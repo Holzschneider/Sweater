@@ -41,8 +41,7 @@ public class CanvasTest {
 		
 		while(!sh.isDisposed())
 			if (!dsp.readAndDispatch())
-				if (!dsp.isDisposed())
-					dsp.sleep();
+				dsp.sleep();
 
 		
 	}
