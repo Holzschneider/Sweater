@@ -42,7 +42,7 @@ public class LayoutTest {
 		
 		Button but = new Button(sh, 0);
 		but.setText("hallo");
-
+		
 		sh.setLayout(new SimpleLayout(100, 100, (c) -> but.setBounds(100, 100, 200, 50) ));
 		
 //		sh.setLayout(new SimpleLayout(100, 100, new Layouter() {
