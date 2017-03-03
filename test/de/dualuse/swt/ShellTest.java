@@ -18,9 +18,8 @@ public class ShellTest {
 //			if (dsp.readAndDispatch())
 //				if (!dsp.isDisposed())
 //					dsp.sleep();
-		
 		while(!sh.isDisposed())
-			if (dsp.readAndDispatch())
+			if (!dsp.readAndDispatch())
 				if (!dsp.isDisposed())
 					dsp.sleep();
 
