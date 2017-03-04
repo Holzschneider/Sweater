@@ -26,14 +26,10 @@ public class CanvasTest {
 			e.gc.setLineWidth(30);
 			e.gc.setLineDash(new int[] {100});
 			e.gc.setForeground(col);
-			e.gc.drawOval(100, 100, dim.x-200, dim.y-200);
-			
-			
-			
-			
+			e.gc.drawOval(100, 100, dim.x-200, dim.y-200);		
 		});
 		
-		
+			
 		sh.setBounds(100, 100, 800, 800);
 		sh.setVisible(true);
 
