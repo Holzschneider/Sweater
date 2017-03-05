@@ -44,7 +44,7 @@ public class TreeTestVirtual {
 		});
 		
 		final Tree tree = new Tree(shell, SWT.VIRTUAL | SWT.BORDER);
-		final File baseDir = new File("d:\\");
+		final File baseDir = new File("/");
 		
 		// tree.setLinesVisible(true);
 		tree.setHeaderVisible(true);
@@ -151,13 +151,13 @@ public class TreeTestVirtual {
 //			
 //		});
 			
-		tree.addListener(SWT.MeasureItem, new Listener() {
-			@Override public void handleEvent(Event event) {
-				System.out.println("Measuring item (" + event.item  + ", " + event.width + ")");
-				event.width = 4;
-				event.height = 0;
-			}
-		});
+//		tree.addListener(SWT.MeasureItem, new Listener() {
+//			@Override public void handleEvent(Event event) {
+//				System.out.println("Measuring item (" + event.item  + ", " + event.width + ")");
+//				event.width = 4;
+//				event.height = 0;
+//			}
+//		});
 		
 		while(!dsp.isDisposed()) {
 			
