@@ -9,6 +9,7 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Transform;
+import org.eclipse.swt.internal.cocoa.OS;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
@@ -23,7 +24,7 @@ public class ScrollPaneTest {
 
 		
 		ScrolledComposite sc = new ScrolledComposite(sh, H_SCROLL|V_SCROLL|NO_BACKGROUND);
-		Image im = new Image(dsp, ScrollPaneTest.class.getResourceAsStream("generic-cat.jpeg")) ;
+		Image im = new Image(dsp, ScrollPaneTest.class.getResourceAsStream("generic-cat.jpeg"));
 		
 		im.handle.setCacheMode(1);
 		

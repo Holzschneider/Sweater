@@ -2,6 +2,9 @@ package de.dualuse.swt;
 
 import static org.eclipse.swt.SWT.*;
 
+import java.io.File;
+import java.io.FileInputStream;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.graphics.*;
@@ -20,6 +23,7 @@ public class ImageTest {
 		
 //		BufferedImage bi = ImageIO.read(ImageTest.class.getResource("generic-cat.jpeg"));
 		
+//		Image im = new Image(d, new FileInputStream(new File("/Users/holzschneider/Desktop/Sitzordnung.pdf")));
 		Image im = new Image(d,ImageTest.class.getResource("generic-cat.jpeg").openStream() );
 		ImageData id = im.getImageData();
 		int[] pixels = new int[id.width*id.height];

@@ -9,8 +9,13 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Transform;
+import org.eclipse.swt.internal.cocoa.NSBitmapImageRep;
+import org.eclipse.swt.internal.cocoa.NSImage;
+import org.eclipse.swt.internal.cocoa.OS;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.*;
+
+
 
 public class ScrollCanvasTest {
 	static boolean scroll = false; 
@@ -22,6 +27,20 @@ public class ScrollCanvasTest {
 		sh.setLayout(new FillLayout());
 
 		Image im = new Image(dsp, ScrollCanvasTest.class.getResourceAsStream("generic-cat.jpeg")) ;
+//		NSBitmapImageRep rep = new NSBitmapImageRep(im.handle.representations().objectAtIndex(0).id);
+//		System.out.println( rep.id+": "+rep.description().getString() ) ;
+//		im.handle.removeRepresentation(rep);
+//		
+//		CIImage ciim = new CIImage().initWithBitmapImageRep(rep);
+//		
+//		NSCIImageRep cirep = new NSCIImageRep().initWithCIImage(ciim);
+//		
+//		im.handle.addRepresentation(cirep);
+//		
+//		System.out.println(im.handle.representations().objectAtIndex(0));
+//		System.out.println( rep.id+": "+new NSBitmapImageRep(im.handle.representations().objectAtIndex(0).id).description().getString() ) ;
+		
+		
 		
 		Point q = new Point(0,0);
 		Canvas c = new Canvas(sh,NO_BACKGROUND);		
@@ -39,7 +58,7 @@ public class ScrollCanvasTest {
 				g.setTransform(t);
 				g.drawImage(im, 0, 0);
 				t.scale(.5f, .5f);
-				g.setTransform(t);
+				g.setTransform(t);				
 			}
 		});
 

@@ -1,5 +1,7 @@
 package de.dualuse.swt;
 
+import static org.eclipse.swt.SWT.*;
+
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
@@ -12,11 +14,11 @@ public class CanvasTest {
 	public static void main(String[] args) {
 
 		Display dsp = new Display();
-		Shell sh = new Shell(dsp);
+		Shell sh = new Shell(dsp, SHELL_TRIM|NO_BACKGROUND);
 		sh.setLayout(new FillLayout());
 
 		
-		Canvas c = new Canvas(sh, 0);
+		Canvas c = new Canvas(sh, NO_BACKGROUND);
 		c.addPaintListener((e) -> {
 			Point dim = c.getSize();
 			e.gc.drawLine(0, 0, dim.x, dim.y);
