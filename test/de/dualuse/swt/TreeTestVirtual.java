@@ -43,6 +43,8 @@ public class TreeTestVirtual {
 			}
 		});
 		
+		System.out.println("Hi");
+		
 		final Tree tree = new Tree(shell, SWT.VIRTUAL | SWT.BORDER);
 		final File baseDir = new File("/");
 		
