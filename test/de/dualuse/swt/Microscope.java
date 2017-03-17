@@ -4,6 +4,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
+import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.events.ControlAdapter;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.MouseAdapter;
@@ -40,7 +41,7 @@ public abstract class Microscope extends Composite {
 //==[ Constructors ]================================================================================
 	
 	public Microscope(Composite parent, int style) {
-		super(parent, style | SWT.NO_REDRAW_RESIZE | SWT.DOUBLE_BUFFERED);
+		super(parent, style | SWT.DOUBLE_BUFFERED);
 		
 		canvasTransform = new Transform(getDisplay());
 		
@@ -265,11 +266,13 @@ public abstract class Microscope extends Composite {
 			@Override void paintCanvas(GC gc) {
 				gc.setAntialias(SWT.OFF);
 				gc.setInterpolation(SWT.NONE);
+				gc.setLineWidth(1);
 				gc.drawImage(image, 0, 0);
-				
 				gc.drawLine(0, 0, 100, 100);
 			}
 		};
+		
+		new Browser(shell,  SWT.NONE).setUrl("http://news.ycombinator.com");
 		
 		SWTUtil.exitOnClose(shell);
 		SWTUtil.center(shell);
