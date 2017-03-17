@@ -260,11 +260,14 @@ public abstract class Microscope extends Composite {
 		
 		Image image = new Image(Display.getCurrent(), Microscope.class.getResourceAsStream("generic-cat.jpeg"));
 		
+		
 		new Microscope(shell, SWT.NONE) {
 			@Override void paintCanvas(GC gc) {
 				gc.setAntialias(SWT.OFF);
 				gc.setInterpolation(SWT.NONE);
 				gc.drawImage(image, 0, 0);
+				
+				gc.drawLine(0, 0, 100, 100);
 			}
 		};
 		
