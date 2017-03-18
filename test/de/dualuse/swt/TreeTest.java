@@ -20,6 +20,7 @@ public class TreeTest {
 		
 		Shell shell = new Shell(dsp);
 		shell.setSize(800, 600);
+		
 
 		shell.setText("Tree");
 		shell.setLayout(new FillLayout(SWT.VERTICAL));

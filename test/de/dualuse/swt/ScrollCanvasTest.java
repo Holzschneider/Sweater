@@ -2,18 +2,14 @@ package de.dualuse.swt;
 
 import static org.eclipse.swt.SWT.*;
 
-import org.eclipse.swt.custom.StackLayout;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.Transform;
-import org.eclipse.swt.internal.cocoa.NSBitmapImageRep;
-import org.eclipse.swt.internal.cocoa.NSImage;
-import org.eclipse.swt.internal.cocoa.OS;
+import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.layout.FillLayout;
-import org.eclipse.swt.widgets.*;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Shell;
 
 
 
@@ -48,17 +44,34 @@ public class ScrollCanvasTest {
 			Transform t = new Transform(c.getDisplay());
 
 			public void paintControl(PaintEvent e) {
-				paintComponent(e.gc);
+//				paintComponent(e.gc);
+				
+				
+				System.out.println(e.x+", "+e.y+", "+e.width+", "+e.height);
+				
+//				Color c = new Color((int)(Math.random()*0xFFFFFF));
+				Color c = new Color(dsp, (int)(Math.random()*100)+100,(int)(Math.random()*100)+100,(int)(Math.random()*100)+100);
+//						
+				e.gc.setBackground(c);
+				e.gc.fillRectangle(e.x,e.y,e.width,e.height);
+////				e.gc.drawRectangle(e.x+1, e.y+1, e.width-2, e.height-2);
+//				
+				c.dispose();
+
+//				e.gc.drawLine(0, 0, 100, 100);
+				
 			}
 			
 			private void paintComponent(GC g) {
+				g.setInterpolation(NONE);
 				g.getTransform(t);
 				t.translate(q.x, q.y);
 				t.scale(2, 2);
 				g.setTransform(t);
 				g.drawImage(im, 0, 0);
 				t.scale(.5f, .5f);
-				g.setTransform(t);				
+				g.setTransform(t);
+				
 			}
 		});
 
