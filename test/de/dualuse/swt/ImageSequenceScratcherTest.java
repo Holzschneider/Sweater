@@ -12,7 +12,14 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.ShellAdapter;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.events.ShellListener;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.*;
@@ -53,8 +60,8 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		super.addListener(MouseDown, this::down);
 		super.addListener(MouseUp, this::up);
 		super.addListener(MouseMove, this::move);
+
 	}
-	
 	
 	//////////////////
 	
@@ -121,10 +128,11 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		sh.setLayout(new FillLayout());
 		
 
-		new ImageSequenceScratcherTest(sh, NONE) {
+		ImageSequenceScratcherTest scratcher = new ImageSequenceScratcherTest(sh, NONE) {
 			
 			//XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
-			File root = new File("/Users/holzschneider/Archive/Geenee/Geenee Strips/bigbangtheory-clip1.mov.strip");
+			File root = new File("/Users/ihlefeld/Downloads/Schlangenbader.strip/frames");
+			// File root = new File("/Users/holzschneider/Archive/Geenee/Geenee Strips/bigbangtheory-clip1.mov.strip");
 			File frames[] = root.listFiles((f) -> f.getName().endsWith(".jpg"));
 			
 //			Map<Integer,Image> cache = /*Collections.synchronizedMap*/(new LinkedHashMap<Integer,Image>() {
@@ -151,6 +159,20 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 			
 			int redrawCounter = 0;
 			boolean specialRedraw = true;
+			
+
+			@Override public void dispose() {
+				super.dispose();
+				
+				System.out.println("Disposing cache");
+//				for (Entry<Integer,Image> entry : cache.entrySet()) {
+//					Image image = entry.getValue();
+//					image.dispose();
+//				}
+//				cache.clear();
+				
+				worker.shutdown();
+			}
 			
 			
 			int paintControlCounter = 0;
@@ -218,8 +240,11 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		sh.setBounds(100, 100, 1200, 800);
 		sh.setVisible(true);
 		
-		
-		
+		sh.addDisposeListener(new DisposeListener() {
+			@Override public void widgetDisposed(DisposeEvent e) {
+				scratcher.dispose();
+			}
+		});
 		
 		while(!sh.isDisposed())
 			if (!dsp.readAndDispatch())
@@ -227,7 +252,7 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		
 		dsp.dispose();
 		
-		System.out.println("Disposed");
-		System.exit(0);
+		System.out.println("Event Loop stopped");
+//		System.exit(0);
 	}
 }

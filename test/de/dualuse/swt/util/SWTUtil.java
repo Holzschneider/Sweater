@@ -15,9 +15,10 @@ public class SWTUtil {
 		if (dsp == null)
 			throw new RuntimeException("Current thread is not a user-interface thread of an active Display.");
 		
-		while (!dsp.isDisposed())
+		while (!dsp.isDisposed()) {
 			if (!dsp.readAndDispatch())
 				dsp.sleep();
+		}
 	}
 	
 	public static void center(Shell shell, int width, int height) {
