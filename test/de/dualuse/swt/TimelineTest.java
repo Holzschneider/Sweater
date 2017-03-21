@@ -97,6 +97,15 @@ public class TimelineTest {
 			Point vo = sc.getOrigin();
 			Point vs = sc.getSize();
 			
+			int vleft = vo.x, vtop = vo.y;
+			int vright = vo.x+vs.x, vbottom = vo.y+vs.y;
+			
+			vleft = min(vleft, e.x);
+			vright = max(vright, e.x+e.width);
+			vtop = min(vtop, e.y);
+			vbottom = max(vbottom, e.y+e.height);
+			
+			
 			TimelineTest ot = observationTimeline;
 			GC g = e.gc;
 			Point s = timelineCanvas.getSize();
@@ -107,14 +116,14 @@ public class TimelineTest {
 			
 			for (int i=0;i<ot.n;i++) {
 				g.setBackground(i%2==0?dark:darker);
-				g.fillRectangle(e.x, i*ROW_HEIGHT, e.width, ROW_HEIGHT);
+				g.fillRectangle(vleft, i*ROW_HEIGHT, vright-vleft, ROW_HEIGHT);
 			}
 			
 			g.setLineWidth(1);
 			g.setForeground(grey);
 			for (int i=0;i<s.x;i+=240) 
-				if (vo.x<i && i<vo.x+vs.x)
-					g.drawLine(i, e.y, i, e.y+e.height);
+				if (vleft<i && i<vright)
+					g.drawLine(i, vtop, i, vbottom);
 			
 			grey.dispose();
 			dark.dispose();
@@ -123,8 +132,8 @@ public class TimelineTest {
 			
 
 			HashSet<Observation> visible = new HashSet<Observation>();
-			Long left = ot.keyIdObjectMap.ceilingKey(((long)vo.x)<<32);
-			Long right = ot.keyIdObjectMap.floorKey(((long)(vo.x+vs.x))<<32);
+			Long left = ot.keyIdObjectMap.ceilingKey(((long)vleft)<<32);
+			Long right = ot.keyIdObjectMap.floorKey(((long)vright)<<32);
 			
 			for (;left<right; left = ot.keyIdObjectMap.higherKey(left))
 				visible.add( ot.keyIdObjectMap.get(left) );
