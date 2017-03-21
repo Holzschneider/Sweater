@@ -94,6 +94,9 @@ public class TimelineTest {
 		Random rng = new Random(1337);
 		timelineCanvas.addPaintListener( (e) -> {
 			
+			Point vo = sc.getOrigin();
+			Point vs = sc.getSize();
+			
 			TimelineTest ot = observationTimeline;
 			GC g = e.gc;
 			Point s = timelineCanvas.getSize();
@@ -110,7 +113,7 @@ public class TimelineTest {
 			g.setLineWidth(1);
 			g.setForeground(grey);
 			for (int i=0;i<s.x;i+=240) 
-				if (e.x<i && i<e.x+e.width)
+				if (vo.x<i && i<vo.x+vs.x)
 					g.drawLine(i, e.y, i, e.y+e.height);
 			
 			grey.dispose();
@@ -120,8 +123,8 @@ public class TimelineTest {
 			
 
 			HashSet<Observation> visible = new HashSet<Observation>();
-			Long left = ot.keyIdObjectMap.ceilingKey(((long)e.x)<<32);
-			Long right = ot.keyIdObjectMap.floorKey(((long)(e.x+e.width))<<32);
+			Long left = ot.keyIdObjectMap.ceilingKey(((long)vo.x)<<32);
+			Long right = ot.keyIdObjectMap.floorKey(((long)(vo.x+vs.x))<<32);
 			
 			for (;left<right; left = ot.keyIdObjectMap.higherKey(left))
 				visible.add( ot.keyIdObjectMap.get(left) );
