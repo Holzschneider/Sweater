@@ -6,9 +6,9 @@ import static org.eclipse.swt.SWT.*;
 import java.util.*;
 
 import org.eclipse.swt.custom.ScrolledComposite;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
@@ -17,6 +17,8 @@ import org.eclipse.swt.widgets.Shell;
 public class TimelineTest {
 	static class Observation {
 		TreeSet<Integer> keys = new TreeSet<>();
+		int number = count++;
+		static int count = 0;
 	}
 	
 	
@@ -25,8 +27,8 @@ public class TimelineTest {
 
 	Random r = new Random(1337);
 	int n = 50;
-	int minSpan = 0, maxSpan = 3000;
-	int sigmaSpan = 100;
+	int minExtent = 0, maxExtent = 3000;
+	int sigmaSpan = 50, µSpan = 150;
 	int minKeys = 1, maxKeys = 8;
 
 
@@ -38,13 +40,13 @@ public class TimelineTest {
 		for (int i=0;i<n;i++) {
 			Observation o = new Observation();
 			
-			int centerFrame = r.nextInt(maxSpan-minSpan)+minSpan;
+			int centerFrame = r.nextInt(maxExtent-minExtent)+minExtent;
 			
-			int radius = 1+(int) abs(r.nextGaussian()*sigmaSpan);
+			int radius = 1+(int) abs(µSpan+r.nextGaussian()*sigmaSpan);
 			int numKeys = r.nextInt(maxKeys-minKeys)+minKeys;
 
 			for (int j=0;j<numKeys;j++) {
-				int key = max(minSpan, min(maxSpan, r.nextInt(radius*2)+centerFrame-radius));
+				int key = max(minExtent, min(maxExtent, r.nextInt(radius*2)+centerFrame-radius));
 				
 				o.keys.add(key);
 				
@@ -80,8 +82,16 @@ public class TimelineTest {
 		ScrolledComposite sc = new ScrolledComposite(sh,  V_SCROLL|H_SCROLL|NO_BACKGROUND);
 		Canvas timelineCanvas  = new Canvas(sc, NONE);
 		
-		timelineCanvas.setSize(observationTimeline.maxSpan,observationTimeline.n*ROW_HEIGHT);
+		timelineCanvas.setSize(observationTimeline.maxExtent,observationTimeline.n*ROW_HEIGHT);
 		
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		byte[] pixels = { 0,0,0, -1, -1, -1};
+		ImageData borderData = new ImageData(2, 1, 24, new PaletteData(0xFF0000, 0x00FF00, 0x0000FF), 6, pixels);
+		Image borderImage = new Image(dsp, borderData);
+		
+		
+		Random rng = new Random(1337);
 		timelineCanvas.addPaintListener( (e) -> {
 			
 			TimelineTest ot = observationTimeline;
@@ -120,13 +130,76 @@ public class TimelineTest {
 			sorted.sort((a,b) ->  Integer.compare(a.keys.first(),b.keys.first()) );
 			
 			
+			///
+			Color white = new Color(dsp, 255, 255, 255);
+			Color lighter = new Color(dsp, 255, 255, 255, 80);
+			Color dimmer = new Color(dsp, 0, 0, 0, 80);
+			
+			g.setBackground(white);
+			
+			g.setLineWidth(1);
+			
+			int A = ROW_HEIGHT/5, M = 2;
+			for (Observation o: sorted) {
+				int lowest = o.keys.first();
+				int highest = o.keys.last();
+				int top = o.number*ROW_HEIGHT+M;
+				int height = ROW_HEIGHT-2*M; 
+			
+				rng.setSeed(System.identityHashCode(o));
+				Color individualColor = new Color(dsp, new RGB(rng.nextFloat()*360, 0.7f, 0.6f));
+				
+				g.setBackground(individualColor);
+				g.fillRoundRectangle(lowest, top, highest-lowest, height, A, A);
+				
+				g.setForeground(lighter);
+				
+				for (int i = lowest; i<highest; i=o.keys.higher(i))
+					if (i!=lowest && i!=highest) {
+//						g.setForeground(lighter);
+//						g.setAlpha(lighter.getAlpha());
+//						g.drawLine(i+1, top, i+1, top+height-1);
+//						g.setForeground(dimmer);
+//						g.setAlpha(dimmer.getAlpha());
+//						g.drawLine(i, top, i, top+height-1);
+						
+						g.setAlpha(64);
+						g.drawImage(borderImage, 0, 0, 2, 1, i, top, 2, height);
+						
+					}
+				
+//				g.drawRoundRectangle(lowest, o.number*ROW_HEIGHT+M, highest-lowest-1, ROW_HEIGHT-2*M-1, A, A);
+				g.setAlpha(255);
+				individualColor.dispose();
+			}
+			
+			
 			
 			System.out.println(e.x+", "+e.y+", "+e.width+","+e.height);
 			System.out.println();
 		});
-		
+		//////////////////////////////////////////////////////////////////////////////////////////////////////
 		sc.setContent(timelineCanvas);
 		
+		timelineCanvas.addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseUp(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void mouseDown(MouseEvent e) {
+				timelineCanvas.redraw(e.x, e.y, 100, 100, true);				
+			}
+			
+			@Override
+			public void mouseDoubleClick(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
 		
 		
 		sh.setBounds(100,100,1200,500);
