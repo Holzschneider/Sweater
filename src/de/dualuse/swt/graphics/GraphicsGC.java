@@ -1,4 +1,4 @@
-package de.dualuse.swt;
+package de.dualuse.swt.graphics;
 
 import java.awt.*;
 import java.awt.RenderingHints.Key;

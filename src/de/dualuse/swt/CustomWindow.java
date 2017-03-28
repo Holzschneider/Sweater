@@ -2,6 +2,8 @@ package de.dualuse.swt;
 
 import org.eclipse.swt.widgets.Composite;
 
+import de.dualuse.swt.app.Window;
+
 public class CustomWindow extends Window {
 	//custom window decoration
 

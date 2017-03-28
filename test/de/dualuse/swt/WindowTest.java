@@ -3,6 +3,8 @@ package de.dualuse.swt;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 
+import de.dualuse.swt.app.Window;
+
 public class WindowTest extends Window {
 	@AutoMenu(value="File",rank=10) Menu fileMenu;
 	

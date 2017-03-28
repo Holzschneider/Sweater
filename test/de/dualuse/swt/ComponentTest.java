@@ -10,6 +10,8 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 
+import de.dualuse.swt.app.AutoEvent;
+
 
 public class ComponentTest {
 

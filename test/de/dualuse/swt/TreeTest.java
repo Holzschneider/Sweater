@@ -62,8 +62,6 @@ public class TreeTest {
 				dsp.sleep();
 		}
 		
-		dsp.dispose();
-		
 		System.out.println("Shutting down");
 	}
 }

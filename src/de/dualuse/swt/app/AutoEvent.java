@@ -1,4 +1,4 @@
-package de.dualuse.swt;
+package de.dualuse.swt.app;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

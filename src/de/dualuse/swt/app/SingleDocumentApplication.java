@@ -1,4 +1,4 @@
-package de.dualuse.swt;
+package de.dualuse.swt.app;
 
 public class SingleDocumentApplication {
 

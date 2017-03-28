@@ -1,4 +1,4 @@
-package de.dualuse.swt;
+package de.dualuse.swt.app;
 
 import org.eclipse.swt.widgets.Menu;
 
