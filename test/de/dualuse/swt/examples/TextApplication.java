@@ -3,13 +3,10 @@ package de.dualuse.swt.examples;
 import java.io.File;
 import java.io.IOException;
 
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Shell;
-
+import de.dualuse.swt.app.DocumentWindow;
 import de.dualuse.swt.app.MultiDocumentApplication;
 import de.dualuse.swt.widgets.AutoShell;
 import de.dualuse.swt.widgets.ProgressDialog;
-import de.dualuse.swt.widgets.ProgressDialog.Task;
 import de.dualuse.swt.widgets.ProgressDialog.TaskProgress;
 
 public class TextApplication extends MultiDocumentApplication {
@@ -22,7 +19,7 @@ public class TextApplication extends MultiDocumentApplication {
 	
 //==[ Document Handling Implementations for Parent Class ]==========================================
 	
-	@Override protected Shell newDocument() {
+	@Override protected DocumentWindow newDocument() {
 		System.out.println("New Document");
 		TextShell shell = new TextShell(this);
 		shell.setText("New Document");
@@ -30,7 +27,7 @@ public class TextApplication extends MultiDocumentApplication {
 	}
 
 	// XXX Exception -> to cancel opening a document, return null? IOException?
-	@Override protected Shell openDocument(File document) {
+	@Override protected DocumentWindow openDocument(File document) {
 		
 //		Shell hiddenShell = new Shell(this, SWT.NONE);
 //		HiddenShell hiddenShell = new HiddenShell();
