@@ -3,6 +3,7 @@ package de.dualuse.swt.app;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.swt.SWT;
 
@@ -15,7 +16,16 @@ import de.dualuse.swt.widgets.AutoShell;
 
 public abstract class MultiDocumentApplication extends Application {
 	
+	public interface ApplicationListener {
+		void documentWindowCreated(DocumentWindow window);
+		void documentWindowClosed(DocumentWindow window);
+	}
+	
 	Shell activeWindow;
+	List<DocumentWindow> openDocuments = new ArrayList<DocumentWindow>();
+	List<File> recentDocuments = new ArrayList<File>();
+	
+	Menu fileMenu;
 	
 	Menu currentMenu;
 	Menu recentMenu;
@@ -26,6 +36,15 @@ public abstract class MultiDocumentApplication extends Application {
 	MenuItem closeItem;
 	MenuItem closeAllItem;
 	
+//	Action newDocumentAction;
+//	Action openDocumentAction;
+//	
+//	Action closeDocumentAction;
+//	Action closeAllDocumentAction;
+//	
+//	List<Shell> openDocuments = new ArrayList<Shell>();
+//	List<File> recentDocuments = new ArrayList<File>();
+	
 //==[ Constructor ]=================================================================================
 	
 	public MultiDocumentApplication(String name, String version) {
@@ -34,17 +53,33 @@ public abstract class MultiDocumentApplication extends Application {
 		setupMenu();
 	}
 	
+//==[ Getter ]======================================================================================
+	
+	public List<DocumentWindow> getOpenWindows() {
+		return new ArrayList<DocumentWindow>(openDocuments);
+	}
+	
+	public List<File> getRecentDocuments() {
+		return new ArrayList<File>(recentDocuments);
+	}
+	
 //==[ App Menu ]====================================================================================
 	
 	private void setupMenu() {
 
-		Menu menubar = getMenuBar();
-
-		MenuItem cascadeFileMenu = new MenuItem(menubar, SWT.CASCADE);
+		new DocumentMenu(this);
+		// Menu menuBar = getMenuBar();
+		// addMenuToBar(menuBar);
+		
+	}
+	
+	public void addMenuToBar(Menu menuBar) {
+		
+		MenuItem cascadeFileMenu = new MenuItem(menuBar, SWT.CASCADE);
 		cascadeFileMenu.setText("&File");
 		
 		// Menu fileMenu = new Menu(menubar);
-		Menu fileMenu = new Menu(cascadeFileMenu); // works as well
+		fileMenu = new Menu(cascadeFileMenu); // works as well
 		cascadeFileMenu.setMenu(fileMenu); // Only works for cascade items
 		
 		MenuItem newItem = new MenuItem(fileMenu, SWT.PUSH);
@@ -84,20 +119,24 @@ public abstract class MultiDocumentApplication extends Application {
 		closeAllItem.setAccelerator(SWT.SHIFT | SWT.MOD1 | 'W');
 		
 		closeItem.addListener(SWT.Selection, (e) -> closeDocumentAction());
-		closeAllItem.addListener(SWT.Selection, (e) -> closeAllDocumentAction());
+		closeAllItem.addListener(SWT.Selection, (e) -> closeAllDocumentsAction());
 		newItem.addListener(SWT.Selection, (e) -> newDocumentAction());
 		openItem.addListener(SWT.Selection, (e) -> openDocumentAction());
 	}
 	
+	public Menu getFileMenu() {
+		return fileMenu;
+	}
+	
 //==[ Menu Actions ]================================================================================
 	
-	private void newDocumentAction() {
-		Shell newShell = newDocument();
+	public void newDocumentAction() {
+		DocumentWindow newShell = newDocument();
 		addDocumentWindow(newShell);
 		newShell.open();
 	}
 	
-	private void openDocumentAction() {
+	public void openDocumentAction() {
 		try (AutoShell hiddenShell = new AutoShell()){
 			
 			FileDialog dialog = new FileDialog(hiddenShell);
@@ -106,7 +145,7 @@ public abstract class MultiDocumentApplication extends Application {
 			
 			File chosenFile = new File(result);
 			
-			Shell openedShell = openDocument(chosenFile);
+			DocumentWindow openedShell = openDocument(chosenFile);
 			addDocumentWindow(openedShell);
 			openedShell.open();
 			
@@ -120,7 +159,7 @@ public abstract class MultiDocumentApplication extends Application {
 			activeWindow.close();
 	}
 	
-	private void closeAllDocumentAction() {
+	public void closeAllDocumentsAction() {
 		
 		List<Shell> openShells = new ArrayList<Shell>();
 		for (int i=0, I=currentMenu.getItemCount(); i<I; i++) {
@@ -135,7 +174,7 @@ public abstract class MultiDocumentApplication extends Application {
 
 //==[ Update Current&Recent Menus ]=================================================================
 	
-	private void addDocumentWindow(final Shell documentWindow) {
+	private void addDocumentWindow(final DocumentWindow documentWindow) {
 
 		MenuItem menuItem = new MenuItem(currentMenu, SWT.PUSH);
 		menuItem.setText(documentWindow.getText());
@@ -177,6 +216,8 @@ public abstract class MultiDocumentApplication extends Application {
 			if (activeWindow == documentWindow)
 				setActiveWindow(null);
 		});
+		
+		openDocuments.add(documentWindow);
 	}
 
 	private void removeDocumentWindow(final Shell documentWindow) {
@@ -212,10 +253,32 @@ public abstract class MultiDocumentApplication extends Application {
 		}
 	}
 	
+//==[ Application Listener ]========================================================================
+	
+	CopyOnWriteArrayList<ApplicationListener> listeners = new CopyOnWriteArrayList<ApplicationListener>();
+	
+	public void addApplicationListener(ApplicationListener listener) {
+		listeners.add(listener);
+	}
+	
+	public void removeApplicationListener(ApplicationListener listener) {
+		listeners.remove(listener);
+	}
+	
+	protected void fireDocumentWindowCreated(DocumentWindow window) {
+		for (ApplicationListener listener : listeners)
+			listener.documentWindowCreated(window);
+	}
+	
+	protected void fireDocumentWindowClosed(DocumentWindow window) {
+		for (ApplicationListener listener : listeners)
+			listener.documentWindowClosed(window);
+	}
+	
 //==[ Document Handling ]===========================================================================
 	
-	protected abstract Shell newDocument();
-	protected abstract Shell openDocument(File document);
+	protected abstract DocumentWindow newDocument();
+	protected abstract DocumentWindow openDocument(File document);
 
 //==[ Test-Main ]===================================================================================
 	
@@ -223,11 +286,11 @@ public abstract class MultiDocumentApplication extends Application {
 
 		MultiDocumentApplication app = new MultiDocumentApplication("Example Application", "v1.1.45") {
 
-			@Override protected Shell newDocument() {
+			@Override protected DocumentWindow newDocument() {
 				return null;
 			}
 
-			@Override protected Shell openDocument(File document) {
+			@Override protected DocumentWindow openDocument(File document) {
 				return null;
 			}
 			
