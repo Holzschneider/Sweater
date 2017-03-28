@@ -48,8 +48,8 @@ public class Application extends Display implements AutoMenuBar {
 //==[ Build Application Menu ]======================================================================
 	
 	{
-		build(this, this.getMenuBar(), MenuScope.INHERIT, MenuScope.APPLICATION);
-		build(this, this.getSystemMenu(), MenuScope.SYSTEM);
+//		build(this, this.getMenuBar(), MenuScope.INHERIT, MenuScope.APPLICATION);
+//		build(this, this.getSystemMenu(), MenuScope.SYSTEM);
 	}
 
 //==[ Event Loop ]==================================================================================

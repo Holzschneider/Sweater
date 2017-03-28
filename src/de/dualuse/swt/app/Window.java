@@ -1,17 +1,23 @@
 package de.dualuse.swt.app;
 
-import org.eclipse.swt.widgets.Shell;
+import static org.eclipse.swt.SWT.*;
 
-import de.dualuse.swt.app.AutoMenuBar.MenuScope;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.Shell;
 
 public class Window extends Shell implements AutoMenuBar {
 	
 	//hier per Annotations gleich auch das per-Window-Menu definieren
 	
 	public Window() {
-		build(this.getDisplay(), this.getMenuBar(), MenuScope.WINDOW); //!
-		build(this, this.getMenuBar(), MenuScope.INHERIT, MenuScope.WINDOW); //!
+		Menu menuBar = new Menu(this,BAR);
+//		build(this.getDisplay(), this.getDisplay().getMenuBar(), MenuScope.WINDOW); //!
+		build(this, menuBar , MenuScope.INHERIT, MenuScope.WINDOW); //!
+		setMenuBar(menuBar);
 	}
+	
+	@Override
+	protected void checkSubclass() { }
 	
 	
     public static final int DO_NOTHING_ON_CLOSE = 0;

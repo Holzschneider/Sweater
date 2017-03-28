@@ -41,11 +41,8 @@ public class MenuTest {
 				MenuItem closeItem = new MenuItem(applicationMenu, CHECK);
 				closeItem.setText("welt");
 				closeItem.setSelection(true);
-				
-	
 			}
 		
-			
 
 			{
 				/// MENU
@@ -98,6 +95,7 @@ public class MenuTest {
 		{
 			/// MENU
 			Menu m = new Menu(sh1, BAR);
+//			Menu m = sh1.getMenuBar();
 			MenuItem mi = new MenuItem(m, CASCADE);
 			mi.setText("File");
 			
