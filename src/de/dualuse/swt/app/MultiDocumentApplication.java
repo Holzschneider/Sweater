@@ -11,7 +11,7 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 
-import de.dualuse.swt.AutoShell;
+import de.dualuse.swt.widgets.AutoShell;
 
 public abstract class MultiDocumentApplication extends Application {
 	
