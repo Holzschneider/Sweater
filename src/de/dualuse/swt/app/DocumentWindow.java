@@ -12,12 +12,13 @@ public class DocumentWindow extends Shell {
 	
 	MultiDocumentApplication application;
 	File document;
+
+//==[ Constructor ]=================================================================================
 	
 	public DocumentWindow(MultiDocumentApplication application) {
 		super(application);
 		this.application = application;
 		setupMenu();
-		System.out.println(application);
 	}
 	
 	public DocumentWindow(MultiDocumentApplication application, File document, int style) {
@@ -25,20 +26,25 @@ public class DocumentWindow extends Shell {
 		this.application = application;
 		this.document = document;
 		setupMenu();
-		System.out.println(application);
 	}
+	
+	/////
 	
 	private void setupMenu() {
 		Menu menuBar = new Menu(this, SWT.BAR);
-		new DocumentMenu(this, menuBar);
-		setMenu(menuBar);
+		new DocumentMenu(application, this, menuBar);
+		setMenuBar(menuBar);
 	}
 	
+//==[ Getter ]======================================================================================
+	
 	public MultiDocumentApplication getApplication() {
+		checkWidget();
 		return application;
 	}
 	
 	public File getDocument() {
+		checkWidget();
 		return document;
 	}
 	

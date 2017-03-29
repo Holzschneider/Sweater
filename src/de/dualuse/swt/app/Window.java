@@ -2,8 +2,6 @@ package de.dualuse.swt.app;
 
 import org.eclipse.swt.widgets.Shell;
 
-import de.dualuse.swt.app.AutoMenuBar.MenuScope;
-
 public class Window extends Shell implements AutoMenuBar {
 	
 	//hier per Annotations gleich auch das per-Window-Menu definieren

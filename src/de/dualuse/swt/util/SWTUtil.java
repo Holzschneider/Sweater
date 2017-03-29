@@ -6,6 +6,7 @@ import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.events.ShellListener;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
@@ -69,29 +70,40 @@ public class SWTUtil {
 	
 	// Center the shell on the current monitor
 	public static void center(Shell shell) {
+		center(shell, 0.5, 0.5);
+	}
+	
+	public static void center(Shell shell, double xfrac, double yfrac) {
 		Display dsp = shell.getDisplay();
 		Rectangle monitorBounds = getCurrentMonitorBounds(dsp);
-		center(monitorBounds, shell);
+		center(monitorBounds, shell, xfrac, yfrac);
 	}
 	
 	// Center the shell over its parent
-	public static void center(Shell parent, Shell child) {
+	public static void center(Composite parent, Shell child) {
+		center(parent, child, 0.5, 0.5);
+	}
+	
+	public static void center(Composite parent, Shell child, double xfrac, double yfrac) {
 		Display dsp = child.getDisplay();
 		Rectangle region = parent.isVisible() ? parent.getBounds() : getCurrentMonitorBounds(dsp);
-		center(region, child);
+		center(region, child, xfrac, yfrac);
 	}
 	
 	///// Private Helper
 	
 	// Center the shell over the given region
-	private static void center(Rectangle region, Shell shell) {
+	private static void center(Rectangle region, Shell shell, double xfrac, double yfrac) {
 		Rectangle s_bounds = shell.getBounds();
 		
 		System.out.println("Center: " + s_bounds);
 		System.out.println("Over: " + region);
 		
-		int x = region.x + (region.width - s_bounds.width) / 2;
-		int y = region.y + (region.height - s_bounds.height) / 2;
+//		int x = region.x + (region.width - s_bounds.width) / 2;
+//		int y = region.y + (region.height - s_bounds.height) / 2;
+		
+		int x = region.x + (int)Math.round((region.width - s_bounds.width) * xfrac);
+		int y = region.y + (int)Math.round((region.height - s_bounds.height) * yfrac);
 		
 		shell.setLocation(x, y);
 	}

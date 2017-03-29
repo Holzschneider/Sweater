@@ -23,6 +23,7 @@ public class Container extends Composite {
 	
 	
 	//// Dispose Handling //////////////////////////////////////
+	// XXX wrong, use DisposeHandler instead, dispose() not called recursively
 	public void dispose () {
 		if (isDisposed ()) 
 			return;

@@ -22,39 +22,46 @@ public class DocumentMenu extends Menu {
 	final static String OPEN_DOCUMENTS = "Current";
 	final static String RECENT_DOCUMENTS = "Recent";
 	
-	MenuItem newDocument;
-	MenuItem openDocument;
+	MenuItem newDocumentMenuItem;
+	MenuItem openDocumentMenuItem;
 	
-	MenuItem closeDocument;
-	MenuItem closeAllDocuments;
+	MenuItem closeDocumentMenuItem;
+	MenuItem closeAllDocumentsMenuItem;
 	
-	MenuItem openDocumentWindows;
-	MenuItem recentDocumentWindows;
+	MenuItem currentDocumentsMenuItem;
+	MenuItem recentDocumentsMenuItem;
 	
-	Menu openDocumentsMenu;
+	Menu currentDocumentsMenu;
 	Menu recentDocumentsMenu;
+	
+	boolean appMenu = false;
 	
 //==[ Constructor ]=================================================================================
 	
+	// Application Menu
 	public DocumentMenu(MultiDocumentApplication application) {
 		super(application.getMenuBar());
 		// super(window.getMenu());
 
+		appMenu = true;
+		
 		// MultiDocumentApplication application = window.getApplication();
 		init(application);
 		setupMenu(application, application.getMenuBar());
 	}
 	
-	public DocumentMenu(DocumentWindow window, Menu menuBar) {
+	// Window Menu
+	public DocumentMenu(MultiDocumentApplication application, DocumentWindow window, Menu menuBar) {
 		super(menuBar);
 		
-		MultiDocumentApplication application = window.getApplication();
-		System.out.println("Application: " + application);
 		init(application);
+		setupMenu(application, menuBar);
 		
-		closeDocument.setEnabled(true);
-		closeDocument.addListener(SWT.Selection, (e) -> window.close());
+		closeDocumentMenuItem.setEnabled(true);
+		closeDocumentMenuItem.addListener(SWT.Selection, (e) -> window.close());
 	}
+	
+	/////
 	
 	private void init(MultiDocumentApplication application) {
 		application.addApplicationListener(appListener);
@@ -64,51 +71,66 @@ public class DocumentMenu extends Menu {
 	private void setupMenu(MultiDocumentApplication application, Menu menuBar) {
 		// File MenuItem & Menu
 		MenuItem cascadeFileMenu = new MenuItem(menuBar, SWT.CASCADE);
-		cascadeFileMenu.setText("&File");
+		// cascadeFileMenu.setText("&File");
+		if (appMenu)
+			cascadeFileMenu.setText("&App");
+		else
+			cascadeFileMenu.setText("&Window");
 		
 		Menu fileMenu = new Menu(cascadeFileMenu);
 		cascadeFileMenu.setMenu(fileMenu);
 		
 		// New Document
-		newDocument = new MenuItem(fileMenu, SWT.PUSH);
-		newDocument.setText(NEW_DOCUMENT);
-		newDocument.setAccelerator(SWT.MOD1 | 'N');
-		newDocument.addListener(SWT.Selection, (e) -> application.newDocumentAction());
+		newDocumentMenuItem = new MenuItem(fileMenu, SWT.PUSH);
+		newDocumentMenuItem.setText(NEW_DOCUMENT);
+		newDocumentMenuItem.setAccelerator(SWT.MOD1 | 'N');
+		newDocumentMenuItem.addListener(SWT.Selection, (e) -> application.createNewDocument());
 		
 		// Open Document
-		openDocument = new MenuItem(fileMenu, SWT.PUSH);
-		openDocument.setText(OPEN_DOCUMENT);
-		openDocument.setAccelerator(SWT.MOD1 | 'O');
-		openDocument.addListener(SWT.Selection, (e) -> application.openDocumentAction());
+		openDocumentMenuItem = new MenuItem(fileMenu, SWT.PUSH);
+		openDocumentMenuItem.setText(OPEN_DOCUMENT);
+		openDocumentMenuItem.setAccelerator(SWT.MOD1 | 'O');
+		openDocumentMenuItem.addListener(SWT.Selection, (e) -> application.openDocument());
+		
+		new MenuItem(fileMenu, SWT.SEPARATOR);
 		
 		// Close Document
-		closeDocument = new MenuItem(fileMenu, SWT.PUSH);
-		closeDocument.setText(CLOSE_DOCUMENT);
-		closeDocument.setAccelerator(SWT.MOD1 | 'W');
-		closeDocument.setEnabled(false);
+		closeDocumentMenuItem = new MenuItem(fileMenu, SWT.PUSH);
+		closeDocumentMenuItem.setText(CLOSE_DOCUMENT);
+		closeDocumentMenuItem.setAccelerator(SWT.MOD1 | 'W');
+		closeDocumentMenuItem.setEnabled(false);
 		
 		// Close All Documents
-		closeAllDocuments = new MenuItem(fileMenu, SWT.PUSH);
-		closeAllDocuments.setText(CLOSE_ALL_DOCUMENTS);
-		closeAllDocuments.setAccelerator(SWT.SHIFT | SWT.MOD1 | 'W');
-		closeAllDocuments.setEnabled(false);
-		closeAllDocuments.addListener(SWT.Selection, (e) -> application.closeAllDocumentsAction());
+		closeAllDocumentsMenuItem = new MenuItem(fileMenu, SWT.PUSH);
+		closeAllDocumentsMenuItem.setText(CLOSE_ALL_DOCUMENTS);
+		closeAllDocumentsMenuItem.setAccelerator(SWT.SHIFT | SWT.MOD1 | 'W');
+		closeAllDocumentsMenuItem.setEnabled(false);
+		closeAllDocumentsMenuItem.addListener(SWT.Selection, (e) -> application.closeAllDocuments());
+		
+		new MenuItem(fileMenu, SWT.SEPARATOR);
 		
 		// Current Documents
-		openDocumentWindows = new MenuItem(fileMenu, SWT.CASCADE);
-		openDocumentWindows.setEnabled(false);
-		openDocumentWindows.setText(OPEN_DOCUMENTS);
+		currentDocumentsMenuItem = new MenuItem(fileMenu, SWT.CASCADE);
+		currentDocumentsMenuItem.setText(OPEN_DOCUMENTS);
+		currentDocumentsMenuItem.setEnabled(false);
 	
-		openDocumentsMenu = new Menu(openDocumentWindows);
-		openDocumentWindows.setMenu(openDocumentsMenu);
+		currentDocumentsMenu = new Menu(currentDocumentsMenuItem);
+		currentDocumentsMenuItem.setMenu(currentDocumentsMenu);
 		
 		List<DocumentWindow> windows = application.getOpenWindows();
-		for (DocumentWindow docWindow : windows)
+		System.out.println("Menu Creation: Currently existing windows");
+		for (DocumentWindow docWindow : windows) {
+			System.out.println("\tAdding open window: " + docWindow.getText());
 			addDocumentWindow(docWindow);
+		}
 		
 		// Recent Documents
-		recentDocumentWindows = new MenuItem(fileMenu, SWT.CASCADE);
-		recentDocumentWindows.setEnabled(false);
+		recentDocumentsMenuItem = new MenuItem(fileMenu, SWT.CASCADE);
+		recentDocumentsMenuItem.setText(RECENT_DOCUMENTS);
+		recentDocumentsMenuItem.setEnabled(false);
+		
+		recentDocumentsMenu = new Menu(recentDocumentsMenuItem);
+		recentDocumentsMenuItem.setMenu(recentDocumentsMenu);
 		
 		// XXX get recent document windows from application and populate menu
 	}
@@ -127,9 +149,11 @@ public class DocumentMenu extends Menu {
 	
 //==[ Update Open Document Menu ]===================================================================
 	
-	public void addDocumentWindow(DocumentWindow window) {
+	// New window has been opened (add corresponding menu entry)
+	private void addDocumentWindow(DocumentWindow window) {
 
-		MenuItem menuItem = new MenuItem(openDocumentsMenu, SWT.PUSH);
+		// Add MenuItem for new Window in CurrentDocumentsMenu
+		MenuItem menuItem = new MenuItem(currentDocumentsMenu, SWT.PUSH);
 		menuItem.setText(window.getText());
 		menuItem.setData(window);
 		menuItem.addListener(SWT.Selection, (e) -> {
@@ -137,28 +161,40 @@ public class DocumentMenu extends Menu {
 				window.setMinimized(false);
 			window.forceFocus();
 		});
-		
-		openDocumentWindows.setEnabled(true);
 
+		// Add Window Dispose Listener (remove entry from CurrnetDocumentsMenu if window closed)
 		Listener disposeListener = (e) -> removeDocumentWindow(window);
 		window.addListener(SWT.Dispose, disposeListener);
-		this.addListener(SWT.Dispose, (e) -> window.removeListener(SWT.Dispose, disposeListener));
 		
+		// Remove window dispose listener if menu itself is disposed
+		addListener(SWT.Dispose, (e) -> {
+			if (!window.isDisposed()) // XXX own window already disposed at this point (either check or don't add if own window above)
+				window.removeListener(SWT.Dispose, disposeListener);
+		});
+		
+		// Update menu state
+		currentDocumentsMenuItem.setEnabled(true);
+		closeAllDocumentsMenuItem.setEnabled(true);
+
 	}
 	
-	public void removeDocumentWindow(DocumentWindow window) {
+	// Window has been closed (remove corresponding menu entry)
+	private void removeDocumentWindow(DocumentWindow window) {
 
-		for (int i=0; i<openDocumentsMenu.getItemCount(); i++) {
-			MenuItem menuItem = openDocumentsMenu.getItem(i);
+		// Remove MenuItem from the CurrentDocuments Menu for the window that has been closed
+		for (int i=0; i<currentDocumentsMenu.getItemCount(); i++) {
+			MenuItem menuItem = currentDocumentsMenu.getItem(i);
 			if (menuItem.getData() == window) {
 				menuItem.dispose();
 				break;
 			}
 		}
 		
-		if (openDocumentsMenu.getItemCount()==0)
-			openDocumentWindows.setEnabled(false);
-		
+		// Update menu state
+		if (currentDocumentsMenu.getItemCount()==0) {
+			currentDocumentsMenuItem.setEnabled(false);
+			closeAllDocumentsMenuItem.setEnabled(false);
+		}
 	}
 	
 //==[ Update Recent Document Menu ]=================================================================
@@ -169,13 +205,6 @@ public class DocumentMenu extends Menu {
 	
 	public void removeRecentDocument(File document) {
 		// TODO
-	}
-	
-//==[ Resource Management ]=========================================================================
-	
-	@Override public void dispose() {
-		// ...
-		super.dispose();
 	}
 	
 }

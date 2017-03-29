@@ -7,6 +7,7 @@ import de.dualuse.swt.app.DocumentWindow;
 import de.dualuse.swt.app.MultiDocumentApplication;
 import de.dualuse.swt.widgets.AutoShell;
 import de.dualuse.swt.widgets.ProgressDialog;
+import de.dualuse.swt.widgets.ProgressDialog.Progress;
 import de.dualuse.swt.widgets.ProgressDialog.TaskProgress;
 
 public class TextApplication extends MultiDocumentApplication {
@@ -20,26 +21,72 @@ public class TextApplication extends MultiDocumentApplication {
 //==[ Document Handling Implementations for Parent Class ]==========================================
 	
 	@Override protected DocumentWindow newDocument() {
-		System.out.println("New Document");
 		TextShell shell = new TextShell(this);
 		shell.setText("New Document");
+		
+		this.isDisposed();
 		return shell;
 	}
 
-	// XXX Exception -> to cancel opening a document, return null? IOException?
 	@Override protected DocumentWindow openDocument(File document) {
 		
 //		Shell hiddenShell = new Shell(this, SWT.NONE);
 //		HiddenShell hiddenShell = new HiddenShell();
 		try (AutoShell hiddenShell = new AutoShell()) {
+			
 			ProgressDialog<String> progress = new ProgressDialog<String>(hiddenShell, "Opening Document...");
 			
 			String result = progress.open(new ProgressDialog.SimpleTask<String>() {
 	
 				@Override public void execute(TaskProgress<String> tp) {
+//					
+//					Progress progress = tp.createIndeterminateProgress();
+//					
+//					try { Thread.sleep(8000); } catch (InterruptedException e) {}
+//					
+//					tp.done("done");
+//					
+//					if (true) return;
 					
 					// tp.indeterminate();
 					
+					Progress totalProgress = tp.createProgress();
+					Progress objectProgress = tp.createProgress();
+					
+					totalProgress.setLabel("Loading Document...");
+					objectProgress.setLabel("Loading Object...");
+					
+					for (int i=0; i<=10; i++) {
+						
+						objectProgress.setValues(0, 100, 0);
+						for (int j=0; j<=100; j++) {
+							try { Thread.sleep(32); } catch (InterruptedException e) {}
+							objectProgress.setValue(j);
+						}
+						
+						totalProgress.setValue(10*i);
+						
+						yield();
+					}
+					
+					try { Thread.sleep(1000); } catch (InterruptedException e) {}
+					
+					Progress thirdProgress = tp.createProgress();
+					
+					for (int i=0; i<=100; i++) {
+						
+						try { Thread.sleep(25); } catch (InterruptedException e) {}
+						thirdProgress.setValue(i);
+						
+						yield();
+					}
+					
+					// tp.abort(new RuntimeException("test"));
+					// tp.abort();
+					tp.done("Result");
+					
+					
+					/*
 					String totalLabel = "Loading Document...";
 					String objectLabel = "Loading Object...";
 					
@@ -67,6 +114,7 @@ public class TextApplication extends MultiDocumentApplication {
 	//				}
 					
 					tp.done("Result");
+					*/
 				}
 			});
 			
