@@ -1,83 +1,60 @@
 package de.dualuse.swt.widgets;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FillLayout;
-import org.eclipse.swt.layout.FormAttachment;
-import org.eclipse.swt.layout.FormData;
-import org.eclipse.swt.layout.FormLayout;
-import org.eclipse.swt.layout.RowData;
-import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Dialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Layout;
-import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.util.SWTUtil;
+import de.dualuse.swt.util.SimpleFuture;
 
 public class ProgressDialog<E> extends Dialog {
 
+	final static int MIN_WIDTH = 360;
+	
 	Shell parent;
 	
+	RuntimeException exception;
+	E result;
+	
 //==[ Interfaces ]==================================================================================
-	
-	public interface TaskProgress<E> {
-		int createProgress(String label, int start, int max);
-		void setProgress(int id, String label, int start, int max);
-		
-		void update(int id, int value);
-		
-		void update(int value);
-		
-		void done(E result);
-		void indeterminate();
-	}
-	
+
 	public interface Task<E> {
 		void execute(TaskProgress<E> tp);
 		void pause();
 		void resume();
 		void cancel();
 	}
+
+	public interface TaskProgress<E> {
+		Progress createProgress();
+		Progress createIndeterminateProgress();
+		void abort();
+		void abort(RuntimeException e);
+		void done(E result);
+	}
 	
-	public static abstract class SimpleTask<E> implements Task<E> {
-		
-		private AtomicBoolean shouldSleep  = new AtomicBoolean();
-		private AtomicBoolean shouldCancel = new AtomicBoolean();
-		
-		protected void yield() {
-			while(shouldSleep.get())
-				try { shouldSleep.wait(); } catch (InterruptedException ex) {}
-		}
-		
-		protected boolean shouldCancel() {
-			return shouldCancel.get();
-		}
-		
-		@Override public void pause() {
-			shouldSleep.set(true);
-			shouldSleep.notifyAll();
-		}
-		
-		@Override public void resume() {
-			shouldSleep.set(false);
-			shouldSleep.notifyAll();
-		}
-		
-		@Override public void cancel() {
-			shouldCancel.set(true);
-		}
+	public interface Progress {
+		Progress setLabel(String label);
+		Progress setValues(int min, int max, int value);
+		Progress setMin(int min);
+		Progress setMax(int max);
+		Progress setValue(int value);
+		Progress indeterminate();
+		Progress absolute();
+		void dispose();
 	}
 	
 //==[ Constructor ]=================================================================================
@@ -94,17 +71,15 @@ public class ProgressDialog<E> extends Dialog {
 	
 //==[ Create Dialog and Return Value ]==============================================================
 	
-	E result;
-	ProgressBar progress;
-	
 	public E open(Task<E> task) {
 		
 		final Shell parent = getParent();
-		final Display dsp = parent.getDisplay();
 		
 		// Setup dialog shell
-		Shell shell = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
+		// Shell shell = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
+		Shell shell = new Shell(parent, SWT.TITLE | SWT.BORDER | SWT.APPLICATION_MODAL); // mac: BORDER no effect, TITLE includes border, Windows?
 		shell.setText(getText());
+		
 		FillLayout layout = new FillLayout(SWT.VERTICAL);
 		layout.marginWidth = 8;
 		layout.marginHeight = 8;
@@ -143,160 +118,13 @@ public class ProgressDialog<E> extends Dialog {
 			}
 		});
 
-		
-//		Label label = new Label(shell, SWT.NONE);
-//		label.setText("Loading File...");
-//		
-//		progress = new ProgressBar(shell, SWT.NONE);
-//		progress.setToolTipText("Progress Test");
-		
-		ArrayList<Label> labels = new ArrayList<Label>();
-		ArrayList<ProgressBar> progresss = new ArrayList<ProgressBar>();
-		
+		TaskProgressHandler handler = new TaskProgressHandler(shell, progressPane);
 		Thread t = new Thread(new Runnable() {
 			@Override public void run() {
-				task.execute(new TaskProgress<E>() {
-					
-//					@Override public int addProgress(int total) {
-//						parent.getDisplay().syncExec(() -> {
-//							
-//						});
-//					}
-					
-					@Override public int createProgress(String text, int start, int max) {
-						AtomicInteger result = new AtomicInteger();
-						dsp.syncExec(() -> {
-							int index = labels.size();
-							
-							Label label = new Label(progressPane, SWT.NONE);
-							label.setText(text);
-							label.pack();
-							labels.add(label);
-	
-							ProgressBar progress = new ProgressBar(progressPane, SWT.NONE);
-							progress.setMaximum(max);
-							progress.setSelection(start);
-							progress.pack();
-							progresss.add(progress);
-							
-							shell.pack();
-							
-							result.set(index);
-							
-							shell.pack();
-							SWTUtil.center(parent, shell);
-							
-							if (!shell.isVisible())
-								shell.open();
-						});
-						return result.get();
-					}
-					
-					@Override public void setProgress(int id, String text, int start, int max) {
-						dsp.asyncExec(() -> {
-							Label label = labels.get(id);
-							label.setText(text);
-							
-							ProgressBar progress = progresss.get(id);
-							progress.setMaximum(max);
-							progress.setSelection(start);
-						});
-					}
-					
-					@Override public void update(int id, int value) {
-						dsp.asyncExec(() -> {
-							createDefaultProgress();
-							ProgressBar progress = progresss.get(id);
-							progress.setSelection(value);
-						});
-					}
-					
-					// @Override public void update(int id, int value) {
-					@Override public void update(int value) {
-						dsp.asyncExec(() -> {
-							// progress.setState(SWT.SMOOTH);
-							createDefaultProgress();
-							ProgressBar progress = progresss.get(0);
-							progress.setSelection(value);
-						});
-					}
-
-					@Override public void done(E res) {
-						dsp.asyncExec(() -> {
-							result = res;
-							shell.dispose();
-						});
-					}
-					
-					@Override public void indeterminate() {
-						// XXX work with progressbar list (problem: order)
-						
-//						parent.getDisplay().asyncExec(() -> {
-//							progress.dispose();
-//							progress = new ProgressBar(shell, SWT.INDETERMINATE);
-//							progress.pack();
-//						});
-					}
-					
-					private void createDefaultProgress() {
-						if (progresss.isEmpty()) {
-							
-							System.out.println("Creating default progress");
-							
-							Label label = new Label(progressPane, SWT.NONE);
-							label.setText("Loading file...");
-							labels.add(label);
-							
-							ProgressBar progress = new ProgressBarLabeled(progressPane, SWT.NONE);
-							
-							progress.setMaximum(100);
-							progress.pack();
-							shell.pack();
-							
-							// center();
-							SWTUtil.center(parent, shell);
-							
-							shell.open();
-							progresss.add(progress);
-						}
-					}
-					
-//					private void center() {
-//						
-//						shell.pack();
-//						
-//						Display display = shell.getDisplay();
-//						
-//						Rectangle pbounds = parent.getBounds();
-//						Rectangle sbounds = shell.getBounds();
-//						
-//						if (!parent.isVisible()) {
-//							Monitor[] monitors = display.getMonitors();
-//							// monitors[0].getBounds().contains
-//							System.out.println("Display not visible");
-//							
-//							Point cursor = display.getCursorLocation();
-//							for (Monitor monitor : monitors) {
-//								Rectangle mbounds = monitor.getBounds();
-//								if (mbounds.contains(cursor)) {
-//									pbounds = mbounds;
-//									break;
-//								}
-//							}
-//						}
-//						
-//						int x = pbounds.x + (pbounds.width - sbounds.width)/2;
-//						int y = pbounds.y + (pbounds.height - sbounds.height)/2;
-//						
-//						shell.setLocation(x, y);
-//					}
-				});
+				task.execute(handler);
 			}
 		});
 		t.start();
-		
-//		shell.pack();
-//		shell.open();
 		
 		Display display = parent.getDisplay();
 		while(!shell.isDisposed()) {
@@ -304,6 +132,233 @@ public class ProgressDialog<E> extends Dialog {
 				display.sleep();
 		}
 		
+		if (result==null && exception!=null)
+			throw exception;
+		
 		return result;
 	}
+	
+//==[ TaskProgress Handler ]========================================================================
+	
+	class TaskProgressHandler implements TaskProgress<E> {
+
+		Shell shell;
+		Composite parent;
+		Display dsp;
+		
+		public TaskProgressHandler(Shell shell, Composite parent) {
+			dsp = Display.getCurrent();
+			this.shell = shell;
+			this.parent = parent;
+		}
+		
+		@Override public Progress createProgress() {
+			return createProgressController(SWT.NONE);
+		}
+		
+		@Override public Progress createIndeterminateProgress() {
+			return createProgressController(SWT.INDETERMINATE);
+		}
+		
+		@Override public void abort() {
+			dsp.asyncExec(() -> {
+				result = null;
+				shell.dispose();
+			});
+		}
+		
+		@Override public void abort(RuntimeException e) {
+			dsp.asyncExec(() -> {
+				exception = e;
+				result = null;
+				shell.dispose();
+			});
+		}
+		
+		@Override public void done(E res) {
+			dsp.asyncExec(() -> {
+				result = res;
+				shell.dispose();
+			});
+		}
+		
+		private Progress createProgressController(int style) {
+			SimpleFuture<ProgressController> resultFuture = new SimpleFuture<ProgressController>();
+			
+			dsp.asyncExec(() -> {
+				
+				resultFuture.put(new ProgressController(parent, style));
+				
+				shell.pack();
+				Rectangle bounds = shell.getBounds();
+				if (bounds.width < MIN_WIDTH)
+					shell.setSize(MIN_WIDTH, bounds.height);
+				
+				SWTUtil.center(shell.getParent(), shell, 0.5, 0.32);
+				
+				if (!shell.isVisible())
+					shell.open();
+				
+			});
+			
+			try {
+				ProgressController result = resultFuture.get();
+				return result;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				return null;
+			}
+		}
+	}
+	
+//==[ Progress Controller ]=========================================================================
+
+	class ProgressController implements Progress {
+		
+		Label label;
+		ProgressBar progressBar;
+		
+		Composite parent;
+		Display dsp;
+		
+		int min = 0, max = 100, current = 0; // default values
+		
+		boolean disposed;
+		
+		public ProgressController(Composite parent) {
+			this(parent, SWT.NONE);
+		}
+		
+		public ProgressController(Composite parent, int style) {
+			this.parent = parent;
+			dsp = Display.getCurrent();
+			label = new Label(parent, SWT.NONE);
+			progressBar = new ProgressBarLabeled(parent, style);
+		}
+		
+		@Override public Progress setLabel(String text) {
+			async(() -> label.setText(text));
+			return this;
+		}
+		
+		@Override public Progress setValues(int min, int max, int current) {
+			async(() -> setValues());
+			return this;
+		}
+		
+		@Override public Progress setMin(int min) {
+			async(() -> progressBar.setMinimum(this.min = min));
+			return this;
+		}
+		
+		@Override public Progress setMax(int max) {
+			async(() -> progressBar.setMaximum(this.max = max));
+			return this;
+		}
+		
+		@Override public Progress setValue(int current) {
+			async(() -> progressBar.setSelection(this.current = current));
+			return this;
+		}
+		
+		@Override public Progress indeterminate() {
+			async(() -> {
+				if ((progressBar.getStyle() & SWT.INDETERMINATE) == SWT.INDETERMINATE) return;
+				
+				updateStyle(progressBar.getStyle() | SWT.INDETERMINATE);
+				
+				progressBar.pack();
+				setValues();
+			});
+			return this;
+		}
+		
+		@Override public Progress absolute() {
+			async(() -> {
+				if ((progressBar.getStyle() & SWT.INDETERMINATE) == 0) return;
+
+				updateStyle(progressBar.getStyle() ^ SWT.INDETERMINATE);
+				
+				progressBar.pack();
+				setValues();
+			});
+			return this;
+		}
+		
+		@Override public void dispose() {
+			disposed = true;
+			async(() -> {
+				label.dispose();
+				progressBar.dispose();
+			});
+		}
+		
+		private void async(Runnable callback) {
+			if (disposed) throw new SWTException(SWT.ERROR_WIDGET_DISPOSED);
+			dsp.asyncExec(() -> {
+				if (label.isDisposed() || progressBar.isDisposed())
+					return;
+				callback.run();
+			});
+		}
+		
+		private void setValues() {
+			progressBar.setMinimum(min);
+			progressBar.setMaximum(max);
+			progressBar.setSelection(current);
+		}
+		
+		private void updateStyle(int newStyle) {
+			// Find old index
+			Composite parent = progressBar.getParent();
+			Control[] children = parent.getChildren();
+			int index = -1;
+			for (int i=0; i<children.length; i++) {
+				if (children[i] == progressBar) {
+					index = i;
+					break;
+				}
+			}
+			if (index == -1) return;
+			
+			// Remove current ProgresBar
+			progressBar.dispose(); // has child already been removed after this call?
+			
+			// Create and position new replacment ProgressBar
+			progressBar = new ProgressBar(parent, SWT.NONE);
+			progressBar.moveAbove(parent.getChildren()[index]);
+		}
+	}
+
+//==[ Simple Task ]=================================================================================
+	
+	public static abstract class SimpleTask<E> implements Task<E> {
+		
+		private AtomicBoolean shouldSleep  = new AtomicBoolean();
+		private AtomicBoolean shouldCancel = new AtomicBoolean();
+		
+		protected void yield() {
+			while(shouldSleep.get())
+				try { shouldSleep.wait(); } catch (InterruptedException ex) {}
+		}
+		
+		protected boolean shouldCancel() {
+			return shouldCancel.get();
+		}
+		
+		@Override public void pause() {
+			shouldSleep.set(true);
+			shouldSleep.notifyAll();
+		}
+		
+		@Override public void resume() {
+			shouldSleep.set(false);
+			shouldSleep.notifyAll();
+		}
+		
+		@Override public void cancel() {
+			shouldCancel.set(true);
+		}
+	}
+	
 }

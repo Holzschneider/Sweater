@@ -8,8 +8,7 @@ import java.io.IOException;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.layout.FillLayout;
-import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Text;
 
 import de.dualuse.swt.app.DocumentWindow;
@@ -22,89 +21,51 @@ public class TextShell extends DocumentWindow {
 	private Text text;
 	private Font font;
 
-	// Without overriding this method, throws exception that is silently caught in the SWT Event loop,
-	// so the code after super(parent) is never executed and control returns/continues in the SWT Event Loop.
+	// To allow subclassing
 	@Override protected void checkSubclass() {}
 	
 //==[ Constructor ]=================================================================================
 	
-	// XXX super(parent) -> constructor of DocumentWindow, tries to setup DocumentMenu
-	//			DocumentMenu calls window.getApplication()
-	//			TextShell overrides getApplication() to return TextApplication instance,
-	//			but TextApplication isn't set yet during super(parent) call, only gets set later
-	
 	public TextShell(TextApplication parent) {
 		super(parent);
-		new RuntimeException().printStackTrace();
 		this.parent = parent;
-		try {
-			init();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		// open();
+		init();
 	}
 	
 	public TextShell(TextApplication parent, File document) throws IOException {
-		super(parent);
-		this.parent = parent;
-		try {
-			init();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		this(parent);
 		
 		setText(document.getAbsolutePath());
 		
 		this.document = document;
-		text.setText(loadDocument(document));
 		
-		// open();
+		String content = loadDocument(document);
+		text.setText(content);
 	}
 	
-	
+	/////
 	
 	private void init() {
 		setBounds(100, 100, 640, 480);
 		setLayout(new FillLayout());
-		text = new Text(this, SWT.WRAP | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL) {
-			@Override protected void checkSubclass() {}
-			@Override public void dispose() {
-				super.dispose();
-				System.out.println("Text disposed");
-			}
-		};
+		
+		text = new Text(this, SWT.WRAP | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
 		
 		font = new Font(getDisplay(), "Monospaced", 16, SWT.NONE);
 		text.setFont(font);
 		
-		setupMenu();
+		addListener(SWT.Dispose, (e) -> disposeResources());
+		
+		addListener(SWT.Close, (e) -> {
+			e.doit = false;
+			MessageBox mbox = new MessageBox(this, SWT.APPLICATION_MODAL | SWT.OK | SWT.CANCEL);
+			mbox.setText("Close Document?");
+			mbox.setMessage("Close document and discard changes?");
+			int choice = mbox.open();
+			e.doit = choice == SWT.OK;
+		});
 	}
 	
-	private void setupMenu() {
-
-		Menu menu = new Menu(this, SWT.BAR);
-
-//		parent.addMenuToBar(menu);
-		
-//		Menu fileMenu = parent.getFileMenu();
-//		MenuItem cascadeFileMenu = new MenuItem(menu, SWT.CASCADE);
-//		cascadeFileMenu.setText("File");
-//		cascadeFileMenu.setMenu(fileMenu);
-		
-		MenuItem cascadeWindowMenu = new MenuItem(menu, SWT.CASCADE);
-		cascadeWindowMenu.setText("Window");
-		
-		Menu windowMenu = new Menu(cascadeWindowMenu);
-		cascadeWindowMenu.setMenu(windowMenu);
-		
-		MenuItem testItem = new MenuItem(windowMenu, SWT.PUSH);
-		testItem.setText("Test");
-		testItem.setAccelerator(SWT.MOD1 | 'T');
-		
-		setMenuBar(menu);
-	}
-
 	private String loadDocument(File document) throws IOException {
 		StringBuilder builder = new StringBuilder();
 		try (BufferedReader br = new BufferedReader(new FileReader(document))) {
@@ -138,14 +99,13 @@ public class TextShell extends DocumentWindow {
 	}
 	
 	@Override public TextApplication getApplication() {
+		checkWidget();
 		return parent;
 	}
 	
 //==[ Resource Management ]=========================================================================
 	
-	@Override public void dispose() {
-		super.dispose();
-		text.dispose();
+	private void disposeResources() {
 		font.dispose();
 	}
 	

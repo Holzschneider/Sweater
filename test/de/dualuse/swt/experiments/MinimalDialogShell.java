@@ -1,18 +1,24 @@
 package de.dualuse.swt.experiments;
 
-
-import static org.eclipse.swt.SWT.*;
+import static org.eclipse.swt.SWT.BOLD;
+import static org.eclipse.swt.SWT.COLOR_TRANSPARENT;
+import static org.eclipse.swt.SWT.INHERIT_FORCE;
+import static org.eclipse.swt.SWT.MouseUp;
+import static org.eclipse.swt.SWT.NO_TRIM;
 
 import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Region;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 
-public class ShellCustomizationTest {
-
+public class MinimalDialogShell {
 	public static void main(String[] args) {
-		
+
 		Display dsp = new Display();
 		Shell sh = new Shell(dsp, NO_TRIM) {
 			Point down = null;
@@ -47,10 +53,11 @@ public class ShellCustomizationTest {
 			
 			{
 				setBackgroundMode(INHERIT_FORCE);
+				
 //				setBackground( new Color(dsp, new RGBA(0, 0, 255, 10)) );
 				setBackground( dsp.getSystemColor( COLOR_TRANSPARENT ) );
 				
-				System.out.println(dsp.getSystemColor( COLOR_TRANSPARENT ));
+				System.out.println("Transparent Color: " + dsp.getSystemColor( COLOR_TRANSPARENT ));
 //				setAlpha(140);
 				addDragDetectListener( this::drag );
 				addMouseMoveListener( this::move );
@@ -88,6 +95,7 @@ public class ShellCustomizationTest {
 
 			//e.gc.drawLine(0, -10, 1000, 100);
 			
+			/*
 			e.gc.setBackground(titleBar );
 			e.gc.fillRectangle(0, 0, sh.getSize().x, 32);
 			
@@ -96,6 +104,7 @@ public class ShellCustomizationTest {
 			e.gc.drawText("Tracer", 8, 8);
 			
 			e.gc.setForeground(titleBar);
+			*/
 //			e.gc.drawLine(0, 0, 1000, 1000);
 //			e.gc.drawRoundRectangle(0, 0, sh.getSize().x-1, sh.getSize().y-1, 5, 5);
 		});

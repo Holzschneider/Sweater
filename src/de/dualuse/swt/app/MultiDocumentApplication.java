@@ -8,8 +8,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.eclipse.swt.SWT;
 
 import org.eclipse.swt.widgets.FileDialog;
-import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.widgets.AutoShell;
@@ -17,126 +15,56 @@ import de.dualuse.swt.widgets.AutoShell;
 public abstract class MultiDocumentApplication extends Application {
 	
 	public interface ApplicationListener {
+		
 		void documentWindowCreated(DocumentWindow window);
 		void documentWindowClosed(DocumentWindow window);
+			// Recent Documents? -> use closed Listener
+		
+		// Document Saved?
+		
+		// Application Close Listener? (that can cancel the process)
 	}
 	
-	Shell activeWindow;
 	List<DocumentWindow> openDocuments = new ArrayList<DocumentWindow>();
 	List<File> recentDocuments = new ArrayList<File>();
-	
-	Menu fileMenu;
-	
-	Menu currentMenu;
-	Menu recentMenu;
-	
-	MenuItem openDocsItem;
-	MenuItem recentDocsItem; // XXX Implement Recent Items List
-	
-	MenuItem closeItem;
-	MenuItem closeAllItem;
-	
-//	Action newDocumentAction;
-//	Action openDocumentAction;
-//	
-//	Action closeDocumentAction;
-//	Action closeAllDocumentAction;
-//	
-//	List<Shell> openDocuments = new ArrayList<Shell>();
-//	List<File> recentDocuments = new ArrayList<File>();
 	
 //==[ Constructor ]=================================================================================
 	
 	public MultiDocumentApplication(String name, String version) {
 		super(name, version);
 		
-		setupMenu();
+		new DocumentMenu(this);
 	}
 	
 //==[ Getter ]======================================================================================
 	
 	public List<DocumentWindow> getOpenWindows() {
+		checkDevice();
 		return new ArrayList<DocumentWindow>(openDocuments);
 	}
 	
 	public List<File> getRecentDocuments() {
+		checkDevice();
 		return new ArrayList<File>(recentDocuments);
 	}
 	
-//==[ App Menu ]====================================================================================
+//==[ Application Actions ]=========================================================================
 	
-	private void setupMenu() {
-
-		new DocumentMenu(this);
-		// Menu menuBar = getMenuBar();
-		// addMenuToBar(menuBar);
+	// Create new document
+	public void createNewDocument() {
+		checkDevice();
 		
-	}
-	
-	public void addMenuToBar(Menu menuBar) {
-		
-		MenuItem cascadeFileMenu = new MenuItem(menuBar, SWT.CASCADE);
-		cascadeFileMenu.setText("&File");
-		
-		// Menu fileMenu = new Menu(menubar);
-		fileMenu = new Menu(cascadeFileMenu); // works as well
-		cascadeFileMenu.setMenu(fileMenu); // Only works for cascade items
-		
-		MenuItem newItem = new MenuItem(fileMenu, SWT.PUSH);
-		newItem.setText("New");
-		newItem.setAccelerator(SWT.MOD1 | 'N');
-		
-		MenuItem openItem = new MenuItem(fileMenu, SWT.PUSH);
-		openItem.setText("Open");
-		openItem.setAccelerator(SWT.MOD1 | 'O');
-		
-		new MenuItem(fileMenu, SWT.SEPARATOR);
-		
-		openDocsItem = new MenuItem(fileMenu, SWT.CASCADE);
-		openDocsItem.setEnabled(false);
-		openDocsItem.setText("Current");
-		
-		currentMenu = new Menu(openDocsItem);
-		openDocsItem.setMenu(currentMenu);
-		
-		recentDocsItem = new MenuItem(fileMenu, SWT.CASCADE);
-		recentDocsItem.setEnabled(false);
-		recentDocsItem.setText("Recent");
-		
-		recentMenu = new Menu(recentDocsItem);
-		recentDocsItem.setMenu(recentMenu);
-		
-		new MenuItem(fileMenu, SWT.SEPARATOR);
-		
-		closeItem = new MenuItem(fileMenu, SWT.PUSH);
-		closeItem.setText("Close");
-		closeItem.setEnabled(false);
-		closeItem.setAccelerator(SWT.MOD1 | 'W');
-		
-		closeAllItem = new MenuItem(fileMenu, SWT.PUSH);
-		closeAllItem.setText("Close All");
-		closeAllItem.setEnabled(false);
-		closeAllItem.setAccelerator(SWT.SHIFT | SWT.MOD1 | 'W');
-		
-		closeItem.addListener(SWT.Selection, (e) -> closeDocumentAction());
-		closeAllItem.addListener(SWT.Selection, (e) -> closeAllDocumentsAction());
-		newItem.addListener(SWT.Selection, (e) -> newDocumentAction());
-		openItem.addListener(SWT.Selection, (e) -> openDocumentAction());
-	}
-	
-	public Menu getFileMenu() {
-		return fileMenu;
-	}
-	
-//==[ Menu Actions ]================================================================================
-	
-	public void newDocumentAction() {
 		DocumentWindow newShell = newDocument();
-		addDocumentWindow(newShell);
+		// addDocumentWindow(newShell);
 		newShell.open();
+		
+		addDocumentWindow(newShell);
 	}
 	
-	public void openDocumentAction() {
+	// Open existing document
+	public void openDocument() {
+		checkDevice();
+		
 		try (AutoShell hiddenShell = new AutoShell()){
 			
 			FileDialog dialog = new FileDialog(hiddenShell);
@@ -146,111 +74,47 @@ public abstract class MultiDocumentApplication extends Application {
 			File chosenFile = new File(result);
 			
 			DocumentWindow openedShell = openDocument(chosenFile);
-			addDocumentWindow(openedShell);
+			// addDocumentWindow(openedShell);
 			openedShell.open();
+			
+			addDocumentWindow(openedShell);
 			
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 	}
-	
-	private void closeDocumentAction() {
-		if (activeWindow != null)
-			activeWindow.close();
+
+	// Close particular Document
+	// could override close request (default: just pass on to window)
+	public void closeDocument(DocumentWindow window) {
+		checkDevice();
+		
+		window.close();
 	}
 	
-	public void closeAllDocumentsAction() {
+	// Close all documents
+	public void closeAllDocuments() {
+		checkDevice();
 		
-		List<Shell> openShells = new ArrayList<Shell>();
-		for (int i=0, I=currentMenu.getItemCount(); i<I; i++) {
-			MenuItem item = currentMenu.getItem(i);
-			openShells.add((Shell)item.getData());
-		}
-		
-		for (Shell shell : openShells)
-			shell.close();
-		
+		for (DocumentWindow window : new ArrayList<>(openDocuments))
+			window.close();
 	}
 
 //==[ Update Current&Recent Menus ]=================================================================
 	
-	private void addDocumentWindow(final DocumentWindow documentWindow) {
-
-		MenuItem menuItem = new MenuItem(currentMenu, SWT.PUSH);
-		menuItem.setText(documentWindow.getText());
-		menuItem.setData(documentWindow);
-		menuItem.addListener(SWT.Selection, (e) -> {
-			if (documentWindow.getMinimized())
-				documentWindow.setMinimized(false);
-			documentWindow.forceFocus();
+	private void addDocumentWindow(final DocumentWindow window) {
+		// System.out.println("App: Window added");
+		openDocuments.add(window);
+		window.addListener(SWT.Dispose, (e) -> {
+			removeDocumentWindow(window);
 		});
-		
-		openDocsItem.setEnabled(true);
-		
-		documentWindow.addListener(SWT.Dispose, (e) -> {
-			
-			System.out.println("Disposed: " + documentWindow.getText());
-			
-			removeDocumentWindow(documentWindow);
-			if (activeWindow == documentWindow)
-				setActiveWindow(null);
-		});
-
-		documentWindow.addListener(SWT.Show, (e) -> {
-			System.out.println("Show: " + documentWindow.getText());
-		});
-		
-		documentWindow.addListener(SWT.Activate, (e) -> {
-			
-			System.out.println("Activate: " + documentWindow.getText());
-			
-			setActiveWindow(documentWindow);
-		});
-		
-		documentWindow.addListener(SWT.Deactivate, (e) -> {
-			
-			System.out.println("Deactivate:");
-			System.out.println("\t" + activeWindow);
-			System.out.println("\t" + documentWindow);
-			
-			if (activeWindow == documentWindow)
-				setActiveWindow(null);
-		});
-		
-		openDocuments.add(documentWindow);
-	}
-
-	private void removeDocumentWindow(final Shell documentWindow) {
-		
-		for (int i=0; i<currentMenu.getItemCount(); i++) {
-			MenuItem menuItem = currentMenu.getItem(i);
-			if (menuItem.getData() == documentWindow) {
-				menuItem.dispose();
-				break;
-			}
-		}
-		
-		if (currentMenu.getItemCount()==0)
-			openDocsItem.setEnabled(false);
-		
+		fireDocumentWindowCreated(window);
 	}
 	
-	/////
-	
-	private void setActiveWindow(Shell shell) {
-		
-		activeWindow = shell;
-		System.out.println("Active Window: " + (activeWindow!=null ? activeWindow.getText() : "null"));
-		
-		if (activeWindow==null && closeItem.isEnabled()) {
-			closeItem.setEnabled(false);
-			closeAllItem.setEnabled(false);
-			System.out.println("Close disabled");
-		} if (activeWindow!=null && !closeItem.isEnabled()) {
-			closeItem.setEnabled(true);
-			closeAllItem.setEnabled(true);
-			System.out.println("Close enabled");
-		}
+	private void removeDocumentWindow(final DocumentWindow window) {
+		// System.out.println("App: Window removed");
+		openDocuments.remove(window);
+		fireDocumentWindowClosed(window);
 	}
 	
 //==[ Application Listener ]========================================================================
@@ -258,10 +122,12 @@ public abstract class MultiDocumentApplication extends Application {
 	CopyOnWriteArrayList<ApplicationListener> listeners = new CopyOnWriteArrayList<ApplicationListener>();
 	
 	public void addApplicationListener(ApplicationListener listener) {
+		checkDevice();
 		listeners.add(listener);
 	}
 	
 	public void removeApplicationListener(ApplicationListener listener) {
+		checkDevice();
 		listeners.remove(listener);
 	}
 	

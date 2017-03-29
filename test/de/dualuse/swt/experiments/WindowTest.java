@@ -1,5 +1,7 @@
 package de.dualuse.swt.experiments;
 
+import static org.eclipse.swt.SWT.*;
+
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 
@@ -13,7 +15,7 @@ public class WindowTest extends Window {
 	@AutoMenuItem({"File", "Recents", SEPARATOR}) MenuItem bla;
 	
 	
-	@AutoMenuItem(value={"File","Recents","..."},  accelerator=ALT|FUNCTION|'4')
+	@AutoMenuItem(value={"File","Recents","..."},  accelerator=ALT|'4')
 	public void open() {
 		
 	}

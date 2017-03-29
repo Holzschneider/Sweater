@@ -61,11 +61,17 @@ public class Application extends Display implements AutoMenuBar {
 //==[ Event Loop ]==================================================================================
 	
 	public void loop() {
-		while (!isDisposed())
-			if (shouldSleep()) 
-				sleep();
+		checkDevice();
 		
-		onDisposed();
+		try {
+			
+			while (!isDisposed())
+				if (!readAndDispatch()) 
+					sleep();
+			
+		} finally {
+			onDisposed();
+		}
 	}
 
 	/**
@@ -74,23 +80,21 @@ public class Application extends Display implements AutoMenuBar {
 	 */
 	
 	public void loop(Shell applicationWindow) {
-		while (!applicationWindow.isDisposed())
-			if (shouldSleep())
-				sleep();
-	
-		dispose();
-		onDisposed();
+		checkDevice();
+		
+		try {
+		
+			while (!applicationWindow.isDisposed())
+				if (!readAndDispatch())
+					sleep();
+		
+			dispose();
+		
+		} finally {
+			onDisposed();
+		}
 	}
 	
-	// XXX readAndDispatch() throws NullPointerException or SWTException("Device is disposed") when 
-	//     application is terminated via the system menu, presents onDisposed() from being called
-	private boolean shouldSleep() {
-//		try {
-			return !readAndDispatch();
-//		} catch (Exception e) {
-//			return false;
-//		}
-	}
 
 //==[ Resource Management ]=========================================================================
 	
@@ -99,9 +103,9 @@ public class Application extends Display implements AutoMenuBar {
 //	public void addDisposedListener(DisposedListener dl); //need?
 //	public void loop(Shell... applicationWindow) //need?
 	
-////==[ Test-Main ]===================================================================================
-//	
-////	public static void main(String[] args) {
-////		
-////	}
+//==[ Test-Main ]===================================================================================
+	
+	public static void main_(String[] args) {
+		
+	}
 }
