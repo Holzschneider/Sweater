@@ -10,10 +10,21 @@ public class Window extends Shell implements AutoMenuBar {
 	//hier per Annotations gleich auch das per-Window-Menu definieren
 	
 	public Window() {
-		Menu menuBar = new Menu(this,BAR);
-//		build(this.getDisplay(), this.getDisplay().getMenuBar(), MenuScope.WINDOW); //!
-		build(this, menuBar , MenuScope.INHERIT, MenuScope.WINDOW); //!
-		setMenuBar(menuBar);
+		
+		setMenuBar(
+				new AutoMenuBuilder()
+				.add(this.getDisplay(), MenuScope.WINDOW)
+				.add(this, MenuScope.UNSPECIFIED, MenuScope.WINDOW)
+				.build(new Menu(this,BAR))
+		);
+
+//		setMenuBar(
+//				new AutoMenuBuilder()
+//				.add(this, MenuScope.INHERIT, MenuScope.WINDOW)
+//				.add(this.getDisplay(), MenuScope.WINDOW)
+//				.build(new Menu(this,BAR))
+//			);
+		
 	}
 	
 	@Override

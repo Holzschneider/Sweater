@@ -6,18 +6,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-interface Test {
-	static public final int bla = 10;
-}
 
 public interface AutoMenuBar {
 	static public final String SEPARATOR = "_";
-	
-	static public final int CTRL = 1<<31;
-	static public final int ALT = 1<<30;
-	static public final int SHIFT = 1<<29;
-	static public final int META = 1<<28;
-	static public final int FUNCTION = 1<<27;
 	
 	///
 	
@@ -35,29 +26,43 @@ public interface AutoMenuBar {
     static public final char RIGHT          = 0x27;
     static public final char DOWN           = 0x28;
 
-	
-    
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target({ElementType.FIELD})
 	static public @interface AutoMenu {
-		String[] value();
-		int rank() default 0;
-		int[] ranks() default 0;
-		boolean enabled() default true;
+		String[] value() default {};
+		String[] path() default {};
+		int[] rank() default {};
+		int[] index() default {};
+		boolean[] splitAfter() default {};
+		boolean[] splitBefore() default {};
+		boolean[] enabled() default {};
+		String[] icon() default {};
+		int[] systemIcon() default {};
 		MenuScope[] scope() default MenuScope.UNSPECIFIED;
 	}
 
 	@Target({ElementType.FIELD,ElementType.METHOD})
 	@Retention(RetentionPolicy.RUNTIME)
 	static public @interface AutoMenuItem {
-		String[] path();
-		int rank() default 0;
-		boolean split() default false;
-		int accelerator() default 0;
-		boolean check() default false;
-		String group() default "";
-		boolean enabled() default true;
-		String icon() default "";
+		String[] value() default {};
+		String[] path() default {};
+		int[] rank() default {};
+		int[] index() default {};
+		boolean[] splitAfter() default {};
+		boolean[] splitBefore() default {};
+		int[] accelerator() default {};
+		boolean[] checkbox() default {};
+		boolean[] checked() default {};
+		
+		/**
+		 * specifies whether checkbox menuitems shall behave as radio button group within a seperator stretch
+		 * <p />
+		 * @return true, false or {} for 'undefined'  
+		 */
+		boolean[] grouped() default {};
+		boolean[] enabled() default {};
+		String[] icon() default {};
+		int[] systemIcon() default {};
 		MenuScope[] scope() default MenuScope.UNSPECIFIED; 
 	}
 	

@@ -3,6 +3,8 @@ package de.dualuse.swt.experiments;
 import static org.eclipse.swt.SWT.*;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MenuEvent;
+import org.eclipse.swt.events.MenuListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
@@ -23,6 +25,14 @@ public class MenuTest {
 		{
 			System.out.println( dsp.getSystemMenu() );
 			dsp.getSystemMenu().getItems()[0].setText("About Menues");
+			
+//			MenuItem systemItem = new MenuItem(dsp.getSystemMenu(), PUSH,0);
+//			systemItem.setText("hallo");
+			dsp.getSystemMenu().getItems()[0].addListener(Selection, (e)->System.out.println("about!!!"));
+			dsp.getSystemMenu().getItems()[2].addListener(Selection, (e)->System.out.println("preferences!!!"));
+			
+			
+			
 			
 			Menu bar = dsp.getMenuBar();
 		
@@ -52,10 +62,11 @@ public class MenuTest {
 				Menu applicationMenu = new Menu(mi);
 //				Menu fileMenu = new Menu(sh1, DROP_DOWN);
 				mi.setMenu(applicationMenu);
-				MenuItem openItem = new MenuItem(applicationMenu, PUSH);
-				
+				MenuItem openItem = new MenuItem(applicationMenu, RADIO);
 				openItem.setText("open");
-				MenuItem closeItem = new MenuItem(applicationMenu, PUSH);
+				
+				
+				MenuItem closeItem = new MenuItem(applicationMenu, RADIO);
 				closeItem.setText("close");
 		
 				openItem.setAccelerator(SHIFT|'O');
@@ -95,14 +106,32 @@ public class MenuTest {
 		{
 			/// MENU
 			Menu m = new Menu(sh1, BAR);
+			
+			m.addListener(Selection, (e)-> System.out.println("hasdf"));
+			
+			
 //			Menu m = sh1.getMenuBar();
 			MenuItem mi = new MenuItem(m, CASCADE);
 			mi.setText("File");
+			
+			mi.addListener(Selection, (e)-> System.out.println("WTF"));
 			
 			Menu fileMenu = new Menu(m);
 //			Menu fileMenu = new Menu(sh1, DROP_DOWN);
 			mi.setMenu(fileMenu);
 			MenuItem openItem = new MenuItem(fileMenu, PUSH);
+			
+			fileMenu.addMenuListener(new MenuListener() {
+				@Override
+				public void menuShown(MenuEvent e) {
+					System.out.println("shown");
+				}
+				
+				@Override
+				public void menuHidden(MenuEvent e) {
+					System.out.println("hidden");					
+				}
+			});
 			
 			openItem.setText("open");
 			MenuItem closeItem = new MenuItem(fileMenu, PUSH);
