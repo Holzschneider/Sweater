@@ -4,13 +4,14 @@ import org.eclipse.swt.graphics.DeviceData;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
-import de.dualuse.swt.app.AutoMenuBar.MenuScope;
-
 public class Application extends Display implements AutoMenuBar {
 
 	//support for splash-windows / start-wizards
 	
 //==[ Constructor ]=================================================================================
+	public Application() {
+		this(deriveAppName());
+	}
 	
 	public Application(String title) {
 		super(setAppNameVersion(title));
@@ -18,6 +19,15 @@ public class Application extends Display implements AutoMenuBar {
 	
 	public Application(String title, String version) {
 		super(setAppNameVersion(title, version));
+	}
+	
+	private static String deriveAppName() {
+		StackTraceElement ste[] = new Throwable().getStackTrace();
+		String className = ste[ste.length-1].getClassName();
+		String simpleName = className.replaceAll("^.+\\.", "");
+		String appName = simpleName.replaceAll("((\\p{javaLowerCase})(\\p{javaUpperCase}))", "$2 $3");
+		
+		return appName;
 	}
 	
 	// setAppName() and setAppVersion must be called before Display() Object is intialized
@@ -38,8 +48,8 @@ public class Application extends Display implements AutoMenuBar {
 //==[ Build Application Menu ]======================================================================
 	
 	{
-		build(this, this.getMenuBar(), MenuScope.INHERIT, MenuScope.APPLICATION);
-		build(this, this.getSystemMenu(), MenuScope.SYSTEM);
+//		build(this, this.getMenuBar(), MenuScope.INHERIT, MenuScope.APPLICATION);
+//		build(this, this.getSystemMenu(), MenuScope.SYSTEM);
 	}
 
 //==[ Event Loop ]==================================================================================
