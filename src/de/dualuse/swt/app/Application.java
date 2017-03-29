@@ -2,6 +2,7 @@ package de.dualuse.swt.app;
 
 import org.eclipse.swt.graphics.DeviceData;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Shell;
 
 public class Application extends Display implements AutoMenuBar {
@@ -47,10 +48,15 @@ public class Application extends Display implements AutoMenuBar {
 	
 //==[ Build Application Menu ]======================================================================
 	
-	{
-//		build(this, this.getMenuBar(), MenuScope.INHERIT, MenuScope.APPLICATION);
-//		build(this, this.getSystemMenu(), MenuScope.SYSTEM);
-	}
+	final public Menu applicationMenu =	new AutoMenuBuilder()
+									.add(this, MenuScope.UNSPECIFIED, MenuScope.APPLICATION)
+									.build(this.getMenuBar());
+	
+	final public Menu systemMenu = new AutoMenuBuilder()
+									.add(this, MenuScope.SYSTEM)
+									.build(this.getSystemMenu());
+			
+	
 
 //==[ Event Loop ]==================================================================================
 	
@@ -79,11 +85,11 @@ public class Application extends Display implements AutoMenuBar {
 	// XXX readAndDispatch() throws NullPointerException or SWTException("Device is disposed") when 
 	//     application is terminated via the system menu, presents onDisposed() from being called
 	private boolean shouldSleep() {
-		try {
+//		try {
 			return !readAndDispatch();
-		} catch (Exception e) {
-			return false;
-		}
+//		} catch (Exception e) {
+//			return false;
+//		}
 	}
 
 //==[ Resource Management ]=========================================================================
@@ -93,9 +99,9 @@ public class Application extends Display implements AutoMenuBar {
 //	public void addDisposedListener(DisposedListener dl); //need?
 //	public void loop(Shell... applicationWindow) //need?
 	
-//==[ Test-Main ]===================================================================================
-	
-	public static void main(String[] args) {
-		
-	}
+////==[ Test-Main ]===================================================================================
+//	
+////	public static void main(String[] args) {
+////		
+////	}
 }
