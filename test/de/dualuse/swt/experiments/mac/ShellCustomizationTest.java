@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments;
+package de.dualuse.swt.experiments.mac;
 
 
 import static org.eclipse.swt.SWT.*;

@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments;
+package de.dualuse.swt.experiments.mac;
 
 import org.eclipse.swt.internal.cocoa.NSBitmapImageRep;
 import org.eclipse.swt.internal.cocoa.NSObject;
