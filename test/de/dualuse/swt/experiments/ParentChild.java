@@ -1,6 +1,12 @@
 package de.dualuse.swt.experiments;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseMoveListener;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.events.ShellListener;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
@@ -36,8 +42,9 @@ public class ParentChild {
 			@Override public void run(SWTTimer source) {
 				
 				// if (i%10 == 0) System.out.println(i);
+				System.out.println(sub.getAlpha());
 				
-				sub.setAlpha(i);
+				sub.setAlpha(i); // not supported on Linux
 				
 				if (i==255) {
 					System.out.println("Faded in (" + sub.getAlpha() + ")");
@@ -48,8 +55,29 @@ public class ParentChild {
 				i += 17;
 			}
 		});
+		
 		sub.addListener(SWT.Activate, (e) -> {
 			timer.start();
+		});
+		
+		parent.addControlListener(new ControlListener() {
+
+			// only called on mouseReleased (not while dragging the window around)
+			@Override public void controlMoved(ControlEvent e) {
+				System.out.println("Parent moved");
+			}
+
+			@Override public void controlResized(ControlEvent e) {
+				System.out.println("Parent resized");
+			}
+		
+		});
+		
+		// Doesn't get mouse events due to SWT.PRIMARY_MODAL dialog
+		parent.addMouseMoveListener(new MouseMoveListener() {
+			@Override public void mouseMove(MouseEvent e) {
+				System.out.println("mouse moved");
+			}
 		});
 		
 		Display dsp = parent.getDisplay();
