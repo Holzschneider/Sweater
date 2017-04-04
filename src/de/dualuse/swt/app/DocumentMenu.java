@@ -38,7 +38,7 @@ public class DocumentMenu extends Menu {
 	
 //==[ Constructor ]=================================================================================
 	
-	// Application Menu
+	// Application Menu (OS X only, requires an application menu independent of a window/shell)
 	public DocumentMenu(MultiDocumentApplication application) {
 		super(application.getMenuBar());
 		// super(window.getMenu());

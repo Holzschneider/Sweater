@@ -19,7 +19,13 @@ public class TextApplication extends MultiDocumentApplication {
 	}
 	
 //==[ Document Handling Implementations for Parent Class ]==========================================
-	
+
+	@Override protected DocumentWindow emptyWindow() {
+		TextShell shell = new TextShell(this);
+		shell.setText("TextApp");
+		return shell;
+	}
+
 	@Override protected DocumentWindow newDocument() {
 		TextShell shell = new TextShell(this);
 		shell.setText("New Document");

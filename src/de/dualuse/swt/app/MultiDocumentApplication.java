@@ -33,7 +33,18 @@ public abstract class MultiDocumentApplication extends Application {
 	public MultiDocumentApplication(String name, String version) {
 		super(name, version);
 		
-		new DocumentMenu(this);
+		if (this.getMenuBar() == null) {
+			
+			// Systems without application menu bar (Windows, Linux depending on WM)
+			DocumentWindow emptyWindow = emptyWindow();
+			emptyWindow.open();
+			
+		} else {
+			
+			// Systems that support an application bar (OS X)
+			new DocumentMenu(this);
+			
+		}
 	}
 	
 //==[ Getter ]======================================================================================
@@ -143,7 +154,13 @@ public abstract class MultiDocumentApplication extends Application {
 	
 //==[ Document Handling ]===========================================================================
 	
+	// Window that displays the application menu on systems that don't support appliation menus independent of windows
+	protected abstract DocumentWindow emptyWindow();
+	
+	// Create window for new document
 	protected abstract DocumentWindow newDocument();
+	
+	// Create window for existing document and load it
 	protected abstract DocumentWindow openDocument(File document);
 
 //==[ Test-Main ]===================================================================================
@@ -152,6 +169,10 @@ public abstract class MultiDocumentApplication extends Application {
 
 		MultiDocumentApplication app = new MultiDocumentApplication("Example Application", "v1.1.45") {
 
+			@Override protected DocumentWindow emptyWindow() {
+				return null;
+			}
+			
 			@Override protected DocumentWindow newDocument() {
 				return null;
 			}

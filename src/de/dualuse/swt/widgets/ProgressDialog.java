@@ -4,9 +4,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -80,23 +85,60 @@ public class ProgressDialog<E> extends Dialog {
 		Shell shell = new Shell(parent, SWT.TITLE | SWT.BORDER | SWT.APPLICATION_MODAL); // mac: BORDER no effect, TITLE includes border, Windows?
 		shell.setText(getText());
 		
-		FillLayout layout = new FillLayout(SWT.VERTICAL);
-		layout.marginWidth = 8;
-		layout.marginHeight = 8;
-		layout.spacing = 0;
-		shell.setLayout(layout);
+//		FillLayout shellLayout = new FillLayout(SWT.VERTICAL);
+//		shellLayout.marginWidth = 8;
+//		shellLayout.marginHeight = 8;
+//		shellLayout.spacing = 0;
+//		shell.setLayout(shellLayout);
+		
+		GridLayout shellLayout = new GridLayout();
+		shellLayout.marginWidth = 8;
+		shellLayout.marginHeight = 8;
+		shellLayout.horizontalSpacing = 8;
+		shellLayout.numColumns = 1;
+		shell.setLayout(shellLayout);
 		
 		Container progressPane = new Container(shell, SWT.NONE);
-		progressPane.setLayout(new FillLayout(SWT.VERTICAL));
+		// progressPane.setLayout(new FillLayout(SWT.VERTICAL));
+		// progressPane.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY)); // visual layout debug marker 
 		
-		Container buttonPane = new Container(shell, SWT.NONE);
-
+		GridData progressPaneData = new GridData();
+		progressPaneData.horizontalAlignment = GridData.FILL;
+		progressPaneData.grabExcessHorizontalSpace = true;
+		progressPane.setLayoutData(progressPaneData);
+		
+		
+		GridLayout containerLayout = new GridLayout();
+		containerLayout.marginWidth = 8;
+		containerLayout.marginHeight = 8;
+		containerLayout.numColumns = 2;
+		progressPane.setLayout(containerLayout);
+		
+		Container buttonPane = new Container(shell, SWT.NONE | SWT.RIGHT_TO_LEFT); // right_to_left for RowLayout alignment
+		// Container buttonPane = new Container(progressPane, SWT.NONE);
+		// buttonPane.setBackground(Display.getCurrent().getSystemColor(SWT.COLOR_DARK_RED)); // visual layout debug marker 
+		
+		GridData buttonPaneData = new GridData();
+		buttonPaneData.horizontalAlignment = GridData.END;
+		buttonPane.setLayoutData(buttonPaneData);
+		
+		final Button logButton = new Button(buttonPane, SWT.NONE);
+		logButton.setText("Log");
+		
+		Image image = new Image(Display.getCurrent(), ProgressDialog.class.getResourceAsStream("right_sm.png"));
+		logButton.setImage(image);
+		shell.addListener(SWT.Dispose, (e) -> image.dispose());
+		
 		final Button cancelButton = new Button(buttonPane, SWT.NONE);
 		cancelButton.setText("Cancel");
 		
 		final Button pauseButton = new Button(buttonPane, SWT.NONE);
 		pauseButton.setText("Pause");
 		
+		RowLayout buttonPaneLayout = new RowLayout(); // if expandable log messages: this should probably be a grid layout as well, first column left aligned, second column right aligned
+		buttonPane.setLayout(buttonPaneLayout);
+		
+		/*
 		buttonPane.setLayout(new Layout() {
 			int margin = 4;
 			@Override protected Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache) {
@@ -104,19 +146,26 @@ public class ProgressDialog<E> extends Dialog {
 				pauseButton.pack();
 				Rectangle cancelBounds = cancelButton.getBounds();
 				Rectangle pauseBounds = pauseButton.getBounds();
-				int width = 3*margin + cancelBounds.width + pauseBounds.width;
+				int width = 3 * margin + cancelBounds.width + pauseBounds.width;
 				int height = 2 * margin + Math.max(cancelBounds.height, pauseBounds.height);
 				return new Point(width, height);
 			}
 
 			@Override protected void layout(Composite composite, boolean flushCache) {
 				cancelButton.pack();
-				cancelButton.setLocation(composite.getBounds().width - margin - cancelButton.getBounds().width, 0);
+				cancelButton.setLocation(
+					composite.getBounds().width - margin - cancelButton.getBounds().width,
+					0
+				);
 				
 				pauseButton.pack();
-				pauseButton.setLocation(cancelButton.getLocation().x - margin - pauseButton.getBounds().width, 0);
+				pauseButton.setLocation(
+					cancelButton.getLocation().x - margin - pauseButton.getBounds().width,
+					0
+				);
 			}
 		});
+		*/
 
 		TaskProgressHandler handler = new TaskProgressHandler(shell, progressPane);
 		Thread t = new Thread(new Runnable() {
@@ -215,7 +264,8 @@ public class ProgressDialog<E> extends Dialog {
 
 	class ProgressController implements Progress {
 		
-		Label label;
+		Label progressTitle;
+		Label progressValue;
 		ProgressBar progressBar;
 		
 		Composite parent;
@@ -232,32 +282,54 @@ public class ProgressDialog<E> extends Dialog {
 		public ProgressController(Composite parent, int style) {
 			this.parent = parent;
 			dsp = Display.getCurrent();
-			label = new Label(parent, SWT.NONE);
-			progressBar = new ProgressBarLabeled(parent, style);
+			
+			progressTitle = new Label(parent, SWT.NONE);
+			progressTitle.setText("Progress");
+			GridData titleData = new GridData();
+			titleData.horizontalAlignment = GridData.BEGINNING;
+			titleData.grabExcessHorizontalSpace = true;
+			progressTitle.setLayoutData(titleData);
+			
+			progressValue = new Label(parent, SWT.NONE);
+			progressValue.setText("0%");
+			GridData valueData = new GridData();
+			valueData.horizontalAlignment = GridData.END;
+			progressValue.setLayoutData(valueData);
+			
+			progressBar = new ProgressBar(parent, style);
+			GridData progressData = new GridData();
+			progressData.horizontalAlignment = GridData.FILL;
+			progressData.horizontalSpan = 2;
+			progressData.grabExcessHorizontalSpace = true;
+			progressBar.setLayoutData(progressData);
+			
 		}
 		
 		@Override public Progress setLabel(String text) {
-			async(() -> label.setText(text));
+			async(() -> {
+				progressTitle.setText(text);
+				progressTitle.pack();
+			});
 			return this;
 		}
 		
 		@Override public Progress setValues(int min, int max, int current) {
-			async(() -> setValues());
+			async(() -> updateValues(min, max, current));
 			return this;
 		}
 		
 		@Override public Progress setMin(int min) {
-			async(() -> progressBar.setMinimum(this.min = min));
+			async(() -> updateMin(min));
 			return this;
 		}
 		
 		@Override public Progress setMax(int max) {
-			async(() -> progressBar.setMaximum(this.max = max));
+			async(() -> updateMax(max));
 			return this;
 		}
 		
 		@Override public Progress setValue(int current) {
-			async(() -> progressBar.setSelection(this.current = current));
+			async(() -> updateCurrent(current));
 			return this;
 		}
 		
@@ -267,8 +339,8 @@ public class ProgressDialog<E> extends Dialog {
 				
 				updateStyle(progressBar.getStyle() | SWT.INDETERMINATE);
 				
-				progressBar.pack();
-				setValues();
+				progressBar.pack(); // XXX parent.layout() necessary? -> test
+				updateValues();
 			});
 			return this;
 		}
@@ -280,7 +352,7 @@ public class ProgressDialog<E> extends Dialog {
 				updateStyle(progressBar.getStyle() ^ SWT.INDETERMINATE);
 				
 				progressBar.pack();
-				setValues();
+				updateValues();
 			});
 			return this;
 		}
@@ -288,7 +360,7 @@ public class ProgressDialog<E> extends Dialog {
 		@Override public void dispose() {
 			disposed = true;
 			async(() -> {
-				label.dispose();
+				progressTitle.dispose();
 				progressBar.dispose();
 			});
 		}
@@ -296,16 +368,36 @@ public class ProgressDialog<E> extends Dialog {
 		private void async(Runnable callback) {
 			if (disposed) throw new SWTException(SWT.ERROR_WIDGET_DISPOSED);
 			dsp.asyncExec(() -> {
-				if (label.isDisposed() || progressBar.isDisposed())
+				if (progressTitle.isDisposed() || progressBar.isDisposed())
 					return;
 				callback.run();
 			});
 		}
 		
-		private void setValues() {
-			progressBar.setMinimum(min);
-			progressBar.setMaximum(max);
-			progressBar.setSelection(current);
+		private void updateMin(int min) {
+			progressBar.setMinimum(this.min = min);
+			updateLabel();
+		}
+		
+		private void updateMax(int max) {
+			progressBar.setMaximum(this.max = max);
+			updateLabel();
+		}
+		
+		private void updateCurrent(int current) {
+			progressBar.setSelection(this.current = current);
+			updateLabel();
+		}
+		
+		private void updateValues(int min, int max, int current) {
+			progressBar.setMinimum(this.min = min);
+			progressBar.setMaximum(this.max = max);
+			progressBar.setSelection(this.current = current);
+			updateLabel();
+		}
+		
+		private void updateValues() {
+			updateValues(this.min, this.max, this.current);
 		}
 		
 		private void updateStyle(int newStyle) {
@@ -327,6 +419,12 @@ public class ProgressDialog<E> extends Dialog {
 			// Create and position new replacment ProgressBar
 			progressBar = new ProgressBar(parent, SWT.NONE);
 			progressBar.moveAbove(parent.getChildren()[index]);
+		}
+		
+		private void updateLabel() {
+			double percentage = current*100.0/max;
+			progressValue.setText((int)percentage + " %");
+			parent.layout();
 		}
 	}
 
