@@ -86,6 +86,7 @@ public abstract class MultiDocumentApplication extends Application {
 			
 			DocumentWindow openedShell = openDocument(chosenFile);
 			// addDocumentWindow(openedShell);
+			
 			openedShell.open();
 			
 			addDocumentWindow(openedShell);

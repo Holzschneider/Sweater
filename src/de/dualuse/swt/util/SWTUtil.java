@@ -7,6 +7,7 @@ import org.eclipse.swt.events.ShellListener;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
@@ -124,6 +125,27 @@ public class SWTUtil {
 		}
 		
 		return monitor.getBounds();
+	}
+
+//==[ Pack Widget in only one dimension ]===========================================================
+	
+	public static void packWidth(Control control) {
+		Point prefSize = control.computeSize (SWT.DEFAULT, SWT.DEFAULT, true);
+		Point currSize = control.getSize();
+		control.setSize(prefSize.x, currSize.y);
+	}
+	
+	public static void packHeight(Control control) {
+		Point prefSize = control.computeSize (SWT.DEFAULT, SWT.DEFAULT, true);
+		Point currSize = control.getSize();
+		control.setSize(currSize.x, prefSize.y);
+	}
+	
+	public static void pack(Control control, int minWidth, int minHeight) {
+		Point prefSize = control.computeSize (SWT.DEFAULT, SWT.DEFAULT, true);
+		if (prefSize.x < minWidth) prefSize.x = minWidth;
+		if (prefSize.y < minHeight) prefSize.y = minHeight;
+		control.setSize(prefSize.x, prefSize.y);
 	}
 	
 //==[ Automatically Dispose App on Shell Exit ]=====================================================

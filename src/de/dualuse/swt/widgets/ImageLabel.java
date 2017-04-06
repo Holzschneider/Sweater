@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.net.URL;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -19,6 +21,7 @@ public class ImageLabel extends Composite {
 	Image image;
 	Label imageLabel;
 	Label textLabel;
+	int alignment = SWT.TOP;
 	
 //==[ Constructor ]=================================================================================
 	
@@ -28,7 +31,7 @@ public class ImageLabel extends Composite {
 		// Children
 		imageLabel = new Label(this, SWT.NONE);
 		textLabel = new Label(this, SWT.WRAP);
-
+		
 		// Layout
 		LayoutDelegate layout = new LayoutDelegate();
 		layout.layout((composite, flushCache) -> layoutChildren());
@@ -41,6 +44,7 @@ public class ImageLabel extends Composite {
 //==[ Setter ]======================================================================================
 	
 	public void setImage(URL url) {
+		checkWidget();
 		try {
 			Image newImage = new Image(Display.getCurrent(), url.openConnection().getInputStream());
 			
@@ -55,7 +59,15 @@ public class ImageLabel extends Composite {
 	}
 	
 	public void setText(String text) {
+		checkWidget();
 		textLabel.setText(text);
+	}
+	
+	public void setVerticalAlignment(int alignment) {
+		checkWidget();
+		if (alignment!=SWT.TOP && alignment!=SWT.CENTER && alignment!=SWT.BOTTOM)
+			throw new SWTException(SWT.ERROR_INVALID_ARGUMENT);
+		this.alignment = alignment;
 	}
 	
 //==[ Layout ]======================================================================================
@@ -72,8 +84,36 @@ public class ImageLabel extends Composite {
 		}
 		Rectangle imageBounds = imageLabel.getBounds();
 		
-		textLabel.setLocation(imageBounds.width, 0);
-		textLabel.setSize(bounds.width - imageBounds.width, bounds.height);
+		Point hints = new Point(bounds.x - imageLabel.getSize().x, bounds.y);
+		System.out.println("Hints: " + hints);
+		
+		Point textSize = textLabel.computeSize(bounds.x - imageLabel.getSize().x, bounds.y);
+		System.out.println("TextSize: " + textSize);
+		
+		textLabel.setSize(textSize.x, textSize.y);
+		
+		if (alignment == SWT.TOP) {
+			System.out.println("Top Alignment");
+			textLabel.setLocation(imageBounds.width, 0);
+		} else if (alignment == SWT.CENTER) {
+			System.out.println("Center Alignment");
+			textLabel.setLocation(imageBounds.width, (bounds.y - textSize.y)/2);
+		} else if (alignment == SWT.BOTTOM) {
+			System.out.println("Bottom Alignment");
+			textLabel.setLocation(imageBounds.width, bounds.y - textSize.y);
+		}		
+		// textLabel.setSize(bounds.width - imageBounds.width, bounds.height - textLabel.getLocation().y);
+	}
+	
+	@Override public Point computeSize(int wHint, int hHint, boolean changed) {
+		Point imageSize = imageLabel.computeSize(SWT.DEFAULT, hHint, changed);
+		
+		if (wHint != SWT.DEFAULT)
+			wHint = Math.max(0, wHint - imageSize.x);
+		
+		Point labelSize = textLabel.computeSize(wHint, hHint, changed);
+		Point result = new Point(imageSize.x + labelSize.x, Math.max(imageSize.y, labelSize.y));
+		return result;
 	}
 	
 //==[ Test-Main ]===================================================================================
