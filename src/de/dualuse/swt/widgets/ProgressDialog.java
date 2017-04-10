@@ -1,16 +1,13 @@
 package de.dualuse.swt.widgets;
 
-import java.io.IOException;
-import java.net.URL;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Dialog;
@@ -39,6 +36,9 @@ public class ProgressDialog<E> extends Dialog {
 	
 	RuntimeException exception;
 	E result;
+
+	boolean cancellable = true;
+	boolean pausable = true;
 	
 //==[ Interfaces ]==================================================================================
 
@@ -81,6 +81,16 @@ public class ProgressDialog<E> extends Dialog {
 		this.parent = parent;
 	}
 	
+//==[ Dialog Configuration/Setup ]==================================================================
+	
+	public void setCancellable(boolean cancellable) {
+		this.cancellable = cancellable;
+	}
+	
+	public void setPausable(boolean pausable) {
+		this.pausable = pausable;
+	}
+	
 //==[ Create Dialog and Return Value ]==============================================================
 	
 	public E open(Task<E> task) {
@@ -102,9 +112,11 @@ public class ProgressDialog<E> extends Dialog {
 		////////// Initial Image / Description
 		
 		ImageLabel label = new ImageLabel(shell, SWT.WRAP);
+		label.setVerticalAlignment(SWT.CENTER);
 		label.setImage(ProgressDialog.class.getResource("logo.png"));
 		label.setText("Loading Document...");
-		label.setVerticalAlignment(SWT.CENTER);
+		label.setBackground(dsp.getSystemColor(SWT.COLOR_DARK_YELLOW));
+		// label.setVerticalAlignment(SWT.CENTER);
 
 		GridData labelData = new GridData(SWT.FILL, SWT.FILL, true, false);
 		labelData.widthHint = 492;
@@ -147,34 +159,40 @@ public class ProgressDialog<E> extends Dialog {
 		
 		final Button cancelButton = new Button(buttonPane, SWT.NONE);
 		cancelButton.setText(CANCEL_LABEL);
+		cancelButton.setEnabled(cancellable);
 		
 		final Button pauseButton = new Button(buttonPane, SWT.NONE);
 		pauseButton.setText(PAUSE_LABEL);
+		pauseButton.setEnabled(pausable);
 		
 		GridData logButtonData = new GridData();
 		logButtonData.horizontalAlignment = GridData.BEGINNING;
 		logButtonData.grabExcessHorizontalSpace = true;
 		logButton.setLayoutData(logButtonData);
-		
-		cancelButton.addListener(SWT.Selection, (e) -> task.cancel());
-		shell.addListener(SWT.Dispose, (e) -> task.cancel());
-		
-		pauseButton.addListener(SWT.Selection, new Listener() {
-			boolean paused = false;
-			@Override public void handleEvent(Event event) {
-				if (paused) {
-					paused = false;
-					pauseButton.setText(PAUSE_LABEL);
-					buttonPane.layout();
-					task.resume();
-				} else {
-					paused = true;
-					pauseButton.setText(RESUME_LABEL);
-					buttonPane.layout();
-					task.pause();
-				}
-			}		
-		});
+
+		if (cancellable) {
+			cancelButton.addListener(SWT.Selection, (e) -> task.cancel());
+			shell.addListener(SWT.Dispose, (e) -> task.cancel()); // XXX make sure cancel() being called after the progress is actually completed doesn't cause problems
+		}
+
+		if (pausable) {
+			pauseButton.addListener(SWT.Selection, new Listener() {
+				boolean paused = false;
+				@Override public void handleEvent(Event event) {
+					if (paused) {
+						paused = false;
+						pauseButton.setText(PAUSE_LABEL);
+						buttonPane.layout();
+						task.resume();
+					} else {
+						paused = true;
+						pauseButton.setText(RESUME_LABEL);
+						buttonPane.layout();
+						task.pause();
+					}
+				}		
+			});
+		}
 		
 		logButton.addListener(SWT.Selection, new Listener() {
 			boolean shown = false;
@@ -206,6 +224,7 @@ public class ProgressDialog<E> extends Dialog {
 					logArea.setLayoutData(textData);
 					
 					logArea.setText(logText.toString());
+					logArea.getVerticalBar().setSelection(logArea.getVerticalBar().getMaximum());
 					
 					logButton.setImage(logButtonImageOpen);
 					
@@ -227,8 +246,6 @@ public class ProgressDialog<E> extends Dialog {
 			}
 		});
 		t.start();
-		
-		shell.open();
 		
 		while(!shell.isDisposed()) {
 			if (!dsp.readAndDispatch())
@@ -307,10 +324,14 @@ public class ProgressDialog<E> extends Dialog {
 				
 				resultFuture.put(new ProgressController(parent, style));
 				
-				shell.pack();
-				Rectangle bounds = shell.getBounds();
-				if (bounds.width < DIALOG_WIDTH)
-					shell.setSize(DIALOG_WIDTH, bounds.height);
+				// shell.pack(); // implementation of pack: setSize(computeSize(SWT.DEFAULT, SWT.DEFAULT, true))
+				Point prefSize = shell.computeSize(DIALOG_WIDTH, SWT.DEFAULT, true); // DIALOG_WIDTH, SWT.DEFAULT, true);
+				shell.setSize(prefSize);
+				
+//				Rectangle bounds = shell.getBounds();
+//				if (bounds.width < DIALOG_WIDTH)
+//					shell.setSize(DIALOG_WIDTH, bounds.height);
+				// XXX different width causes different height due to label being higher if its width is shorter?
 				
 				SWTUtil.center(shell.getParent(), shell, 0.5, 0.32);
 				
@@ -458,14 +479,14 @@ public class ProgressDialog<E> extends Dialog {
 				
 				if ((progressBar.getStyle() & SWT.INDETERMINATE) == 0) return;
 				updateStyle(progressBar.getStyle() ^ SWT.INDETERMINATE);
-				parent.layout();
+				// parent.layout();
 				updateValues();
 				
 			} else {
 				
 				if ((progressBar.getStyle() & SWT.INDETERMINATE) == SWT.INDETERMINATE) return;
 				updateStyle(progressBar.getStyle() | SWT.INDETERMINATE);
-				parent.layout();
+				// parent.layout();
 				
 			}
 
@@ -501,6 +522,9 @@ public class ProgressDialog<E> extends Dialog {
 			
 			// Move to previous position
 			progressBar.moveAbove(parent.getChildren()[index]);
+			
+			// Request layout
+			progressBar.requestLayout();
 		}
 		
 		private void updateLabel() {
@@ -520,6 +544,15 @@ public class ProgressDialog<E> extends Dialog {
 		
 		boolean shouldSleep;
 		boolean shouldCancel;
+		
+		Thread thread;
+		
+		@Override public void execute(TaskProgress<E> tp) {
+			thread = Thread.currentThread();
+			run(tp);
+		}
+		
+		public abstract void run(TaskProgress<E> tp);
 		
 		///// Called from Subclass/Worker Thread
 		
@@ -555,6 +588,7 @@ public class ProgressDialog<E> extends Dialog {
 		synchronized @Override public void cancel() {
 			shouldCancel = true;
 			notifyAll();
+			thread.interrupt();
 		}
 	}
 	

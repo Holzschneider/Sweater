@@ -5,6 +5,17 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Layout;
 
 public class LayoutDelegate extends Layout {
+
+	private Point size = new Point(0,0);
+	
+	private ComputeSizeFunction computeSize = this::computeSize;
+	private ComputeSizeFunction computeSizeHandler = computeSize;
+	
+	private LayoutFunction layout = this::layout;
+	private LayoutFunction layoutHandler = layout;
+	
+//==[ Delegate Interfaces ]=========================================================================
+	
 	public static interface ComputeSizeFunction {
 		public Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache);
 	}
@@ -13,37 +24,40 @@ public class LayoutDelegate extends Layout {
 		public void layout(Composite composite, boolean flushCache);
 	}
 	
-	private Point size = new Point(0,0);
-	private ComputeSizeFunction computeSize = this::computeSize, computeSizeHandler = computeSize;
-	private LayoutFunction layout = this::layout, layoutHandler = layout;
+//==[ Constructors ]================================================================================
 	
-	public LayoutDelegate() {}
-	public LayoutDelegate(Point precomputedSize) { size = precomputedSize; }
+	public LayoutDelegate() {
+		
+	}
 	
-	@Override
-	protected Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache) {
+	public LayoutDelegate(Point precomputedSize) {
+		size = precomputedSize;
+	}
+	
+//==[ Fluent Interface ]============================================================================
+	
+	public LayoutDelegate computeSize(ComputeSizeFunction sizeComputer) { 
+		this.computeSizeHandler = sizeComputer; 
+		return this; 
+	}
+	
+	public LayoutDelegate layout(LayoutFunction layouter) { 
+		this.layoutHandler = layouter; 
+		return this; 
+	}
+	
+//==[ Layout Implementation ]=======================================================================
+	
+	@Override protected Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache) {
 		if (computeSizeHandler!=computeSize)
 			return computeSizeHandler.computeSize(composite, wHint, hHint, flushCache);
 		else 
 			return size;
 	}
 	
-	public LayoutDelegate computeSize(ComputeSizeFunction sizeComputer) { 
-		this.computeSizeHandler = sizeComputer; 
-		return this; 
-	}
-
-	
-	
-	@Override
-	protected void layout(Composite composite, boolean flushCache) {
+	@Override protected void layout(Composite composite, boolean flushCache) {
 		if (layout!=layoutHandler)
 			layoutHandler.layout(composite, flushCache); 
-	}
-	
-	public LayoutDelegate layout(LayoutFunction layouter) { 
-		this.layoutHandler = layouter; 
-		return this; 
 	}
 
 	

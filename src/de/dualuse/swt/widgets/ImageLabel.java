@@ -15,10 +15,13 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.events.LayoutDelegate;
+import de.dualuse.swt.layout.BorderLayout;
+import de.dualuse.swt.layout.CenterLayout;
 
 public class ImageLabel extends Composite {
 		
 	Image image;
+	Composite textPanel;
 	Label imageLabel;
 	Label textLabel;
 	int alignment = SWT.TOP;
@@ -27,15 +30,18 @@ public class ImageLabel extends Composite {
 	
 	public ImageLabel(Composite parent, int style) {
 		super(parent, style);
-
+		
+		setLayout(new BorderLayout());
+		
 		// Children
 		imageLabel = new Label(this, SWT.NONE);
-		textLabel = new Label(this, SWT.WRAP);
+		imageLabel.setLayoutData(BorderLayout.WEST);
 		
-		// Layout
-		LayoutDelegate layout = new LayoutDelegate();
-		layout.layout((composite, flushCache) -> layoutChildren());
-		setLayout(layout);
+		textPanel = new Composite(this, SWT.NONE);
+		textPanel.setLayout(new CenterLayout(SWT.FILL, SWT.CENTER));
+		textPanel.setLayoutData(BorderLayout.CENTER);
+		
+		textLabel = new Label(textPanel, SWT.WRAP);
 		
 		// Resources
 		addListener(SWT.Dispose, (e) -> { if (image!=null) image.dispose(); });
@@ -66,13 +72,17 @@ public class ImageLabel extends Composite {
 	public void setVerticalAlignment(int alignment) {
 		checkWidget();
 		if (alignment!=SWT.TOP && alignment!=SWT.CENTER && alignment!=SWT.BOTTOM)
-			throw new SWTException(SWT.ERROR_INVALID_ARGUMENT);
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		this.alignment = alignment;
+		textPanel.requestLayout();
 	}
 	
 //==[ Layout ]======================================================================================
 	
+	/*
 	private void layoutChildren() {
+		System.out.println("layoutChildren()");
+		
 		Rectangle bounds = getBounds();
 		
 		if (image!=null) {
@@ -106,19 +116,24 @@ public class ImageLabel extends Composite {
 	}
 	
 	@Override public Point computeSize(int wHint, int hHint, boolean changed) {
+		System.out.println("computeSize");
 		Point imageSize = imageLabel.computeSize(SWT.DEFAULT, hHint, changed);
 		
 		if (wHint != SWT.DEFAULT)
 			wHint = Math.max(0, wHint - imageSize.x);
 		
+		System.out.println("wHint: " + wHint);
+		
 		Point labelSize = textLabel.computeSize(wHint, hHint, changed);
 		Point result = new Point(imageSize.x + labelSize.x, Math.max(imageSize.y, labelSize.y));
+		
 		return result;
 	}
+	*/
 	
 //==[ Test-Main ]===================================================================================
 	
-	public static void main_(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException {
 
 		Shell shell = new Shell();
 		FillLayout layout = new FillLayout();
@@ -126,12 +141,15 @@ public class ImageLabel extends Composite {
 		layout.marginHeight = 16;
 		shell.setLayout(layout);
 		
-		URL imgURL = new URL("http://i.imgur.com/wPIsO6u.png");
+		URL imgURL = ImageLabel.class.getResource("logo.png");
 		String wallOfText = "Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus";
 		
 		ImageLabel imgLabel = new ImageLabel(shell, SWT.NONE);
 		imgLabel.setImage(imgURL);
 		imgLabel.setText(wallOfText);
+		
+		imgLabel.textPanel.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_DARK_RED));
+		imgLabel.textLabel.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_DARK_YELLOW));
 		
 //			Image image = new Image(Display.getCurrent(), new URL("http://i.imgur.com/wPIsO6u.png").openConnection().getInputStream());
 //			Label label = new Label(shell, SWT.WRAP | SWT.CENTER);

@@ -3,6 +3,10 @@ package de.dualuse.swt.examples;
 import java.io.File;
 import java.io.IOException;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Synchronizer;
+
 import de.dualuse.swt.app.DocumentWindow;
 import de.dualuse.swt.app.MultiDocumentApplication;
 import de.dualuse.swt.widgets.AutoShell;
@@ -44,7 +48,7 @@ public class TextApplication extends MultiDocumentApplication {
 			
 			String result = progress.open(new ProgressDialog.SimpleTask<String>() {
 	
-				@Override public void execute(TaskProgress<String> tp) {
+				@Override public void run(TaskProgress<String> tp) {
 //					
 //					Progress progress = tp.createIndeterminateProgress();
 //					
