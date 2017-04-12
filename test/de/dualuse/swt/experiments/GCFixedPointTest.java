@@ -10,7 +10,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
-public class FixedPointGCTest {
+public class GCFixedPointTest {
 	final static int S = 10;
 	
 	public static void main(String[] args) {
