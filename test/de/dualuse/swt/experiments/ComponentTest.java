@@ -30,7 +30,7 @@ public class ComponentTest {
 			ResourcePool rp = new ResourcePool();
 			
 			
-			Color white = rp.createColor(255,255,255);
+			Color white = rp.color(255,255,255);
 			
 			
 			//////
