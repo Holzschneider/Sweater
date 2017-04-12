@@ -12,7 +12,11 @@ public class PathShape extends Path {
 		super(device);
 	}
 	
-
+	public PathShape(Device device, Shape s) {
+		super(device);
+		this.addShape(s);
+	}
+	
 	public PathShape(Device device, Path from, float flatness) {
 		super(device, from, flatness);
 	}
