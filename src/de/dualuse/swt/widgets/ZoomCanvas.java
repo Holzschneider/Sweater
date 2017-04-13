@@ -342,9 +342,10 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		inverseTransform(q);
 		
 		canvasTransform.translate(q[0], q[1]);
-					
-		float sx = (float)Math.pow(1.0337, e.count * (zoomX?1:0));
-		float sy = (float)Math.pow(1.0337, e.count * (zoomY?1:0));
+			
+		double scaleIncrementPerTick = 1.0337;
+		float sx = (float)Math.pow(scaleIncrementPerTick, e.count * (zoomX?1:0));
+		float sy = (float)Math.pow(scaleIncrementPerTick, e.count * (zoomY?1:0));
 		
 		canvasTransform.scale(sx, sy);
 		canvasTransform.translate(-q[0],  -q[1]);
