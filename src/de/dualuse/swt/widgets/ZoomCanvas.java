@@ -1,13 +1,14 @@
-package de.dualuse.swt.experiments;
+package de.dualuse.swt.widgets;
 
+import static org.eclipse.swt.SWT.H_SCROLL;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
 import static org.eclipse.swt.SWT.MouseUp;
 import static org.eclipse.swt.SWT.MouseWheel;
 import static org.eclipse.swt.SWT.Paint;
+import static org.eclipse.swt.SWT.V_SCROLL;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
@@ -25,9 +26,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
+import de.dualuse.swt.experiments.Microscope;
 
 public class ZoomCanvas extends Canvas implements PaintListener, Listener, ControlListener {
 	private ArrayList<Listener> listeners = new ArrayList<Listener>();
@@ -141,7 +144,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	private float left = -1.0f/0.0f;
 	private float right = 1.0f/0.0f;
 	
-	public void setZoomBounds(float left, float top, float right, float bottom) {
+	public void setCanvasBounds(float left, float top, float right, float bottom) {
 		this.top = top;
 		this.left = left;
 		this.right = right;
@@ -149,16 +152,16 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	}
 	
 	
-	private boolean relative = true;
-	private boolean widthPinned = true;
+	public boolean relative = true;
+	public boolean widthPinned = true;
 
-	private boolean normalizeStrokeSize = false;
-	private boolean flipY = false;
+	public boolean normalizeStrokeSize = false;
+	public boolean flipY = false;
 	
-	private boolean scrollX = true;
-	private boolean scrollY = true;
-	private boolean zoomX = true;
-	private boolean zoomY = true;
+	public boolean scrollX = true;
+	public boolean scrollY = true;
+	public boolean zoomX = true;
+	public boolean zoomY = true;
 	
 	private Transform canvasTransform;
 	
@@ -219,8 +222,6 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 
 	@Override
 	final public void controlResized(ControlEvent e) {
-		System.out.println("SIZE");
-		
 		Rectangle currentSize = ZoomCanvas.this.getBounds();
 		
 		if (lastSize!=null && isRelative()) {
@@ -338,37 +339,81 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	float bounds[] = {0,0, 0,0};
 	
 	private void respectCanvasBounds() {
+		
 		Rectangle r = getClientArea();
+		for (int i=0;i<2;i++) {
+			
+			bounds[0] = r.x;
+			bounds[1] = r.y;
+	
+			bounds[2] = r.x+r.width;
+			bounds[3] = r.y+r.height;
+			
+			inverseTransform(bounds);
+	
+			float constrainX = 0, constrainY = 0;
+	
+			if (bounds[0]<=left && right<=bounds[2])
+				constrainX = (left-bounds[0])/2f + (right-bounds[2])/2f;
+			else
+			if (bounds[0]<left)
+				constrainX = (left-bounds[0]);
+			else
+			if (right<bounds[2])
+				constrainX = (right-bounds[2]);
+			
+			if (bounds[1]<=top && bottom<=bounds[3])
+				constrainY = (top-bounds[1])/2f + (bottom-bounds[3])/2f;
+			else
+			if (bounds[1]<top)
+				constrainY = (top-bounds[1]);
+			else
+			if (bottom<bounds[3])
+				constrainY = (bottom-bounds[3]);
+			
+			canvasTransform.translate(-constrainX, -constrainY);
+		}		
+		/////////////
 		
-		bounds[0] = r.x;
-		bounds[1] = r.y;
+		
+		
+		if ((getStyle()&H_SCROLL)==H_SCROLL) {
+			ScrollBar sb = getHorizontalBar();
+			if (Float.isFinite(left) && Float.isFinite(right)) {
+				float scaleX = r.width/(bounds[2]-bounds[0]);
+				
+				float min = scaleX*left;
+				float max = scaleX*right;
+				
+				float lower = scaleX*bounds[0];
+				float higher= scaleX*bounds[2];
+				
+				sb.setMinimum(0);
+				sb.setMaximum((int)(max-min));
+				sb.setThumb((int)(higher-lower));
+				sb.setSelection((int)(lower-min));
+			} else
+				sb.setEnabled(false);
+		}
 
-		bounds[2] = r.x+r.width;
-		bounds[3] = r.y+r.height;
-		
-		inverseTransform(bounds);
-
-		float constrainX = 0, constrainY = 0;
-
-		if (bounds[0]<=left && right<=bounds[2])
-			constrainX = (left-bounds[0])/2f + (right-bounds[2])/2f;
-		else
-		if (bounds[0]<left)
-			constrainX = (left-bounds[0]);
-		else
-		if (right<bounds[2])
-			constrainX = (right-bounds[2]);
-		
-		if (bounds[1]<=top && bottom<=bounds[3])
-			constrainY = (top-bounds[1])/2f + (bottom-bounds[3])/2f;
-		else
-		if (bounds[1]<top)
-			constrainY = (top-bounds[1]);
-		else
-		if (bottom<bounds[3])
-			constrainY = (bottom-bounds[3]);
-		
-		canvasTransform.translate(-constrainX, -constrainY);
+		if ((getStyle()&V_SCROLL)==V_SCROLL) {
+			ScrollBar sb = getVerticalBar();
+			if (Float.isFinite(top) && Float.isFinite(bottom)) {
+				float scaleY = r.height/(bounds[3]-bounds[1]);
+				
+				float min = scaleY*top;
+				float max = scaleY*bottom;
+				
+				float lower = scaleY*bounds[1];
+				float higher= scaleY*bounds[3];
+				
+				sb.setMinimum(0);
+				sb.setMaximum((int)(max-min));
+				sb.setThumb((int)(higher-lower));
+				sb.setSelection((int)(lower-min));
+			} else
+				sb.setEnabled(false);
+		}
 	}
 	
 //==[ Test-Main ]===================================================================================
@@ -385,7 +430,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		System.out.println( image.getImageData().width );
 		System.out.println( image.getImageData().height );
 		
-		ZoomCanvas zc = new ZoomCanvas(shell, SWT.NONE);
+		ZoomCanvas zc = new ZoomCanvas(shell, SWT.NONE|H_SCROLL|V_SCROLL);
 		zc.addPaintListener((e) -> {
 			e.gc.setAntialias(SWT.OFF);
 			e.gc.setInterpolation(SWT.NONE);
@@ -394,14 +439,16 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 			e.gc.drawLine(0, 0, 100, 100);
 		});
 		
-
-		zc.setZoomBounds(0, 0, 1129, 750);
+		zc.setCanvasBounds(0, 0, 1129, 750); //1f/0f);
 //		zc.zoomX = zc.zoomY = false;
+		zc.relative = zc.widthPinned = false;
+//		zc.zoomY = false;
+//		zc.scrollY = false;
 		
 //		new Browser(shell,  SWT.NONE).setUrl("http://news.ycombinator.com");
 		
-		shell.open();
-		
+		shell.setBounds(100, 100, 1400, 800);
+		shell.setVisible(true);
 		app.loop(shell);
 	}
 	
