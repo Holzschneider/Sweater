@@ -4,24 +4,25 @@ import java.io.IOException;
 import java.net.URL;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.SWTException;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.events.LayoutDelegate;
-import de.dualuse.swt.layout.BorderLayout;
-import de.dualuse.swt.layout.CenterLayout;
+import de.dualuse.swt.layout.Layouter;
 
-public class ImageLabel extends Composite {
-		
+public class ImageLabel extends Composite implements Layouter {
+	
+	static final int hgap = 16;
+	
 	Image image;
-	Composite textPanel;
+	
 	Label imageLabel;
 	Label textLabel;
 	int alignment = SWT.TOP;
@@ -31,37 +32,89 @@ public class ImageLabel extends Composite {
 	public ImageLabel(Composite parent, int style) {
 		super(parent, style);
 		
-		setLayout(new BorderLayout());
+		setLayout(new LayoutDelegate(this));
 		
 		// Children
 		imageLabel = new Label(this, SWT.NONE);
-		imageLabel.setLayoutData(BorderLayout.WEST);
-		
-		textPanel = new Composite(this, SWT.NONE);
-		textPanel.setLayout(new CenterLayout(SWT.FILL, SWT.CENTER));
-		textPanel.setLayoutData(BorderLayout.CENTER);
-		
-		textLabel = new Label(textPanel, SWT.WRAP);
+		textLabel = new Label(this, SWT.WRAP);
 		
 		// Resources
-		addListener(SWT.Dispose, (e) -> { if (image!=null) image.dispose(); });
+		// addListener(SWT.Dispose, (e) -> { if (image!=null) image.dispose(); }); // externally managed
+		
+//		addControlListener(new ControlListener() {
+//			
+//			@Override
+//			public void controlResized(ControlEvent e) {
+//				System.out.println("ImageLabel.resized(" + getBounds().width + "," + getBounds().height +")");
+//			}
+//			
+//			@Override
+//			public void controlMoved(ControlEvent e) {
+//			}
+//		});
+		
 	}
 
-//==[ Setter ]======================================================================================
-	
-	public void setImage(URL url) {
-		checkWidget();
-		try {
-			Image newImage = new Image(Display.getCurrent(), url.openConnection().getInputStream());
-			
-			if (image != null)
-				image.dispose();
-			
-			imageLabel.setImage(image = newImage);
-		} catch (IOException io) {
-			io.printStackTrace();
-		}
+//==[ Layout ]======================================================================================
+
+	@Override public Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache) {
+//		System.out.println("imageLabel.computeSize(" + wHint + "," + hHint + ")");
+		Point imgPrefSize = imageLabel.computeSize(SWT.DEFAULT, SWT.DEFAULT);
+//		System.out.println("\tImage Width: " + imgPrefSize.x);
 		
+		if (wHint != SWT.DEFAULT)
+			wHint = Math.max(0, wHint - imgPrefSize.x - hgap);
+		
+//		System.out.println("\tReduced wHint: " + wHint);
+		
+		Point textPrefSize = textLabel.computeSize(wHint, hHint);
+
+//		System.out.println("\tImage Height: " + imgPrefSize.y);
+//		System.out.println("\tText Height: " + textPrefSize.y);
+		
+		int height = Math.max(imgPrefSize.y, textPrefSize.y);
+		int width = imgPrefSize.x + hgap + textPrefSize.x;
+		
+//		System.out.println("\t-> Result: " + width + "," + height);
+		
+		return new Point(width, height);
+	}
+
+	@Override public void layout(Composite composite, boolean flushCache) {
+		
+		Rectangle bounds = composite.getBounds();
+		
+		Point imgPrefSize = imageLabel.computeSize(SWT.DEFAULT, bounds.height);
+		Point textPrefSize = textLabel.computeSize(bounds.width - imgPrefSize.x, SWT.DEFAULT);
+		
+		int y = 0;
+		if (alignment == SWT.CENTER)
+			y = (bounds.height-textPrefSize.y)/2;
+		else if (alignment == SWT.BOTTOM)
+			y = bounds.height - textPrefSize.y;
+		
+		imageLabel.setBounds(0, 0, imgPrefSize.x, imgPrefSize.y);
+		textLabel.setBounds(imgPrefSize.x + hgap, y, textPrefSize.x, textPrefSize.y);
+		
+	}
+	
+	@Override public boolean flushCache(Control control) {
+		return false;
+	}
+	
+//==[ Getter & Setter ]=============================================================================
+	
+	public Label getImageLabel() {
+		return imageLabel;
+	}
+	
+	public Label getTextLabel() {
+		return textLabel;
+	}
+	
+	public void setImage(Image newImage) {
+		checkWidget();
+		imageLabel.setImage(image = newImage);
 	}
 	
 	public void setText(String text) {
@@ -74,62 +127,8 @@ public class ImageLabel extends Composite {
 		if (alignment!=SWT.TOP && alignment!=SWT.CENTER && alignment!=SWT.BOTTOM)
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		this.alignment = alignment;
-		textPanel.requestLayout();
+		requestLayout();
 	}
-	
-//==[ Layout ]======================================================================================
-	
-	/*
-	private void layoutChildren() {
-		System.out.println("layoutChildren()");
-		
-		Rectangle bounds = getBounds();
-		
-		if (image!=null) {
-			imageLabel.setLocation(0, 0);
-			imageLabel.setSize(imageLabel.computeSize(image.getImageData().width, bounds.height));
-		} else {
-			imageLabel.setLocation(0, 0);
-			imageLabel.setSize(0, 0);
-		}
-		Rectangle imageBounds = imageLabel.getBounds();
-		
-		Point hints = new Point(bounds.x - imageLabel.getSize().x, bounds.y);
-		System.out.println("Hints: " + hints);
-		
-		Point textSize = textLabel.computeSize(bounds.x - imageLabel.getSize().x, bounds.y);
-		System.out.println("TextSize: " + textSize);
-		
-		textLabel.setSize(textSize.x, textSize.y);
-		
-		if (alignment == SWT.TOP) {
-			System.out.println("Top Alignment");
-			textLabel.setLocation(imageBounds.width, 0);
-		} else if (alignment == SWT.CENTER) {
-			System.out.println("Center Alignment");
-			textLabel.setLocation(imageBounds.width, (bounds.y - textSize.y)/2);
-		} else if (alignment == SWT.BOTTOM) {
-			System.out.println("Bottom Alignment");
-			textLabel.setLocation(imageBounds.width, bounds.y - textSize.y);
-		}		
-		// textLabel.setSize(bounds.width - imageBounds.width, bounds.height - textLabel.getLocation().y);
-	}
-	
-	@Override public Point computeSize(int wHint, int hHint, boolean changed) {
-		System.out.println("computeSize");
-		Point imageSize = imageLabel.computeSize(SWT.DEFAULT, hHint, changed);
-		
-		if (wHint != SWT.DEFAULT)
-			wHint = Math.max(0, wHint - imageSize.x);
-		
-		System.out.println("wHint: " + wHint);
-		
-		Point labelSize = textLabel.computeSize(wHint, hHint, changed);
-		Point result = new Point(imageSize.x + labelSize.x, Math.max(imageSize.y, labelSize.y));
-		
-		return result;
-	}
-	*/
 	
 //==[ Test-Main ]===================================================================================
 	
@@ -145,10 +144,23 @@ public class ImageLabel extends Composite {
 		String wallOfText = "Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus";
 		
 		ImageLabel imgLabel = new ImageLabel(shell, SWT.NONE);
-		imgLabel.setImage(imgURL);
-		imgLabel.setText(wallOfText);
 		
-		imgLabel.textPanel.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_DARK_RED));
+		URL url = ImageLabel.class.getResource("logo.png");
+		Image image = null;
+		
+		try {
+			
+			image = new Image(Display.getCurrent(), url.openConnection().getInputStream());
+			imgLabel.setImage(image);
+			
+		} catch (IOException io) {
+			io.printStackTrace();
+		}
+
+		imgLabel.setText(wallOfText);
+		imgLabel.setVerticalAlignment(SWT.CENTER);
+		
+//		imgLabel.textPanel.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_DARK_RED));
 		imgLabel.textLabel.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_DARK_YELLOW));
 		
 //			Image image = new Image(Display.getCurrent(), new URL("http://i.imgur.com/wPIsO6u.png").openConnection().getInputStream());
@@ -163,5 +175,9 @@ public class ImageLabel extends Composite {
 		while(!dsp.isDisposed())
 			if (!dsp.readAndDispatch())
 				dsp.sleep();
+		
+		if (image != null)
+			image.dispose();
 	}
+
 }

@@ -131,7 +131,8 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		ImageSequenceScratcherTest scratcher = new ImageSequenceScratcherTest(sh, NONE) {
 			
 			//XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
-			File root = new File("/Users/ihlefeld/Downloads/Schlangenbader.strip/frames");
+			File root = new File("/home/sihlefeld/Documents/footage/trip1/frames1");
+			// File root = new File("/Users/ihlefeld/Downloads/Schlangenbader.strip/frames");
 			// File root = new File("/Users/holzschneider/Archive/Geenee/Geenee Strips/bigbangtheory-clip1.mov.strip");
 			File frames[] = root.listFiles((f) -> f.getName().endsWith(".jpg"));
 			

@@ -7,7 +7,6 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Dialog;
@@ -39,6 +38,18 @@ public class ProgressDialog<E> extends Dialog {
 
 	boolean cancellable = true;
 	boolean pausable = true;
+
+	Image image;
+	String message;
+
+	Button cancelButton;
+	Button pauseButton;
+	Button logButton;
+	
+	boolean logOpen = false;
+	boolean done = false;
+	
+	int dialogWidth = DIALOG_WIDTH;
 	
 //==[ Interfaces ]==================================================================================
 
@@ -52,7 +63,11 @@ public class ProgressDialog<E> extends Dialog {
 	public interface TaskProgress<E> {
 		Progress createProgress();
 		Progress createIndeterminateProgress();
+		
 		void log(String message);
+		void logWarn(String message);
+		void logError(String message);
+		
 		void abort();
 		void abort(RuntimeException e);
 		void done(E result);
@@ -83,16 +98,29 @@ public class ProgressDialog<E> extends Dialog {
 	
 //==[ Dialog Configuration/Setup ]==================================================================
 	
-	public void setCancellable(boolean cancellable) {
+	public ProgressDialog<E> setCancellable(boolean cancellable) {
 		this.cancellable = cancellable;
+		return this;
 	}
 	
-	public void setPausable(boolean pausable) {
+	public ProgressDialog<E> setPausable(boolean pausable) {
 		this.pausable = pausable;
+		return this;
+	}
+	
+	public ProgressDialog<E> setDescription(Image image, String message) {
+		this.image = image;
+		this.message = message;
+		return this;
+	}
+	
+	public ProgressDialog<E> setWidth(int width) {
+		this.dialogWidth = width;
+		return this;
 	}
 	
 //==[ Create Dialog and Return Value ]==============================================================
-	
+
 	public E open(Task<E> task) {
 		
 		final Shell parent = getParent();
@@ -111,16 +139,24 @@ public class ProgressDialog<E> extends Dialog {
 		
 		////////// Initial Image / Description
 		
-		ImageLabel label = new ImageLabel(shell, SWT.WRAP);
-		label.setVerticalAlignment(SWT.CENTER);
-		label.setImage(ProgressDialog.class.getResource("logo.png"));
-		label.setText("Loading Document...");
-		label.setBackground(dsp.getSystemColor(SWT.COLOR_DARK_YELLOW));
-		// label.setVerticalAlignment(SWT.CENTER);
+		if (image != null || message != null) {
+			ImageLabel label = new ImageLabel(shell, SWT.WRAP);
+			
+			if (image != null) {
+				label.setImage(image);
+				label.setVerticalAlignment(SWT.CENTER);
+			}
+			
+			label.setText(message);
 
-		GridData labelData = new GridData(SWT.FILL, SWT.FILL, true, false);
-		labelData.widthHint = 492;
-		label.setLayoutData(labelData);
+			GridData labelData = new GridData(SWT.FILL, SWT.FILL, true, false);
+			labelData.widthHint = 492;
+			label.setLayoutData(labelData);
+			
+//			label.setBackground(dsp.getSystemColor(SWT.COLOR_DARK_GREEN));
+//			label.getTextLabel().setBackground(dsp.getSystemColor(SWT.COLOR_DARK_RED));
+//			label.getImageLabel().setBackground(dsp.getSystemColor(SWT.COLOR_DARK_YELLOW));
+		}
 
 		////////// ProgressPane
 		
@@ -148,7 +184,7 @@ public class ProgressDialog<E> extends Dialog {
 		GridLayout buttonPaneLayout = new GridLayout(3, false);
 		buttonPane.setLayout(buttonPaneLayout);
 		
-		final Button logButton = new Button(buttonPane, SWT.NONE);
+		logButton = new Button(buttonPane, SWT.NONE);
 		
 		Image logButtonImageClosed = new Image(dsp, ProgressDialog.class.getResourceAsStream("right_sm.png"));
 		logButton.setImage(logButtonImageClosed);
@@ -157,11 +193,11 @@ public class ProgressDialog<E> extends Dialog {
 		Image logButtonImageOpen = new Image(dsp, ProgressDialog.class.getResourceAsStream("down_sm.png"));
 		shell.addListener(SWT.Dispose, (e) -> logButtonImageOpen.dispose());
 		
-		final Button cancelButton = new Button(buttonPane, SWT.NONE);
+		cancelButton = new Button(buttonPane, SWT.NONE);
 		cancelButton.setText(CANCEL_LABEL);
 		cancelButton.setEnabled(cancellable);
 		
-		final Button pauseButton = new Button(buttonPane, SWT.NONE);
+		pauseButton = new Button(buttonPane, SWT.NONE);
 		pauseButton.setText(PAUSE_LABEL);
 		pauseButton.setEnabled(pausable);
 		
@@ -171,7 +207,10 @@ public class ProgressDialog<E> extends Dialog {
 		logButton.setLayoutData(logButtonData);
 
 		if (cancellable) {
-			cancelButton.addListener(SWT.Selection, (e) -> task.cancel());
+			cancelButton.addListener(SWT.Selection, (e) -> {
+				if (done) return;
+				task.cancel();
+			});
 			shell.addListener(SWT.Dispose, (e) -> task.cancel()); // XXX make sure cancel() being called after the progress is actually completed doesn't cause problems
 		}
 
@@ -179,6 +218,8 @@ public class ProgressDialog<E> extends Dialog {
 			pauseButton.addListener(SWT.Selection, new Listener() {
 				boolean paused = false;
 				@Override public void handleEvent(Event event) {
+					if (done) return;
+					
 					if (paused) {
 						paused = false;
 						pauseButton.setText(PAUSE_LABEL);
@@ -195,10 +236,9 @@ public class ProgressDialog<E> extends Dialog {
 		}
 		
 		logButton.addListener(SWT.Selection, new Listener() {
-			boolean shown = false;
 			
 			@Override public void handleEvent(Event event) {
-				if (shown) {
+				if (logOpen) {
 					logButton.setImage(logButtonImageClosed);
 					
 					logArea.dispose();
@@ -207,7 +247,7 @@ public class ProgressDialog<E> extends Dialog {
 					shell.layout();
 					SWTUtil.packHeight(shell);
 					
-					shown = false;
+					logOpen = false;
 				} else {
 					
 					logArea = new Text(buttonPane, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL | SWT.H_SCROLL) {
@@ -223,15 +263,18 @@ public class ProgressDialog<E> extends Dialog {
 					GridData textData = new GridData(SWT.FILL, SWT.FILL, false, false, 3, 1);
 					logArea.setLayoutData(textData);
 					
-					logArea.setText(logText.toString());
-					logArea.getVerticalBar().setSelection(logArea.getVerticalBar().getMaximum());
+					ScrollBar bar = logArea.getVerticalBar();
+					
+					bar.setSelection(bar.getMaximum());
+					System.out.println("initial value: " + logArea.getVerticalBar().getSelection() + " / " + logArea.getVerticalBar().getMaximum());
+					System.out.println("thumb: " + bar.getThumb());
 					
 					logButton.setImage(logButtonImageOpen);
 					
 					shell.layout();
 					SWTUtil.packHeight(shell);
 					
-					shown = true;
+					logOpen = true;
 				}
 			}
 			
@@ -285,20 +328,68 @@ public class ProgressDialog<E> extends Dialog {
 		
 		@Override public void log(String message) {
 			dsp.asyncExec(() -> {
+				
 				logText.append(message);
+				
 				if (logArea!=null) {
-					logArea.append(message);
+
+					ScrollBar scrollBar = logArea.getVerticalBar();
+					boolean atBottom = scrollBar.getSelection() + scrollBar.getThumb() >= scrollBar.getMaximum();
 					
-					ScrollBar bar = logArea.getVerticalBar();
-					bar.setSelection(bar.getMaximum());
+					System.out.println("atBottom: " + atBottom);
+					System.out.println(scrollBar.getSelection() + " vs " + scrollBar.getMaximum());
+					System.out.println("thumb: " + scrollBar.getThumb());
+					
+					int oldSelection = scrollBar.getSelection();
+					
+					if (!atBottom) {
+
+						logArea.setRedraw(false);
+						int scrollP = logArea.getTopIndex();
+						Point selectionP = logArea.getSelection();
+						
+						logArea.append(message);
+						
+						logArea.setSelection(selectionP);
+						logArea.setTopIndex(scrollP);
+						logArea.setRedraw(true);
+						
+					} else {
+						
+						logArea.append(message); // apparently autoscrolls
+						
+					}
+					
+					// logArea.setText(logText.toString());
+					
+					// if (atBottom) scrollBar.setSelection(scrollBar.getMaximum());
+					
+					// if (!atBottom) scrollBar.setSelection(oldSelection);
+
+					System.out.println(scrollBar.getSelection() + " vs " + scrollBar.getMaximum());
+					System.out.println("thumb: " + scrollBar.getThumb());
+					System.out.println();
+					
+					// 
+					
+//					ScrollBar bar = logArea.getVerticalBar();
+//					bar.setSelection(bar.getMaximum());
 				}
 			});
+		}
+		
+		@Override public void logWarn(String message) {
+			log(message); // XXX use styledtext color to differentiate warning messages
+		}
+		
+		@Override public void logError(String message) {
+			log(message); // XXX use styledtext color to differentiate error messages
 		}
 		
 		@Override public void abort() {
 			dsp.asyncExec(() -> {
 				result = null;
-				shell.dispose();
+				workDone();
 			});
 		}
 		
@@ -306,15 +397,27 @@ public class ProgressDialog<E> extends Dialog {
 			dsp.asyncExec(() -> {
 				exception = e;
 				result = null;
-				shell.dispose();
+				workDone();
 			});
 		}
 		
 		@Override public void done(E res) {
 			dsp.asyncExec(() -> {
 				result = res;
-				shell.dispose();
+				workDone();
 			});
+		}
+		
+		private void workDone() {
+			if (logOpen) {
+				cancelButton.setEnabled(false);
+				pauseButton.setEnabled(true);
+				pauseButton.setText("Close");
+				pauseButton.requestLayout();
+				pauseButton.addListener(SWT.Selection, (e) -> shell.dispose());
+			} else {
+				shell.dispose(); // XXX workDone (-> if log open, don't automatically close)
+			}
 		}
 		
 		private Progress createProgressController(int style) {
@@ -325,7 +428,7 @@ public class ProgressDialog<E> extends Dialog {
 				resultFuture.put(new ProgressController(parent, style));
 				
 				// shell.pack(); // implementation of pack: setSize(computeSize(SWT.DEFAULT, SWT.DEFAULT, true))
-				Point prefSize = shell.computeSize(DIALOG_WIDTH, SWT.DEFAULT, true); // DIALOG_WIDTH, SWT.DEFAULT, true);
+				Point prefSize = shell.computeSize(dialogWidth, SWT.DEFAULT, true); // DIALOG_WIDTH, SWT.DEFAULT, true);
 				shell.setSize(prefSize);
 				
 //				Rectangle bounds = shell.getBounds();
