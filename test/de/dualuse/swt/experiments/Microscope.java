@@ -46,7 +46,7 @@ public abstract class Microscope extends Composite {
 		canvasTransform = new Transform(getDisplay());
 		
 		// XXX with scale/transformation smoother than without?
-		canvasTransform.scale(1.01f, 1.01f);
+//		canvasTransform.scale(1.01f, 1.01f);
 		
 		this.addControlListener(resizeListener);
 		this.addMouseListener(viewportController);
