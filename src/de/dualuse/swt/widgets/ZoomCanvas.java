@@ -6,36 +6,31 @@ import static org.eclipse.swt.SWT.MouseMove;
 import static org.eclipse.swt.SWT.MouseUp;
 import static org.eclipse.swt.SWT.MouseWheel;
 import static org.eclipse.swt.SWT.Paint;
+import static org.eclipse.swt.SWT.Selection;
 import static org.eclipse.swt.SWT.V_SCROLL;
 
 import java.util.ArrayList;
 
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
-import org.eclipse.swt.widgets.Shell;
-
-import de.dualuse.swt.app.Application;
-import de.dualuse.swt.experiments.Microscope;
 
 public class ZoomCanvas extends Canvas implements PaintListener, Listener, ControlListener {
 	private ArrayList<Listener> listeners = new ArrayList<Listener>();
 	private ArrayList<PaintListener> paintListeners = new ArrayList<PaintListener>(); 
-			
+	
+	ScrollBar horizontal, vertical;
+	
 	public ZoomCanvas(Composite parent, int style) {
 		super(parent, style);
 
@@ -49,8 +44,42 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		super.addPaintListener(this);
 		
 		this.addControlListener(this);
+		
+		
+		if ((style&H_SCROLL)==H_SCROLL) {
+			horizontal = getHorizontalBar();
+			horizontal.addListener(Selection, this);
+			horizontal.setIncrement(16);
+		}
+		
+		if ((style&V_SCROLL)==V_SCROLL) {
+			vertical=getVerticalBar();
+			vertical.addListener(Selection, this);
+			vertical.setIncrement(16);
+		}
+		
 	}
 
+	
+	private void scrollbarScrolled(Event event) {
+		float deltaX = 0, deltaY = 0;
+
+		if (horizontal!=null) {
+			int currentX = horizontal.getSelection();
+			deltaX= (scrollBarX-currentX) / elements[0];
+			scrollBarX = currentX;
+		}
+		
+		if (vertical!=null) {
+			int currentY = vertical.getSelection();
+			deltaY= (scrollBarY-currentY) / elements[0];
+			scrollBarY = currentY;
+		}
+		
+		canvasTransform.translate(deltaX, deltaY);
+		redraw();
+	}
+	
 	@Override
 	final public void handleEvent(Event event) {
 		switch (event.type) {
@@ -75,6 +104,9 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		case MouseWheel:
 			mouseScrolled(event);
 			break;
+			
+		case Selection:
+			scrollbarScrolled(event);
 		}
 	}
 
@@ -216,9 +248,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	
 //==[ Resize-Listener ]=============================================================================
 	@Override
-	final public void controlMoved(ControlEvent e) {
-		System.out.println("MOVE");
-	}
+	final public void controlMoved(ControlEvent e) { }
 
 	@Override
 	final public void controlResized(ControlEvent e) {
@@ -249,7 +279,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		}
 		
 		
-		respectCanvasBounds();
+		respectCanvasBoundsAndUpdateScrollbars();
 
 			
 		lastSize = currentSize;
@@ -295,7 +325,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 			(deltaX / (float)Math.hypot(scx, shy)),
 			(deltaY / (float)Math.hypot(scy, shx))
 		);
-		respectCanvasBounds();
+		respectCanvasBoundsAndUpdateScrollbars();
 		
 //		fireStateChanged();
 		
@@ -318,7 +348,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		
 		canvasTransform.scale(sx, sy);
 		canvasTransform.translate(-q[0],  -q[1]);
-		respectCanvasBounds();
+		respectCanvasBoundsAndUpdateScrollbars();
 		
 //		fireStateChanged();
 		
@@ -336,40 +366,42 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	}
 
 	
-	float bounds[] = {0,0, 0,0};
+	private float transformedClipping[] = {0,0, 0,0};
+	private Rectangle clipping = getClientArea();
+	private int scrollBarX = 0, scrollBarY = 0; 
 	
-	private void respectCanvasBounds() {
+	private void respectCanvasBoundsAndUpdateScrollbars() {
 		
-		Rectangle r = getClientArea();
+		clipping = getClientArea();
 		for (int i=0;i<2;i++) {
 			
-			bounds[0] = r.x;
-			bounds[1] = r.y;
+			transformedClipping[0] = clipping.x;
+			transformedClipping[1] = clipping.y;
 	
-			bounds[2] = r.x+r.width;
-			bounds[3] = r.y+r.height;
+			transformedClipping[2] = clipping.x+clipping.width;
+			transformedClipping[3] = clipping.y+clipping.height;
 			
-			inverseTransform(bounds);
+			inverseTransform(transformedClipping);
 	
 			float constrainX = 0, constrainY = 0;
 	
-			if (bounds[0]<=left && right<=bounds[2])
-				constrainX = (left-bounds[0])/2f + (right-bounds[2])/2f;
+			if (transformedClipping[0]<=left && right<=transformedClipping[2])
+				constrainX = (left-transformedClipping[0])/2f + (right-transformedClipping[2])/2f;
 			else
-			if (bounds[0]<left)
-				constrainX = (left-bounds[0]);
+			if (transformedClipping[0]<left)
+				constrainX = (left-transformedClipping[0]);
 			else
-			if (right<bounds[2])
-				constrainX = (right-bounds[2]);
+			if (right<transformedClipping[2])
+				constrainX = (right-transformedClipping[2]);
 			
-			if (bounds[1]<=top && bottom<=bounds[3])
-				constrainY = (top-bounds[1])/2f + (bottom-bounds[3])/2f;
+			if (transformedClipping[1]<=top && bottom<=transformedClipping[3])
+				constrainY = (top-transformedClipping[1])/2f + (bottom-transformedClipping[3])/2f;
 			else
-			if (bounds[1]<top)
-				constrainY = (top-bounds[1]);
+			if (transformedClipping[1]<top)
+				constrainY = (top-transformedClipping[1]);
 			else
-			if (bottom<bounds[3])
-				constrainY = (bottom-bounds[3]);
+			if (bottom<transformedClipping[3])
+				constrainY = (bottom-transformedClipping[3]);
 			
 			canvasTransform.translate(-constrainX, -constrainY);
 		}		
@@ -378,79 +410,48 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		
 		
 		if ((getStyle()&H_SCROLL)==H_SCROLL) {
-			ScrollBar sb = getHorizontalBar();
+			ScrollBar sb = horizontal;
 			if (Float.isFinite(left) && Float.isFinite(right)) {
-				float scaleX = r.width/(bounds[2]-bounds[0]);
+				float scaleX = clipping.width/(transformedClipping[2]-transformedClipping[0]);
 				
 				float min = scaleX*left;
 				float max = scaleX*right;
 				
-				float lower = scaleX*bounds[0];
-				float higher= scaleX*bounds[2];
+				float lower = scaleX*transformedClipping[0];
+				float higher= scaleX*transformedClipping[2];
 				
 				sb.setMinimum(0);
 				sb.setMaximum((int)(max-min));
 				sb.setThumb((int)(higher-lower));
 				sb.setSelection((int)(lower-min));
+				
+				scrollBarX = sb.getSelection();
 			} else
 				sb.setEnabled(false);
 		}
 
 		if ((getStyle()&V_SCROLL)==V_SCROLL) {
-			ScrollBar sb = getVerticalBar();
+			ScrollBar sb = vertical;
 			if (Float.isFinite(top) && Float.isFinite(bottom)) {
-				float scaleY = r.height/(bounds[3]-bounds[1]);
+				float scaleY = clipping.height/(transformedClipping[3]-transformedClipping[1]);
 				
 				float min = scaleY*top;
 				float max = scaleY*bottom;
 				
-				float lower = scaleY*bounds[1];
-				float higher= scaleY*bounds[3];
+				float lower = scaleY*transformedClipping[1];
+				float higher= scaleY*transformedClipping[3];
 				
 				sb.setMinimum(0);
 				sb.setMaximum((int)(max-min));
 				sb.setThumb((int)(higher-lower));
 				sb.setSelection((int)(lower-min));
+				
+				scrollBarY = sb.getSelection();
 			} else
 				sb.setEnabled(false);
 		}
 	}
 	
-//==[ Test-Main ]===================================================================================
-
-	
-	public static void main(String[] args) {
-		Application app = new Application();
-		Shell shell = new Shell(app);
-		shell.setText("SWTMicroscope");
-		shell.setLayout(new FillLayout());
-		
-		Image image = new Image(Display.getCurrent(), Microscope.class.getResourceAsStream("generic-cat.jpeg"));
-		
-		System.out.println( image.getImageData().width );
-		System.out.println( image.getImageData().height );
-		
-		ZoomCanvas zc = new ZoomCanvas(shell, SWT.NONE|H_SCROLL|V_SCROLL);
-		zc.addPaintListener((e) -> {
-			e.gc.setAntialias(SWT.OFF);
-			e.gc.setInterpolation(SWT.NONE);
-			e.gc.setLineWidth(1);
-			e.gc.drawImage(image, 0, 0);
-			e.gc.drawLine(0, 0, 100, 100);
-		});
-		
-		zc.setCanvasBounds(0, 0, 1129, 750); //1f/0f);
-//		zc.zoomX = zc.zoomY = false;
-		zc.relative = zc.widthPinned = false;
-//		zc.zoomY = false;
-//		zc.scrollY = false;
-		
-//		new Browser(shell,  SWT.NONE).setUrl("http://news.ycombinator.com");
-		
-		shell.setBounds(100, 100, 1400, 800);
-		shell.setVisible(true);
-		app.loop(shell);
-	}
 	
 
 }

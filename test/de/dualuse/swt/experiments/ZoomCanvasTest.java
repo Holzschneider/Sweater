@@ -17,7 +17,6 @@ public class ZoomCanvasTest {
 	public static void main(String[] args) {
 		Application app = new Application();
 		Shell shell = new Shell(app);
-		shell.setText("SWTMicroscope");
 		shell.setLayout(new FillLayout());
 		
 		Image image = new Image(Display.getCurrent(), Microscope.class.getResourceAsStream("generic-cat.jpeg"));
@@ -35,7 +34,7 @@ public class ZoomCanvasTest {
 		});
 		
 		zc.setCanvasBounds(0, 0, 1129, 750); //1f/0f);
-//		zc.zoomX = zc.zoomY = false;
+		zc.zoomX = zc.zoomY = false;
 		zc.relative = zc.widthPinned = false;
 //		zc.zoomY = false;
 //		zc.scrollY = false;
