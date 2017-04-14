@@ -1,13 +1,6 @@
 package de.dualuse.swt.widgets;
 
-import static org.eclipse.swt.SWT.H_SCROLL;
-import static org.eclipse.swt.SWT.MouseDown;
-import static org.eclipse.swt.SWT.MouseMove;
-import static org.eclipse.swt.SWT.MouseUp;
-import static org.eclipse.swt.SWT.MouseWheel;
-import static org.eclipse.swt.SWT.Paint;
-import static org.eclipse.swt.SWT.Selection;
-import static org.eclipse.swt.SWT.V_SCROLL;
+import static org.eclipse.swt.SWT.*;
 
 import java.util.ArrayList;
 
@@ -66,13 +59,13 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 
 		if (horizontal!=null) {
 			int currentX = horizontal.getSelection();
-			deltaX= (scrollBarX-currentX) / elements[0];
+			deltaX = (scrollBarX-currentX) / elements[0];
 			scrollBarX = currentX;
 		}
 		
 		if (vertical!=null) {
 			int currentY = vertical.getSelection();
-			deltaY= (scrollBarY-currentY) / elements[0];
+			deltaY = (scrollBarY-currentY) / elements[3];
 			scrollBarY = currentY;
 		}
 		
@@ -103,6 +96,8 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 			
 		case MouseWheel:
 			mouseScrolled(event);
+			event.doit = !zoomX && !zoomY; 
+			//prevent scrolling from happening when zooming should happen instead 
 			break;
 			
 		case Selection:
@@ -447,6 +442,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 				sb.setThumb((int)(higher-lower));
 				sb.setSelection((int)(lower-min));
 				
+				System.out.println("scrollbar Set to: "+ scrollBarY);
 				scrollBarY = sb.getSelection();
 			} else
 				sb.setEnabled(false);

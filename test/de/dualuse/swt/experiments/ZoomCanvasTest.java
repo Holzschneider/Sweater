@@ -1,7 +1,6 @@
 package de.dualuse.swt.experiments;
 
-import static org.eclipse.swt.SWT.H_SCROLL;
-import static org.eclipse.swt.SWT.V_SCROLL;
+import static org.eclipse.swt.SWT.*;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
@@ -24,7 +23,7 @@ public class ZoomCanvasTest {
 		System.out.println( image.getImageData().width );
 		System.out.println( image.getImageData().height );
 		
-		ZoomCanvas zc = new ZoomCanvas(shell, SWT.NONE|H_SCROLL|V_SCROLL);
+		ZoomCanvas zc = new ZoomCanvas(shell, NONE|H_SCROLL|V_SCROLL);
 		zc.addPaintListener((e) -> {
 			e.gc.setAntialias(SWT.OFF);
 			e.gc.setInterpolation(SWT.NONE);
@@ -34,7 +33,8 @@ public class ZoomCanvasTest {
 		});
 		
 		zc.setCanvasBounds(0, 0, 1129, 750); //1f/0f);
-		zc.zoomX = zc.zoomY = false;
+		zc.zoomX = true;
+		zc.zoomY = false;
 		zc.relative = zc.widthPinned = false;
 //		zc.zoomY = false;
 //		zc.scrollY = false;
