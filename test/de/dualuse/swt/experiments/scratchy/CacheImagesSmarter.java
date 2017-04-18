@@ -1,5 +1,5 @@
 package de.dualuse.swt.experiments.scratchy;
-
+/*
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +17,7 @@ import org.eclipse.swt.widgets.Display;
 import de.dualuse.swt.experiments.scratchy.Cache.FailListener;
 import de.dualuse.swt.experiments.scratchy.Cache.ResourceListener;
 
-public class CacheImagesSmarter  extends Cache<Integer, Image> {
+public class CacheImagesSmarter extends CacheAsyncWorkers<Integer, Image> {
 
 	static class Result {
 		public Integer frame;
@@ -73,56 +73,6 @@ public class CacheImagesSmarter  extends Cache<Integer, Image> {
 		}
 		
 		this.dsp = dsp;
-		
-	}
-	
-//==[ Job Queue ]===================================================================================
-	
-	static class Job {
-		public int frame;
-		public ResourceListener<Integer,Image> lDone;
-		public FailListener<Integer> lFail;
-		
-		public Job(int frame) {
-			this.frame = frame;
-		}
-		
-		public Job(int frame, ResourceListener<Integer,Image> lDone) {
-			this.frame = frame;
-			this.lDone = lDone;
-		}
-		
-		public Job(int frame, ResourceListener<Integer,Image> lDone, FailListener<Integer> lFail) {
-			this.frame = frame;
-			this.lDone = lDone;
-			this.lFail = lFail;
-		}
-	}
-	
-	TreeMap<Integer,Job> jobQueue = new TreeMap<Integer,Job>();
-
-	int displayedFrame;
-	int requestedFrame;
-	
-	boolean isDisposed() {
-		return true;
-	}
-	
-	Thread jobDispatcher = new Thread(() -> {
-		while(!isDisposed()) {
-			
-			synchronized(CacheImagesSmarter.this) {
-				
-			}
-			
-		}
-	});
-	
-	private synchronized void addJob(int displayedFrame, Job job) {
-		
-		jobQueue.put(job.frame, job);
-		this.displayedFrame = displayedFrame;
-		this.requestedFrame = job.frame;
 		
 	}
 	
@@ -237,3 +187,4 @@ public class CacheImagesSmarter  extends Cache<Integer, Image> {
 		System.out.println("CacheImages: " + msg);
 	}
 }
+*/

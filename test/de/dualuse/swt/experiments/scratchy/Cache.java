@@ -1,13 +1,7 @@
 package de.dualuse.swt.experiments.scratchy;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 
 /**
  *
@@ -21,26 +15,7 @@ import java.util.concurrent.ThreadFactory;
  *
  */
 
-public abstract class Cache<K,V> {
-	
-	int nThreads = 4; // Runtime.getRuntime().availableProcessors()/2 + 1;
-	
-	ExecutorService workers = Executors.newFixedThreadPool(nThreads, new NamedThreadFactory("Cache Worker"));
-	
-	int MAX_ENTRIES = 2200;
-	
-	LinkedHashMap<K,V> cache = new LinkedHashMap<K,V>(256, 0.75f, true) {
-		private static final long serialVersionUID = 1L;
-		@Override public boolean removeEldestEntry(Entry<K,V> eldest) {
-			if (size() > MAX_ENTRIES) {
-				remove(eldest.getKey());
-				removeEntry(eldest.getKey(), eldest.getValue());
-			}
-			return false;
-		}
-	};
-	
-	Set<K> loading = new HashSet<K>();
+public interface Cache<K,V> {
 	
 //==[ Callback Interface ]==========================================================================
 	
@@ -52,74 +27,46 @@ public abstract class Cache<K,V> {
 		void failed(K key, Exception e);
 	}
 	
-//==[ Constructor ]=================================================================================
-	
-	public Cache() {
-		log(nThreads + " workers.");
-	}
+	public static class ResourceListenerUI<K,V> implements ResourceListener<K,V> {
+		Display dsp;
+		ResourceListener<K,V> listener;
 		
-//==[ Implementation ]==============================================================================
-	
-	public V request(K key) {
-		return request(key, null);
-	}
-	
-	public V request(K key, ResourceListener<K,V> lDone) {
-		return request(key, lDone, null);
-	}
-	
-	public synchronized V request(K key, ResourceListener<K,V> lDone, FailListener<K> lFail) {
-
-		// Not yet available and loading hasn't been triggered yet? Start asynchronous loading...
-		if (!cache.containsKey(key) && !loading.contains(key)) {
-			loading.add(key);
-			
-			workers.execute( () -> {
-				
-				try {
-					
-					V value = loadEntry(key);
-					if (value != null) { // might have been cancalled by the subclass implementation
-						
-						synchronized(Cache.this) {
-							cache.put(key, value);
-							loading.remove(key);
-							addEntry(key, value);
-						}
-						
-						if (lDone!=null)
-							lDone.loaded(key, value);
-						
-					}
-					
-				} catch (Exception e) {
-					if (lFail!=null)
-						lFail.failed(key, e);
-				}
-				
-			});
+		public ResourceListenerUI(ResourceListener<K,V> l) {
+			this.dsp = Display.getCurrent();
+			if (dsp == null) SWT.error(SWT.ERROR_THREAD_INVALID_ACCESS);
+			this.listener = l;
 		}
 		
-		// Can be null if asynchronous loading has already been triggered but resource has not been loaded/added yet
-		return cache.get(key);
-		
+		@Override public void loaded(K key, V value) {
+			dsp.asyncExec(() -> listener.loaded(key, value));
+		}
 	}
 	
-//==[ Abstract Interface ]==========================================================================
-	
-	protected abstract V loadEntry(K key) throws IOException; 
+	public static class FailListenerUI<K> implements FailListener<K> {
+		Display dsp;
+		FailListener<K> listener;
+		
+		public FailListenerUI(FailListener<K> l) {
+			this.dsp = Display.getCurrent();
+			if (dsp == null) SWT.error(SWT.ERROR_THREAD_INVALID_ACCESS);
+			this.listener = l;
+		}
 
-	protected abstract void addEntry(K key, V value);
-	protected abstract void removeEntry(K key, V value);
+		@Override public void failed(K key, Exception exception) {
+			dsp.asyncExec(() -> listener.failed(key, exception));
+		}
+	}
+			
+//==[ Implementation ]==============================================================================
+	
+	public V request(K key);
+	
+	public V request(K key, ResourceListener<K,V> lDone);
+	
+	public abstract V request(K key, ResourceListener<K,V> lDone, FailListener<K> lFail);
 	
 //==[ Dispose ]=====================================================================================
 	
-	public void dispose() {
-		workers.shutdownNow();
-		cache.clear();
-	}	
+	public void dispose();
 	
-	void log(String msg) {
-		System.out.println("Cache: " + msg);
-	}
 }

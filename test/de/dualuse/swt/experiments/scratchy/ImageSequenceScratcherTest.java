@@ -4,6 +4,8 @@ import static java.lang.Math.*;
 import static org.eclipse.swt.SWT.*;
 
 import java.io.File;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -62,7 +64,12 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 	
 	Display dsp;
 	
-	File root = new File("/home/sihlefeld/Documents/footage/trip1/frames1");
+//	 File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
+//	 File root = new File(tripDir, "frames2");
+	
+	File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
+	File root = new File(tripDir, "frames1");
+	
 	CacheImages cache;
 	
 //==[ Constructor ]=================================================================================
@@ -96,18 +103,34 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 
 //==[ Animation ]===================================================================================
 	
+	double fps = SimpleReader.loadDouble(new File(tripDir, "fps.txt"), 29.97); // 29.97; // 59.94;
+	{ System.out.println("fps: " + fps); }
+	
 	int startFrame;
 	long start;
-	double fps = 59.94;
+	
 	boolean playing = false;
 	
 	int paintedFrames;
+
+	long fpsStart;
+	int fpsIter;
+	double fpsAverage;
 	
 	void start() {
 		System.out.println("Starting.");
+		
 		start = System.nanoTime();
+		startFrame = currentFrame;
+		
+		fpsIter = iter;
+		fpsStart = System.nanoTime();
+		fpsAverage = 0;
+		
 		playing = true;
+		
 		paintedFrames = 0;
+		
 		redraw();
 	}
 	
@@ -129,14 +152,18 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		long now = System.nanoTime();
 		double elapsed = (now-start)/1e9;
 		
-		currentFrame = (startFrame + (int)(elapsed * fps));
+		int step = (int)(elapsed * fps);
+		// step = 2*(step/2); // XXX only use every second frame in automatic playback? // could be dependend on framerate
+		// XXX could be used for scrolling as well for larger frame distances (when the user isn't trying to select a specific frame with small frame deltas)
+		
+		currentFrame = (startFrame + step);
+		
 		if (currentFrame >= cache.frames()) {
 			currentFrame = currentFrame % cache.frames();
-			displayedFrame = -1; // XXX direction bug during wraparound?
+			// displayedFrame = -1; // XXX direction bug during wraparound?
 		}
+		
 		counter++;
-		if (counter%60==0)
-			System.out.println("current: " + currentFrame);
 	}
 	
 //==[ Controls ]====================================================================================
@@ -155,12 +182,10 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 	
 	private void move(Event e) {
 		if (pressed) {
-			int last = currentFrame, next = currentFrame+(e.x-l.x);
 			
-			if (last!=next)
-				this.redraw();
-
-			currentFrame = max(0,min(cache.frames()-1,next));
+			int newFrame = currentFrame + (e.x - l.x);
+			gotoFrame(newFrame);
+			
 			l = e;
 		}
 	}
@@ -182,6 +207,8 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 			moveFrames(+16);
 		} else if (e.character == 'k') {
 			moveFrames(-16);
+		} else if (e.character == 'c') {
+			cache.countDisposed();
 		}
 		
 		if (e.keyCode == 27) {
@@ -189,25 +216,22 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		}
 	}
 	
-	private void moveFrames(int step) {
-		currentFrame = (currentFrame + step) % cache.frames();
-		if (currentFrame < 0) currentFrame += cache.frames();
-		redraw();
-	}
+//==[ Frame Movement ]==============================================================================
 
-//==[ Frames ]======================================================================================
-	
 	int currentFrame;
 	
-//	public int getCurrentFrame() {
-//		return frame;
-//	}
-//
-//	/////
-//	
-//	abstract int frames();
-//	abstract Entry<Integer,Image> frame(int frameNumber);
-//	
+	private void moveFrames(int step) {
+		gotoFrame(currentFrame + step);
+	}
+	
+	private void gotoFrame(int nextFrame) {
+		int lastFrame = currentFrame;
+		if (lastFrame == nextFrame) return;
+		
+		currentFrame = max(0, min(cache.frames()-1, nextFrame));
+		redraw();
+	}
+	
 //==[ Paint Code ]==================================================================================
 	
 	Transform t = new Transform(getDisplay());
@@ -215,83 +239,111 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 	int displayedFrame = -1;
 	Image displayedImage = null;
 	
-//	Map<Integer,Image> images = new HashMap<Integer,Image>();
+	int iter = 0;
 	
 	protected void paintControl(PaintEvent e) {
 		try {
-		if (playing) {
-			nextFrame();
-			redraw();
-		}
-		
-		e.gc.setAntialias(OFF);
-		e.gc.setInterpolation(NONE);
-		
-		// Entry<Integer,Image> entry = frame(frame);
-		Entry<Integer,Image> entry = cache.requestNearest(displayedFrame, currentFrame, (k,v) -> {
-			if (k > displayedFrame && k <= currentFrame || // forward direction (implicit: displayedFrame <= currentFrame)
-				k < displayedFrame && k >= currentFrame) // backward direction (implicit: currentFrame <= displayedFrame)
-				redraw();
-		});
-		
-		if (entry != null) {
-
-			int nextFrame = entry.getKey();
-			Image nextImage = entry.getValue();
 			
-			if (displayedImage != nextImage) {
-				cache.getManager().release(displayedImage);
-				cache.getManager().register(nextImage);
+			if (playing) {
+				nextFrame();
+				redraw();
 			}
 			
-			displayedFrame = nextFrame;
-			displayedImage = nextImage;
+			e.gc.setAntialias(OFF);
+			e.gc.setInterpolation(NONE);
 			
-//			ImageData imgData = entry.getValue();
-//			
-//			if (!images.containsKey(entry.getKey())) {
-//					images.put(entry.getKey(), new Image(dsp, entry.getValue()));
-//					System.out.println("image cache: #" + images.size());
-//			}  
-//			
-//			lastFrame = entry.getKey();
-//			lastImage = images.get(lastFrame);
+			// Entry<Integer,Image> entry = frame(frame);
+			Entry<Integer,Image> entry = cache.requestNearest(displayedFrame, currentFrame, (k,v) -> {
+				if (k > displayedFrame && k <= currentFrame || // forward direction (implicit: displayedFrame <= currentFrame)
+					k < displayedFrame && k >= currentFrame) // backward direction (implicit: currentFrame <= displayedFrame)
+					redraw();
+			});
 			
-		}
-		
-		if (displayedImage != null) {
-			
-			ImageData id = displayedImage.getImageData();
-			
-			Point p = getSize();
-			float scale = max(p.x*1f/id.width,p.y*1f/id.height);
-			
-			e.gc.getTransform(t);
-			t.scale(scale, scale);
-			e.gc.setTransform(t);
-			
-//			Image tempImage = new Image(dsp, id);
-//			e.gc.drawImage(tempImage, 0, 0);
-//			tempImage.dispose();
-			
-			 e.gc.drawImage(displayedImage, 0, 0);
-			
-			// e.gc.drawString("" + lastFrame, 16, 16);
-			
-		}
+			if (entry != null) {
 	
-		paintedFrames++;
+				int nextFrame = entry.getKey();
+				Image nextImage = entry.getValue();
+				
+				if (displayedImage != nextImage) {
+					int from = System.identityHashCode(displayedImage);
+					int to = System.identityHashCode(nextImage);
+					
+					log("release : " + from);
+					cache.getManager().release(displayedImage);
+					
+					log("paint - register: " + to);
+					cache.getManager().register(nextImage);
+					
+					log("\n");
+				}
+				
+				displayedFrame = nextFrame;
+				displayedImage = nextImage;
+				
+			}
+			
+			if (displayedImage!=null && displayedImage.isDisposed())
+				System.err.println(System.identityHashCode(displayedImage) + " was disposed");
+			
+			if (displayedImage != null && !displayedImage.isDisposed()) {
+				
+				ImageData id = displayedImage.getImageData();
+				
+				Point p = getSize();
+				float scale = max(p.x*1f/id.width,p.y*1f/id.height);
+				
+				e.gc.getTransform(t);
+				t.scale(scale, scale);
+				e.gc.setTransform(t);
+				
+				e.gc.drawImage(displayedImage, 0, 0);
+				if (playing) {
+					 if (iter % 30 == 0) {
+						 long now = System.nanoTime();
+						 
+						 double elapsed = (now - fpsStart)/1e9;
+						 fpsAverage = (iter - fpsIter) / elapsed;
+						 
+						 fpsStart = now;
+						 fpsIter = iter;
+					 }
+					 
+					 String output = String.valueOf(currentFrame);
+					 if (fpsAverage>0)
+						 output += " (" + ((int)(100*fpsAverage))/100.0 + "fps)";
+					 e.gc.drawString(output, 16, 16);
+					 
+				} else {
+					e.gc.drawString("" + currentFrame, 16, 16);
+				}
+			}
 		
+			paintedFrames++;
+			
 		} catch (Exception ex) {
 			System.err.println("Paint exception: " + ex.getMessage());
 			ex.printStackTrace();
+		} finally {
+			iter++;
 		}
+	}
+	
+//==[ Debug & Logging ]=============================================================================
+	
+	void log(String msg) {
+		// System.out.println("paint (" + iter + "): " + msg);
 	}
 	
 //==[ Test-Main ]===================================================================================
 	
-	public static void main(String[] args) {
-
+	public static void main(String[] args) throws Exception {
+		
+		PrintStream original = System.out;
+		
+//		PrintStream printer = new PrintStream(new File("/home/sihlefeld/log.txt"));
+//		System.setOut(printer);
+//		System.setErr(printer);
+		
 		///// Window Setup
 		
 		Display dsp = new Display();
@@ -335,7 +387,6 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 			
 		};
 		
-		
 		sh.addListener(SWT.Activate, (e) -> {
 			System.out.println("Focus: " + scratcher.setFocus());	
 		});
@@ -356,9 +407,14 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		
 		///// Event Loop
 		
-		while(!sh.isDisposed())
+		while(!sh.isDisposed()) try {
 			if (!dsp.readAndDispatch())
 				dsp.sleep();
+		} catch (Exception e) {
+			original.println("Gotcha (" + e.getMessage() + ")");
+			e.printStackTrace();
+			throw e;
+		}
 		
 		dsp.dispose();
 		

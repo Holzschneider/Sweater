@@ -1,9 +1,7 @@
 package de.dualuse.swt.experiments.scratchy;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
 import java.util.Map.Entry;
@@ -14,37 +12,41 @@ import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.widgets.Display;
 
-public class CacheImages extends Cache<Integer, Image> {
+public class CacheImages extends CacheAsyncWorkers<Integer, Image> {
 
-	static class Result {
-		public Integer frame;
-		public Image image;
-		public Result(Integer frame, Image image) {
-			this.frame = frame;
-			this.image = image;
-		}
-	}
+	Display dsp;
+	
+	///// Frame Source
 	
 	File root;
 	File[] frames;
-	byte[][] frame_data;
 	
-	Display dsp;
-
-	// If some part of the application intends to keep the image reference for later use,
-	// it should register its reference with the resourcemanager and release it once its done with it.
-
-	// Images that are automatically removed from the size-restricted cache are only disposed,
-	// if no additional external references are present.
-	ResourceManager manager = new ResourceManager();
+	///// Image Loader
 	
 	ThreadLocal<ImageLoader> loaders = new ThreadLocal<ImageLoader>() {
 		@Override public ImageLoader initialValue() {
 			return new ImageLoader();
 		}
 	};
+
+	///// Resource Manager
+	
+	/*
+	 * If some part of the application intends to keep the image reference for later use,
+	 * it should register its reference with the resourcemanager and release it once its done with it.
+	 * 
+	 * Images that are automatically removed from the size-restricted cache are only disposed,
+	 * if no additional external references are present.
+	 */
+	ResourceManager manager = new ResourceManager();
+	
+	///// Additional order-sensitive image cache
 	
 	TreeMap<Integer,Image> orderedImages = new TreeMap<Integer,Image>();
+
+	// Keep track of the current and last frame (as specified in the requests)
+	int last;
+	int current;
 	
 //==[ Constructor ]=================================================================================
 	
@@ -53,21 +55,6 @@ public class CacheImages extends Cache<Integer, Image> {
 		this.root = root;
 		this.frames = root.listFiles( (f) -> f.getName().toLowerCase().endsWith(".jpg") );
 		Arrays.sort(frames, (f1, f2) -> { return f1.getName().compareTo(f2.getName()); } );
-		
-		// XXX debug: only load every second frame
-//		File[] reducedFrames = new File[frames.length/2];
-//		for (int i=0; i<reducedFrames.length; i++)
-//			reducedFrames[i] = frames[2*i];
-//		frames = reducedFrames;
-		
-		frame_data = new byte[frames.length][];
-		for (int i=0, I=frames.length; i<I; i++) {
-			try {
-				frame_data[i] = Files.readAllBytes(frames[i].toPath());
-			} catch (IOException io) {
-				System.err.println("Wasn't able to load frame " + i);
-			}
-		}
 		
 		this.dsp = dsp;
 		
@@ -106,9 +93,6 @@ public class CacheImages extends Cache<Integer, Image> {
 		return requestNearest(last, current, lDone, null);
 	}
 	
-	int last;
-	int current;
-	
 	public synchronized Entry<Integer,Image> requestNearest(Integer last, Integer current, ResourceListener<Integer,Image> lDone, FailListener<Integer> lFailed) {
 
 		this.last = last;
@@ -144,8 +128,7 @@ public class CacheImages extends Cache<Integer, Image> {
 		
 		ImageLoader loader = loaders.get();
 		
-		// ImageData imgData = loader.load(frames[key].getAbsolutePath())[0];
-		ImageData imgData = loader.load(new ByteArrayInputStream(frame_data[key]))[0];
+		ImageData imgData = loader.load(frames[key].getAbsolutePath())[0];
 		
 		Image image = new Image(dsp, imgData);
 		
@@ -155,19 +138,19 @@ public class CacheImages extends Cache<Integer, Image> {
 	
 	@Override protected void addEntry(Integer key, Image image) {
 		
-		log("Cache size: " + cache.size());
+		log("addEntry: " + System.identityHashCode(image) + " (#" + cache.size() + ")");
 		
 		orderedImages.put(key, image);
-		dsp.asyncExec( () -> manager.register(image) );
-		
+		manager.register(image);
+				
 	}
 	
 	@Override protected void removeEntry(Integer key, Image image) {
 		
-		log("Cache size: " + cache.size());
-		
+		log("removeEntry: " + System.identityHashCode(image) + " (#" + cache.size() + ")");
+
 		orderedImages.remove(key, image);
-		dsp.asyncExec( () -> manager.release(image) );
+		manager.release(image);
 		
 	}
 	
@@ -177,10 +160,25 @@ public class CacheImages extends Cache<Integer, Image> {
 		for (Image image : cache.values())
 			image.dispose();
 		
+		manager.dispose();
+		
 		super.dispose();
 	}
 
+//==[ Debug Code ]==================================================================================
+
 	void log(String msg) {
-		System.out.println("CacheImages: " + msg);
+		// System.out.println("CacheImages: " + msg);
 	}
+	
+	public synchronized void countDisposed() {
+		int counter = 0;
+		for (Entry<Integer,Image> entry : cache.entrySet()) {
+			Image image = entry.getValue();
+			if (image.isDisposed())
+				counter++;
+		}
+		log("#disposed images in the cache: " + counter);
+	}
+	
 }
