@@ -48,11 +48,15 @@ public abstract class MainView extends Canvas {
 	
 	Display dsp;
 	
-	File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
-	File root = new File(tripDir, "frames2");
+//	File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
+//	File root = new File(tripDir, "frames2");
 	
 //	File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
 //	File root = new File(tripDir, "frames1");
+
+	// macOS
+	File tripDir = new File("/Users/ihlefeld/Downloads/Schlangenbader.strip/");
+	File root = new File(tripDir, "frames");
 	
 	CacheImages cache;
 	
