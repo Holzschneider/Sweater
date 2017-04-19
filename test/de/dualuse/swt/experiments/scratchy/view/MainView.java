@@ -5,41 +5,20 @@ import static org.eclipse.swt.SWT.*;
 
 import java.io.File;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.ControlEvent;
-import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
-import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.PaintEvent;
-import org.eclipse.swt.events.ShellAdapter;
-import org.eclipse.swt.events.ShellEvent;
-import org.eclipse.swt.events.ShellListener;
 import org.eclipse.swt.graphics.*;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.*;
 
 import de.dualuse.swt.experiments.scratchy.cache.CacheImages;
 import de.dualuse.swt.experiments.scratchy.util.SimpleReader;
 import de.dualuse.swt.experiments.scratchy.view.Timeline;
 import de.dualuse.swt.layout.BorderLayout;
-import de.dualuse.swt.util.SWTTimer;
 
 
 /**
@@ -69,11 +48,11 @@ public abstract class MainView extends Canvas {
 	
 	Display dsp;
 	
-//	File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
-//	File root = new File(tripDir, "frames2");
+	File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
+	File root = new File(tripDir, "frames2");
 	
-	File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
-	File root = new File(tripDir, "frames1");
+//	File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
+//	File root = new File(tripDir, "frames1");
 	
 	CacheImages cache;
 	
@@ -85,7 +64,6 @@ public abstract class MainView extends Canvas {
 		dsp = getDisplay();
 		
 		super.addPaintListener(this::paintControl);
-		super.addPaintListener(this::paintControl2);
 		
 		super.addListener(MouseDown, this::down);
 		super.addListener(MouseUp, this::up);
@@ -94,6 +72,7 @@ public abstract class MainView extends Canvas {
 		super.addListener(SWT.KeyDown, this::keyPressed);
 		
 		cache = new CacheImages(dsp, root);
+		totalFrames = cache.frames();
 	}
 	
 	@Override protected void checkSubclass() {}
@@ -115,7 +94,7 @@ public abstract class MainView extends Canvas {
 	{ System.out.println("fps: " + fps); }
 	
 	int startFrame;
-	long start;
+	long startTime;
 	
 	boolean playing = false;
 	
@@ -128,7 +107,7 @@ public abstract class MainView extends Canvas {
 	void start() {
 		System.out.println("Starting.");
 		
-		start = System.nanoTime();
+		startTime = System.nanoTime();
 		startFrame = currentFrame;
 		
 		fpsIter = iter;
@@ -144,12 +123,14 @@ public abstract class MainView extends Canvas {
 	
 	void stop() {
 		System.out.println("Stopping.");
-		startFrame = displayedFrame+1;
+		
+		// startFrame = displayedFrame+1;
 		playing = false;
+		
 		redraw();
 		
 		long now = System.nanoTime();
-		double elapsed = (now-start)/1e9;
+		double elapsed = (now-startTime)/1e9;
 		double actualFPS = paintedFrames / elapsed;
 		
 		System.out.println("fps: " + actualFPS);
@@ -158,18 +139,19 @@ public abstract class MainView extends Canvas {
 	int counter=0;
 	void nextFrame() {
 		long now = System.nanoTime();
-		double elapsed = (now-start)/1e9;
+		double elapsed = (now-startTime)/1e9;
 		
 		int step = (int)(elapsed * fps);
 		// step = 2*(step/2); // XXX only use every second frame in automatic playback? // could be dependend on framerate
 		// XXX could be used for scrolling as well for larger frame distances (when the user isn't trying to select a specific frame with small frame deltas)
 		
-		currentFrame = (startFrame + step);
-		
-		if (currentFrame >= cache.frames()) {
-			currentFrame = currentFrame % cache.frames();
-			// displayedFrame = -1; // XXX direction bug during wraparound?
+		int nextFrame = (startFrame + step);
+		if (nextFrame >= cache.frames()) {
+			nextFrame = nextFrame % cache.frames();
+			displayedFrame = -1; // XXX requestNearest/jobQueue pruning problems otherwise, as currentFrame<displayedFrame would indicate wrong direction (workaround works, but a bit ugly)
 		}
+		
+		gotoFrame(nextFrame);
 		
 		counter++;
 	}
@@ -180,11 +162,13 @@ public abstract class MainView extends Canvas {
 	private Event l = null;
 	
 	private void down(Event e) {
+		if (e.button != 3) return;
 		pressed = true;
 		l = e;
 	}
 
 	private void up(Event e) {
+		if (e.button != 3) return;
 		pressed = false;
 	}
 	
@@ -227,6 +211,7 @@ public abstract class MainView extends Canvas {
 //==[ Frame Movement ]==============================================================================
 
 	int currentFrame;
+	int totalFrames;
 	
 	public void moveFrames(int step) {
 		gotoFrame(currentFrame + step);
@@ -252,6 +237,7 @@ public abstract class MainView extends Canvas {
 	
 //==[ Paint Code ]==================================================================================
 	
+	Transform originalTransform = new Transform(getDisplay());
 	Transform t = new Transform(getDisplay());
 	
 	int displayedFrame = -1;
@@ -262,23 +248,30 @@ public abstract class MainView extends Canvas {
 	protected void paintControl(PaintEvent e) {
 		try {
 			
-			e.gc.setAdvanced(true);
-			
-			if (playing) {
-				nextFrame();
-				redraw();
-			}
-			
+			// Init Graphics settings
 			e.gc.setAntialias(OFF);
 			e.gc.setInterpolation(NONE);
 			
-			// Entry<Integer,Image> entry = frame(frame);
+			// If animation loop is active, compute the current frame and request the next animation frame to be drawn
+			if (playing) {
+				nextFrame();
+				// redraw();
+				dsp.asyncExec(() -> {
+					if (!isDisposed())
+						redraw();
+				}); // macOS sometimes doesn't redraw; paint request collapsed with current one? try async redraw request
+			}
+			
+			// Request the frame image (or the one closest to it according to the current movment direction)
 			Entry<Integer,Image> entry = cache.requestNearest(displayedFrame, currentFrame, (k,v) -> {
 				if (k > displayedFrame && k <= currentFrame || // forward direction (implicit: displayedFrame <= currentFrame)
 					k < displayedFrame && k >= currentFrame) // backward direction (implicit: currentFrame <= displayedFrame)
-					redraw();
+					if (!isDisposed())
+						redraw();
 			});
 			
+			// Ref counting for used image (prevent saved Image to be released by the resourcemanager if it gets thrown out of the cache)
+			// (release held image reference to the previous frame that isn't used anymore)
 			if (entry != null) {
 	
 				int nextFrame = entry.getKey();
@@ -302,9 +295,12 @@ public abstract class MainView extends Canvas {
 				
 			}
 			
+			// Debug me
+			System.out.println("painting - current:" + currentFrame + ", displayed: " + displayedFrame);
 			if (displayedImage!=null && displayedImage.isDisposed())
 				System.err.println(System.identityHashCode(displayedImage) + " was disposed");
 			
+			// Display image (if one is available)
 			if (displayedImage != null && !displayedImage.isDisposed()) {
 				
 				ImageData id = displayedImage.getImageData();
@@ -312,27 +308,32 @@ public abstract class MainView extends Canvas {
 				Point p = getSize();
 				float scale = max(p.x*1f/id.width,p.y*1f/id.height);
 				
+				e.gc.getTransform(originalTransform);
 				e.gc.getTransform(t);
 				t.scale(scale, scale);
 				e.gc.setTransform(t);
 				
+				// XXX on macOS it still happens that disposed images survive to this point and cause an exception
 				e.gc.drawImage(displayedImage, 0, 0);
-				if (playing) {
-					 if (iter % 30 == 0) {
-						 long now = System.nanoTime();
-						 
-						 double elapsed = (now - fpsStart)/1e9;
-						 fpsAverage = (iter - fpsIter) / elapsed;
-						 
-						 fpsStart = now;
-						 fpsIter = iter;
-						 
-						 fpsString = " (" + ((int)(100*fpsAverage))/100.0 + "fps)";
-					 }
-				}
 				
-				paintHUD(e.gc);
+				e.gc.setTransform(originalTransform);
 			}
+			
+			if (playing) {
+				 if (iter % 30 == 0) {
+					 long now = System.nanoTime();
+					 
+					 double elapsed = (now - fpsStart)/1e9;
+					 fpsAverage = (iter - fpsIter) / elapsed;
+					 
+					 fpsStart = now;
+					 fpsIter = iter;
+					 
+					 fpsString = " (" + ((int)(100*fpsAverage))/100.0 + "fps)";
+				 }
+			}
+			
+			paintHUD(e.gc);
 		
 			paintedFrames++;
 			
@@ -344,16 +345,12 @@ public abstract class MainView extends Canvas {
 		}
 	}
 
-	protected void paintControl2(PaintEvent event) {
-	
-	}
-	
 	Color textColor = Display.getCurrent().getSystemColor(SWT.COLOR_WHITE);
 	Color fillColor = new Color(Display.getCurrent(), 64, 64, 64, 32);
 	String fpsString = "";
 	
 	private void paintHUD(GC gc) {
-		String output = String.valueOf(currentFrame);
+		String output = String.valueOf(currentFrame+1) + " / " + totalFrames;
 		
 		if (playing && fpsAverage>0)
 			output += fpsString;
@@ -393,7 +390,6 @@ public abstract class MainView extends Canvas {
 	}
 	
 	protected void fireFrameChanged(int lastFrame, int currentFrame) {
-		System.out.println("Firing frame changed");
 		for (FrameListener listener : listeners)
 			listener.currentFrame(lastFrame, currentFrame);
 	}
@@ -431,7 +427,11 @@ public abstract class MainView extends Canvas {
 			// CacheFirstTest cache = new CacheFirstTest(dsp, root);
 			
 			{
-				addDisposeListener((e) -> cache.dispose() );
+				addDisposeListener((e) -> {
+					cache.dispose();
+					t.dispose();
+					originalTransform.dispose();
+				});
 			}
 			
 			/*

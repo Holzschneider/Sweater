@@ -161,7 +161,7 @@ public class CacheImages extends CacheAsyncWorkers<Integer, Image> {
 //==[ Dispose Image Cache ]=========================================================================
 	
 	@Override public void dispose() {
-		for (Image image : cache.values())
+		for (Image image : cache.values()) // XXX macOS concurrent modification exception (fired twice? two threads that triggered dispose concurrently?))
 			image.dispose();
 		
 		manager.dispose();
