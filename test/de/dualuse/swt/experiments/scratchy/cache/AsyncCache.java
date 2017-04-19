@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.Map.Entry;
 
-public abstract class CacheAsyncWorkers<K,V> implements Cache<K,V> {
+public abstract class AsyncCache<K,V> implements Cache<K,V> {
 	
 	///// Cache
 	
@@ -44,15 +44,15 @@ public abstract class CacheAsyncWorkers<K,V> implements Cache<K,V> {
 	
 //==[ Constructor ]=================================================================================
 	
-	public CacheAsyncWorkers() {
+	public AsyncCache() {
 		init(maxEntries, numWorkers);
 	}
 	
-	public CacheAsyncWorkers(int numWorkers) {
+	public AsyncCache(int numWorkers) {
 		init(maxEntries, numWorkers);
 	}
 	
-	public CacheAsyncWorkers(int maxEntries, int numWorkers) {
+	public AsyncCache(int maxEntries, int numWorkers) {
 		init(maxEntries, numWorkers);
 	}
 	
@@ -79,7 +79,7 @@ public abstract class CacheAsyncWorkers<K,V> implements Cache<K,V> {
 			
 			if (value != null) { // might have been cancalled by the subclass implementation
 				
-				synchronized(CacheAsyncWorkers.this) {
+				synchronized(AsyncCache.this) {
 					cache.put(key, value);
 					addEntry(key, value);
 					loading.remove(key);

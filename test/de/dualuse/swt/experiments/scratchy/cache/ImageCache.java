@@ -13,17 +13,17 @@ import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.widgets.Display;
 
 import de.dualuse.swt.experiments.scratchy.ResourceManager;
-import de.dualuse.swt.experiments.scratchy.cache.Cache.FailListener;
-import de.dualuse.swt.experiments.scratchy.cache.Cache.ResourceListener;
+import de.dualuse.swt.experiments.scratchy.video.Video;
 
-public class CacheImages extends CacheAsyncWorkers<Integer, Image> {
+public class ImageCache extends AsyncCache<Integer, Image> {
 
 	Display dsp;
 	
 	///// Frame Source
 	
-	File root;
-	File[] frames;
+//	File root;
+//	File[] frames;
+	Video video;
 	
 	///// Image Loader
 	
@@ -42,7 +42,7 @@ public class CacheImages extends CacheAsyncWorkers<Integer, Image> {
 	 * Images that are automatically removed from the size-restricted cache are only disposed,
 	 * if no additional external references are present.
 	 */
-	ResourceManager manager = new ResourceManager();
+	public ResourceManager manager = new ResourceManager();
 	
 	///// Additional order-sensitive image cache
 	
@@ -54,21 +54,22 @@ public class CacheImages extends CacheAsyncWorkers<Integer, Image> {
 	
 //==[ Constructor ]=================================================================================
 	
-	public CacheImages(Display dsp, File root) {
+	public ImageCache(Display dsp, Video video) {
 		
-		this.root = root;
-		this.frames = root.listFiles( (f) -> f.getName().toLowerCase().endsWith(".jpg") );
-		Arrays.sort(frames, (f1, f2) -> { return f1.getName().compareTo(f2.getName()); } );
+//		this.root = root;
+//		this.frames = root.listFiles( (f) -> f.getName().toLowerCase().endsWith(".jpg") );
+//		Arrays.sort(frames, (f1, f2) -> { return f1.getName().compareTo(f2.getName()); } );
 		
 		this.dsp = dsp;
+		this.video = video;
 		
 	}
 	
 //==[ Getter ]======================================================================================
 	
-	public int frames() {
-		return frames.length;
-	}
+//	public int frames() {
+//		return video.numFrames();
+//	}
 
 	public ResourceManager getManager() {
 		return manager;
@@ -132,7 +133,7 @@ public class CacheImages extends CacheAsyncWorkers<Integer, Image> {
 		
 		ImageLoader loader = loaders.get();
 		
-		ImageData imgData = loader.load(frames[key].getAbsolutePath())[0];
+		ImageData imgData = loader.load(video.getFrame(key))[0];
 		
 		Image image = new Image(dsp, imgData);
 		
