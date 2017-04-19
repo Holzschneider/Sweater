@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.util;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -7,11 +7,11 @@ import java.io.IOException;
 
 public class SimpleReader {
 	
-	static int loadInt(File src) {
+	public static int loadInt(File src) {
 		return loadInt(src, 0);
 	}
 	
-	static int loadInt(File src, int defaultValue) {
+	public static int loadInt(File src, int defaultValue) {
 		try (BufferedReader in = new BufferedReader(new FileReader(src))) {
 			
 			String line = in.readLine();
@@ -22,11 +22,11 @@ public class SimpleReader {
 		}
 	}
 	
-	static double loadDouble(File src) {
+	public static double loadDouble(File src) {
 		return loadDouble(src, 0.0);
 	}
 	
-	static double loadDouble(File src, double defaultValue) {
+	public static double loadDouble(File src, double defaultValue) {
 		try (BufferedReader in = new BufferedReader(new FileReader(src))) {
 			
 			String line = in.readLine();

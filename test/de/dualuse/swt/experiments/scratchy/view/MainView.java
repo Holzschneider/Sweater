@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.view;
 
 import static java.lang.Math.*;
 import static org.eclipse.swt.SWT.*;
@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,7 +65,7 @@ import de.dualuse.swt.util.SWTTimer;
  *
  */
 
-public abstract class ImageSequenceScratcherTest extends Canvas {
+public abstract class MainView extends Canvas {
 	
 	Display dsp;
 	
@@ -78,7 +79,7 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 	
 //==[ Constructor ]=================================================================================
 	
-	public ImageSequenceScratcherTest(Composite parent, int style) {
+	public MainView(Composite parent, int style) {
 		super(parent, style); // | NO_BACKGROUND); // | SWT.DOUBLE_BUFFERED);
 		
 		dsp = getDisplay();
@@ -227,16 +228,26 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 
 	int currentFrame;
 	
-	private void moveFrames(int step) {
+	public void moveFrames(int step) {
 		gotoFrame(currentFrame + step);
 	}
 	
-	private void gotoFrame(int nextFrame) {
+	public void gotoFrame(int nextFrame) {
 		int lastFrame = currentFrame;
 		if (lastFrame == nextFrame) return;
 		
-		currentFrame = max(0, min(cache.frames()-1, nextFrame));
+		int last = currentFrame;
+		int next = max(0, min(cache.frames()-1, nextFrame));
+		
+		currentFrame = next;
+		
+		fireFrameChanged(last, next);
+		
 		redraw();
+	}
+	
+	public int numFrames() {
+		return cache.frames();
 	}
 	
 //==[ Paint Code ]==================================================================================
@@ -364,6 +375,29 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		});
 	}
 	
+//==[ Frame Listener ]==============================================================================
+
+	interface FrameListener {
+		void currentFrame(int last, int current);
+		// void displayedFrame(int frame);
+	}
+	
+	CopyOnWriteArrayList<FrameListener> listeners = new CopyOnWriteArrayList<FrameListener>();
+	
+	public void addFrameListener(FrameListener listener) {
+		listeners.add(listener);
+	}
+	
+	public void removeFrameListener(FrameListener listener) {
+		listeners.remove(listener);
+	}
+	
+	protected void fireFrameChanged(int lastFrame, int currentFrame) {
+		System.out.println("Firing frame changed");
+		for (FrameListener listener : listeners)
+			listener.currentFrame(lastFrame, currentFrame);
+	}
+	
 //==[ Debug & Logging ]=============================================================================
 	
 	void log(String msg) {
@@ -383,10 +417,11 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 		///// Window Setup
 		
 		Display dsp = new Display();
-		Shell sh = new Shell(dsp, SHELL_TRIM ); // | NO_BACKGROUND); // | DOUBLE_BUFFERED);
-		sh.setLayout(new FillLayout());
+		Shell sh = new Shell(dsp, SHELL_TRIM); // | NO_BACKGROUND); // | DOUBLE_BUFFERED);
+		// sh.setLayout(new FillLayout());
+		sh.setLayout(new BorderLayout());
 
-		ImageSequenceScratcherTest scratcher = new ImageSequenceScratcherTest(sh, NO_BACKGROUND ) {
+		MainView scratcher = new MainView(sh, NO_BACKGROUND ) {
 
 			// XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
 			// File root = new File("/home/sihlefeld/Documents/footage/trip1/frames2");
@@ -422,6 +457,13 @@ public abstract class ImageSequenceScratcherTest extends Canvas {
 //			}
 			
 		};
+		
+		Timeline timeline = new Timeline(sh, SWT.NONE, scratcher, scratcher.numFrames());
+		scratcher.addFrameListener(timeline);
+		
+		scratcher.setLayoutData(BorderLayout.CENTER);
+		timeline.setLayoutData(BorderLayout.SOUTH);
+		
 		
 		sh.addListener(SWT.Activate, (e) -> {
 			System.out.println("Focus: " + scratcher.setFocus());	

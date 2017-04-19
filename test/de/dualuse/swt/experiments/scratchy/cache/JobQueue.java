@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.cache;
 
 import java.util.LinkedList;
 import java.util.concurrent.locks.Condition;

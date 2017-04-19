@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.util;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;

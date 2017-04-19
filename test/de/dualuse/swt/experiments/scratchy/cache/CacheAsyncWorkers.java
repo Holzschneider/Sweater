@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.cache;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -11,12 +11,12 @@ public abstract class CacheAsyncWorkers<K,V> implements Cache<K,V> {
 	///// Cache
 	
 	int numWorkers = Runtime.getRuntime().availableProcessors()/2 + 1;
-	int MAX_ENTRIES = 200;
+	int maxEntries = 200;
 	
 	LinkedHashMap<K,V> cache = new LinkedHashMap<K,V>(256, 0.75f, true) {
 		private static final long serialVersionUID = 1L;
 		@Override public boolean removeEldestEntry(Entry<K,V> eldest) {
-			if (size() > MAX_ENTRIES) {
+			if (size() > maxEntries) {
 				remove(eldest.getKey());
 				removeEntry(eldest.getKey(), eldest.getValue());
 			}
@@ -40,16 +40,33 @@ public abstract class CacheAsyncWorkers<K,V> implements Cache<K,V> {
 	}
 	
 	JobQueue<ResourceLoadJob<K,V>> jobs = new JobQueue<ResourceLoadJob<K,V>>();
-	WorkerService<ResourceLoadJob<K,V>> workers = new WorkerService<ResourceLoadJob<K,V>>(jobs, numWorkers) {
-		@Override protected void handle(ResourceLoadJob<K,V> job) {
-			loadJob(job);
-		}
-	};
+	WorkerService<ResourceLoadJob<K,V>> workers;
 	
 //==[ Constructor ]=================================================================================
 	
 	public CacheAsyncWorkers() {
-		workers.start();
+		init(maxEntries, numWorkers);
+	}
+	
+	public CacheAsyncWorkers(int numWorkers) {
+		init(maxEntries, numWorkers);
+	}
+	
+	public CacheAsyncWorkers(int maxEntries, int numWorkers) {
+		init(maxEntries, numWorkers);
+	}
+	
+	private void init(int maxEntries, int numWorkers) {
+		
+		this.maxEntries = maxEntries;
+		this.numWorkers = numWorkers;
+		
+		workers = new WorkerService<ResourceLoadJob<K,V>>(jobs, numWorkers) {
+			@Override protected void handle(ResourceLoadJob<K,V> job) {
+				loadJob(job);
+			}
+		};
+		workers.start();		
 	}
 	
 //==[ Asynchronous Load Job ]=======================================================================

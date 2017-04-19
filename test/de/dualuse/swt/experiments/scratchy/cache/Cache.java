@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.cache;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;

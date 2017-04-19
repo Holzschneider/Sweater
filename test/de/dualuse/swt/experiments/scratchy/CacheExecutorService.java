@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import de.dualuse.swt.experiments.scratchy.cache.Cache;
+import de.dualuse.swt.experiments.scratchy.util.NamedThreadFactory;
+
 /**
  *
  * When being used as an image cache for SWT:

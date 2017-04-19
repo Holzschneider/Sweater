@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.cache;
 
 public abstract class WorkerThread<E> extends Thread {
 
