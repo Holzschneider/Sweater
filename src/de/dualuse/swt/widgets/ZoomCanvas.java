@@ -1,6 +1,13 @@
 package de.dualuse.swt.widgets;
 
-import static org.eclipse.swt.SWT.*;
+import static org.eclipse.swt.SWT.H_SCROLL;
+import static org.eclipse.swt.SWT.MouseDown;
+import static org.eclipse.swt.SWT.MouseMove;
+import static org.eclipse.swt.SWT.MouseUp;
+import static org.eclipse.swt.SWT.MouseWheel;
+import static org.eclipse.swt.SWT.Paint;
+import static org.eclipse.swt.SWT.Selection;
+import static org.eclipse.swt.SWT.V_SCROLL;
 
 import java.util.ArrayList;
 
@@ -10,6 +17,7 @@ import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Canvas;
@@ -22,7 +30,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	private ArrayList<Listener> listeners = new ArrayList<Listener>();
 	private ArrayList<PaintListener> paintListeners = new ArrayList<PaintListener>(); 
 	
-	ScrollBar horizontal, vertical;
+	private ScrollBar horizontal, vertical;
 	
 	public ZoomCanvas(Composite parent, int style) {
 		super(parent, style);
@@ -50,27 +58,34 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 			vertical.addListener(Selection, this);
 			vertical.setIncrement(16);
 		}
-		
 	}
-
+	
 	
 	private void scrollbarScrolled(Event event) {
-		float deltaX = 0, deltaY = 0;
+		float canvasX = 0, canvasY = 0;
+		int screenX = 0, screenY = 0;
 
 		if (horizontal!=null) {
 			int currentX = horizontal.getSelection();
-			deltaX = (scrollBarX-currentX) / elements[0];
+			screenX = (scrollBarX-currentX);
+			canvasX = screenX / elements[0];
 			scrollBarX = currentX;
 		}
 		
 		if (vertical!=null) {
 			int currentY = vertical.getSelection();
-			deltaY = (scrollBarY-currentY) / elements[3];
+			screenY = (scrollBarY-currentY);
+			canvasY = screenY / elements[3];
 			scrollBarY = currentY;
 		}
 		
-		canvasTransform.translate(deltaX, deltaY);
-		redraw();
+		canvasTransform.translate(canvasX, canvasY);
+		
+		// USE .scroll instead -> so repaint will be clipped to the area that's new
+		
+		Point size = getSize();
+		this.scroll(screenX, screenY, 0, 0, size.x, size.y, false);
+//		redraw();
 	}
 	
 	@Override
@@ -322,8 +337,6 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		);
 		respectCanvasBoundsAndUpdateScrollbars();
 		
-//		fireStateChanged();
-		
 		setLocation(p, q);
 		redraw();
 	}
@@ -345,8 +358,6 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		canvasTransform.scale(sx, sy);
 		canvasTransform.translate(-q[0],  -q[1]);
 		respectCanvasBoundsAndUpdateScrollbars();
-		
-//		fireStateChanged();
 		
 		redraw();
 	}
@@ -442,7 +453,6 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 				sb.setThumb((int)(higher-lower));
 				sb.setSelection((int)(lower-min));
 				
-				System.out.println("scrollbar Set to: "+ scrollBarY);
 				scrollBarY = sb.getSelection();
 			} else
 				sb.setEnabled(false);
