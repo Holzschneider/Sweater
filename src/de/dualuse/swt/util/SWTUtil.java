@@ -97,8 +97,8 @@ public class SWTUtil {
 	private static void center(Rectangle region, Shell shell, double xfrac, double yfrac) {
 		Rectangle s_bounds = shell.getBounds();
 		
-		System.out.println("Center: " + s_bounds);
-		System.out.println("Over: " + region);
+//		System.out.println("Center: " + s_bounds);
+//		System.out.println("Over: " + region);
 		
 //		int x = region.x + (region.width - s_bounds.width) / 2;
 //		int y = region.y + (region.height - s_bounds.height) / 2;

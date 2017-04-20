@@ -2,8 +2,11 @@ package de.dualuse.swt.examples;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Synchronizer;
 
@@ -42,9 +45,18 @@ public class TextApplication extends MultiDocumentApplication {
 		
 //		Shell hiddenShell = new Shell(this, SWT.NONE);
 //		HiddenShell hiddenShell = new HiddenShell();
+		URL imageURL = ProgressDialog.class.getResource("logo.png");
+		Image image = null;
+		
 		try (AutoShell hiddenShell = new AutoShell()) {
 			
 			ProgressDialog<String> progress = new ProgressDialog<String>(hiddenShell, "Opening Document...");
+			try {
+				image = new Image(hiddenShell.getDisplay(), new ImageData(imageURL.openStream()));
+				progress.setDescription(image, "Opening Document:\nLoading data...");
+			} catch (IOException io) {
+				io.printStackTrace();
+			}
 			
 			String result = progress.open(new ProgressDialog.SimpleTask<String>() {
 	
@@ -100,7 +112,7 @@ public class TextApplication extends MultiDocumentApplication {
 						
 						for (int i=0; i<=100; i++) {
 							
-							tp.log("Extra loop (" + i + ")");
+							tp.log("Extra loop (" + i + ")\n");
 							try { Thread.sleep(25); } catch (InterruptedException e) {}
 							thirdProgress.setValue(i);
 							
@@ -155,6 +167,9 @@ public class TextApplication extends MultiDocumentApplication {
 			} catch (IOException io) {
 				io.printStackTrace();
 			}
+		} finally {
+			if (image!=null)
+				image.dispose();
 		}
 		
 		return null;

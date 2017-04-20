@@ -65,7 +65,7 @@ public class BorderLayout extends Layout {
 		if (flushCache)
 			flushAll();
 		
-		Rectangle bounds = composite.getBounds();
+//		Rectangle bounds = composite.getBounds();
 		Control[] children = composite.getChildren();
 		
 		Control cCenter = findControl(children, CENTER);		
@@ -74,23 +74,72 @@ public class BorderLayout extends Layout {
 		Control cSouth = findControl(children, SOUTH);
 		Control cWest = findControl(children, WEST);
 		
-		int top = 0, bottom = 0, left = 0, right = 0;
-		int centerWidth = 0, centerHeight = 0;
+		int width = wHint;
+		int height = hHint;
 		
-		// XXX
+		int nw = 0, nh = 0;
+		int ew = 0, eh = 0;
+		int sw = 0, sh = 0;
+		int ww = 0, wh = 0;
+		int cw = 0, ch = 0;
 		
-		return new Point(wHint, hHint);	
+		if (cNorth != null) {
+			Point prefSize = last[N]!=null ? pref[N] : cNorth.computeSize(wHint, hHint);
+			cache(N, cNorth, prefSize);
+			nw = prefSize.x;
+			nh = prefSize.y;
+		}
+		
+		if (cEast != null) {
+			Point prefSize = last[E]!=null ? pref[E] : cEast.computeSize(wHint, hHint);
+			cache(E, cEast, prefSize);
+			ew = prefSize.x;
+			eh = prefSize.y;
+		}
+
+		if (cSouth != null) {
+			Point prefSize = last[S]!=null ? pref[S] : cSouth.computeSize(wHint, hHint);
+			cache(S, cSouth, prefSize);
+			sw = prefSize.x;
+			sh = prefSize.y;
+		}
+
+		if (cWest != null) {
+			Point prefSize = last[W]!=null ? pref[W] : cWest.computeSize(wHint, hHint);
+			cache(W, cWest, prefSize);
+			ww = prefSize.x;
+			wh = prefSize.y;
+		}
+
+		if (cCenter != null) {
+			Point prefSize = cCenter.computeSize(wHint, hHint);
+			cw = prefSize.x;
+			ch = prefSize.y;
+		}
+		
+		if (wHint == SWT.DEFAULT)
+			width = Math.max(Math.max((ew + cw + ww), nw), sw);
+		
+		if (hHint == SWT.DEFAULT)
+			height = Math.max(Math.max(eh, ch), wh) + nh + sh;
+		
+		System.out.println("\t -> computed prefSize: " + width + ", " + height);
+		
+		return new Point(width, height);	
 	}
 	
 	@Override protected void layout(Composite composite, boolean flushCache) {
 		System.out.println("layout(" + composite + ", " + flushCache + ")");
 		
+		flushCache = true; // XXX resizing the window doesn't flush the cache (linux/awesomewm)
 		if (flushCache)
 			flushAll();
 		
 		Rectangle bounds = composite.getBounds();
 		Control[] children = composite.getChildren();
 
+		System.out.println("layout: " + bounds + " (" + flushCache + ")");
+		
 //		Control cCenter=null, cNorth=null, cEast=null, cSouth=null, cWest=null;
 //		
 //		for (Control child : children) {
