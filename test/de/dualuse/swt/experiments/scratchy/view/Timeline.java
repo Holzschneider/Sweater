@@ -13,7 +13,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
-import de.dualuse.swt.experiments.scratchy.view.MainView.FrameListener;
+import de.dualuse.swt.experiments.scratchy.view.VideoView.FrameListener;
 
 public class Timeline extends Canvas implements FrameListener {
 
@@ -25,9 +25,9 @@ public class Timeline extends Canvas implements FrameListener {
 	int totalFrames;
 	int currentFrame;
 
-	MainView main;
+	VideoView main;
 
-	public Timeline(Composite parent, int style, MainView main, int totalFrames) {
+	public Timeline(Composite parent, int style, VideoView main, int totalFrames) {
 		super(parent, style);
 
 		dsp = getDisplay();

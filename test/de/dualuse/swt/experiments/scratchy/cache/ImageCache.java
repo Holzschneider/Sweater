@@ -1,9 +1,7 @@
 package de.dualuse.swt.experiments.scratchy.cache;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
@@ -21,8 +19,6 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 	
 	///// Frame Source
 	
-//	File root;
-//	File[] frames;
 	Video video;
 	
 	///// Image Loader
@@ -42,7 +38,7 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 	 * Images that are automatically removed from the size-restricted cache are only disposed,
 	 * if no additional external references are present.
 	 */
-	public ResourceManager manager = new ResourceManager();
+	public ResourceManager<Image> manager;
 	
 	///// Additional order-sensitive image cache
 	
@@ -55,23 +51,27 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 //==[ Constructor ]=================================================================================
 	
 	public ImageCache(Display dsp, Video video) {
-		
-//		this.root = root;
-//		this.frames = root.listFiles( (f) -> f.getName().toLowerCase().endsWith(".jpg") );
-//		Arrays.sort(frames, (f1, f2) -> { return f1.getName().compareTo(f2.getName()); } );
-		
 		this.dsp = dsp;
 		this.video = video;
-		
+		this.manager = new ResourceManager<Image>(dsp);
+	}
+	
+	public ImageCache(Display dsp, Video video, ResourceManager<Image> manager) {
+		this.dsp = dsp;
+		this.video = video;
+		this.manager = manager;
+	}
+	
+	public ImageCache(Display dsp, Video video, ResourceManager<Image> manager, int maxEntries, int numWorkers) {
+		super(maxEntries, numWorkers);
+		this.dsp = dsp;
+		this.video = video;
+		this.manager = manager;
 	}
 	
 //==[ Getter ]======================================================================================
 	
-//	public int frames() {
-//		return video.numFrames();
-//	}
-
-	public ResourceManager getManager() {
+	public ResourceManager<Image> getManager() {
 		return manager;
 	}
 	
@@ -85,7 +85,7 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 		FailListener<Integer> lFailedSWT = lFailed==null ? null : 
 			(k, e) -> dsp.asyncExec(() -> lFailed.failed(k, e));
 		
-		return super.request(key, lDoneSWT, lFailedSWT);
+		return manager.register(super.request(key, lDoneSWT, lFailedSWT));
 	}
 
 	/////
@@ -102,16 +102,19 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 
 		this.last = last;
 		this.current = current;
-		
+
 		// Already present?
 		Image image = request(current, lDone, lFailed);
 		Integer frame = current;
-		
+
 		if (image != null)
 			return new SimpleEntry<Integer,Image>(frame, image);
-	
+
 		// Otherwise return nearest available in the given direction
-		return (current >= last) ? orderedImages.floorEntry(current) : orderedImages.ceilingEntry(current);
+		Entry<Integer,Image> result = (current >= last) ? orderedImages.floorEntry(current) : orderedImages.ceilingEntry(current); 
+		if (result!=null) manager.register(result.getValue());
+		
+		return result;
 	}
 	
 //==[ Abstract Interface: Load & Free Resources ]===================================================
@@ -173,7 +176,11 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 //==[ Debug Code ]==================================================================================
 
 	void log(String msg) {
-		// System.out.println("CacheImages: " + msg);
+		System.out.println("CacheImages: " + msg);
+	}
+	
+	public synchronized int size() {
+		return cache.size();
 	}
 	
 	public synchronized void countDisposed() {

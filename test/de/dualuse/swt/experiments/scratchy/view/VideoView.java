@@ -14,12 +14,15 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.widgets.*;
 
+import de.dualuse.swt.experiments.scratchy.ResourceManager;
 import de.dualuse.swt.experiments.scratchy.cache.ImageCache;
 import de.dualuse.swt.experiments.scratchy.video.Video;
 import de.dualuse.swt.experiments.scratchy.video.VideoDir;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
+import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
 import de.dualuse.swt.experiments.scratchy.view.Timeline;
 import de.dualuse.swt.layout.BorderLayout;
+import de.dualuse.swt.util.Sleak;
 
 
 /**
@@ -45,7 +48,7 @@ import de.dualuse.swt.layout.BorderLayout;
  *
  */
 
-public class MainView extends Canvas {
+public class VideoView extends Canvas implements EditorListener {
 	
 	Display dsp;
 	
@@ -56,7 +59,7 @@ public class MainView extends Canvas {
 	
 //==[ Constructor ]=================================================================================
 	
-	public MainView(Composite parent, int style, VideoEditor editor) {
+	public VideoView(Composite parent, int style, VideoEditor editor) {
 		super(parent, style); // | NO_BACKGROUND); // | SWT.DOUBLE_BUFFERED);
 		
 		this.dsp = getDisplay();
@@ -71,9 +74,10 @@ public class MainView extends Canvas {
 		super.addListener(SWT.KeyDown, this::keyPressed);
 		super.addListener(SWT.KeyUp, this::keyUp);
 		
-		cache = new ImageCache(dsp, editor.getVideo());
-		cacheHD = new ImageCache(dsp, editor.getVideoHD());
-		cacheHD.manager = cache.manager; // XXX shared resource manager; hack to test SD/HD frame logic
+		ResourceManager<Image> manager = new ResourceManager<Image>(dsp);
+		cache = new ImageCache(dsp, editor.getVideo(), manager);
+		cacheHD = new ImageCache(dsp, editor.getVideoHD(), manager, 12, 4);
+		// cacheHD.manager = cache.manager; // XXX shared resource manager; hack to test SD/HD frame logic
 		
 		totalFrames = editor.getVideo().numFrames();
 		fps = editor.getVideo().fps();
@@ -93,6 +97,17 @@ public class MainView extends Canvas {
 //		System.out.println("drawing background2");
 //		super.drawBackground(gc, x, y, width, height, offsetX, offsetY);
 //	}
+
+//==[ Frame Listener ]==============================================================================
+
+	@Override public void scratchedTo(int from, int to) {
+		
+	}
+
+	@Override public void movedTo(int from, int to) {
+		
+	}
+	
 	
 //==[ Animation ]===================================================================================
 	
@@ -210,7 +225,13 @@ public class MainView extends Canvas {
 		} else if (e.character == 'k') {
 			moveFrames(-16);
 		} else if (e.character == 'c') {
+			System.out.println();
+			System.out.println("#cache (SD): " + cache.size());
 			cache.countDisposed();
+			
+			System.out.println();
+			System.out.println("#cache (HD): " + cacheHD.size());
+			cacheHD.countDisposed();
 		}
 		
 		if (e.keyCode == 27) {
@@ -354,6 +375,8 @@ public class MainView extends Canvas {
 		gc.drawString(output, 16, 16, true); // XXX flickers on Windows
 	}
 	
+//==[ Request Next Frame Image from Image Cache ]===================================================
+	
 	// If current frame has changed, request frame image from cache
 	private void requestFrameImage() {
 		if (playing || pressed || keyRepeat) {
@@ -382,11 +405,8 @@ public class MainView extends Canvas {
 			int nextFrame = entry.getKey();
 			Image nextImage = entry.getValue();
 			
-			if (displayedImage != nextImage) {
-				cache.getManager().release(displayedImage);
-				cache.getManager().register(nextImage);
-			}
-			
+			// Refcounting && update displayedImage/Frame information
+			cache.getManager().release(displayedImage);
 			displayedFrame = nextFrame;
 			displayedImage = nextImage;
 			displayedHD = false;
@@ -394,6 +414,7 @@ public class MainView extends Canvas {
 	}
 	
 	private boolean requestHDFrame() {
+		
 		// Request image from cache, will be null if not present (but asynchronously triggers redraw once available)
 		Image frameImage = cacheHD.request(currentFrame, (k,v) -> {
 			if (currentFrame!=k) return; // too late, view has moved on
@@ -401,22 +422,20 @@ public class MainView extends Canvas {
 			if (!isDisposed())
 				redraw();
 		});
+		
 		// cache.request(currentFrame); // request SD frame as well, just to have it cached
-		// XXX prevents fallback requestFrameImage to get issued and no callback gets called?
+		// prevents fallback requestFrameImage to get issued and no callback gets called?
+		
+		if (frameImage==null)
+			return false;
 		
 		// Refcounting && update displayedImage/Frame information
-		if (frameImage != null) {			
-			cache.getManager().release(displayedImage);
-			cache.getManager().register(frameImage);
-			
-			displayedFrame = currentFrame;
-			displayedImage = frameImage;
-			displayedHD = true;
-			
-			return true;
-		}
-		
-		return false;
+		cache.getManager().release(displayedImage);
+		displayedFrame = currentFrame;
+		displayedImage = frameImage;
+		displayedHD = true;
+
+		return true;
 	}
 	
 //==[ Frame Listener ]==============================================================================
@@ -463,77 +482,8 @@ public class MainView extends Canvas {
 	
 //==[ Test-Main ]===================================================================================
 	
-	public static void main(String[] args) throws Exception {
+	public static void main_(String[] args) {
 		
-		// XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
-//		File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
-//		File root = new File(tripDir, "frames2");
-//		File rootHD = new File(tripDir, "frames1");
-
-		File tripDir = new File("/home/sihlefeld/Documents/footage/trip4");
-		File root = new File(tripDir, "frames2");
-		File rootHD = new File(tripDir, "frames1");
-		
-//		File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
-//		File root = new File(tripDir, "frames1");
-
-		// macOS
-//		File tripDir = new File("/Users/ihlefeld/Downloads/Schlangenbader.strip/");
-//		File root = new File(tripDir, "frames");
-
-		Video video = new VideoDir(root);
-		Video videoHD = new VideoDir(rootHD);
-		
-		VideoEditor editor = new VideoEditor(video, videoHD);
-		
-		///// Window Setup
-		
-		Display dsp = new Display();
-		Shell sh = new Shell(dsp, SHELL_TRIM); // | NO_BACKGROUND); // | DOUBLE_BUFFERED);
-		// sh.setLayout(new FillLayout());
-		sh.setLayout(new BorderLayout());
-
-		MainView scratcher = new MainView(sh, NO_BACKGROUND, editor);
-		
-		Timeline timeline = new Timeline(sh, SWT.NONE, scratcher, video.numFrames());
-		scratcher.addFrameListener(timeline);
-		
-		scratcher.setLayoutData(BorderLayout.CENTER);
-		timeline.setLayoutData(BorderLayout.SOUTH);
-		
-		
-		sh.addListener(SWT.Activate, (e) -> {
-			System.out.println("Focus: " + scratcher.setFocus());	
-		});
-		
-		sh.setBounds(100, 100, 1200, 800);
-		sh.setVisible(true);
-		
-		sh.addDisposeListener(new DisposeListener() {
-			@Override public void widgetDisposed(DisposeEvent e) {
-				scratcher.dispose();
-			}
-		});
-		
-//		Thread concurrentExperiment = new Thread(() -> {
-//			Experiment3ConcurrentImageConstruction.run(dsp);
-//		});
-//		concurrentExperiment.start();
-		
-		///// Event Loop
-		
-		while(!sh.isDisposed()) try {
-			if (!dsp.readAndDispatch())
-				dsp.sleep();
-		} catch (Exception e) {
-			// original.println("Gotcha (" + e.getMessage() + ")");
-			e.printStackTrace();
-			throw e;
-		}
-		
-		dsp.dispose();
-		
-		System.out.println("Event Loop stopped");
 	}
-	
+
 }

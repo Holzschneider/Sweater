@@ -21,6 +21,9 @@ public class VideoEditor {
 		this.video = video;
 		this.videoHD = videoHD;
 		this.total = video.numFrames();
+		
+		if (video.numFrames() != videoHD.numFrames())
+			throw new IllegalArgumentException("Non-matching SD and HD frames (amount should be equal).");
 	}
 	
 	public Video getVideo() {
@@ -51,7 +54,7 @@ public class VideoEditor {
 	
 //==[ Listener ]====================================================================================
 	
-	interface EditorListener {
+	public interface EditorListener {
 		void scratchedTo(int from, int to);
 		void movedTo(int from, int to);
 	}

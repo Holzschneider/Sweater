@@ -80,7 +80,7 @@ public abstract class AsyncCache<K,V> implements Cache<K,V> {
 			if (value != null) { // might have been cancalled by the subclass implementation
 				
 				synchronized(AsyncCache.this) {
-					cache.put(key, value);
+					cache.put(key, value); // can trigger removeEntry (via removeEldest())
 					addEntry(key, value);
 					loading.remove(key);
 				}
