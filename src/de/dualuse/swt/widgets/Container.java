@@ -3,7 +3,7 @@ package de.dualuse.swt.widgets;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 
-import de.dualuse.swt.events.LayoutDelegate;
+import de.dualuse.swt.layout.LayoutDelegate;
 
 public class Container extends Composite {
 

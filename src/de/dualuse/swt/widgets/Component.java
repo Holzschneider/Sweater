@@ -9,9 +9,9 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 
-import de.dualuse.swt.events.LayoutDelegate;
 import de.dualuse.swt.events.MouseDelegate;
 import de.dualuse.swt.events.MouseDragListener;
+import de.dualuse.swt.layout.LayoutDelegate;
 
 public class Component extends Canvas {
 	
