@@ -62,6 +62,10 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 		this.manager = manager;
 	}
 	
+	public ImageCache(Display dsp, Video video, ResourceManager<Image> manager, int maxEntries) {
+		this(dsp, video, manager, maxEntries, Runtime.getRuntime().availableProcessors()/2 + 1);
+	}
+	
 	public ImageCache(Display dsp, Video video, ResourceManager<Image> manager, int maxEntries, int numWorkers) {
 		super(maxEntries, numWorkers);
 		this.dsp = dsp;
@@ -176,7 +180,7 @@ public class ImageCache extends AsyncCache<Integer, Image> {
 //==[ Debug Code ]==================================================================================
 
 	void log(String msg) {
-		System.out.println("CacheImages: " + msg);
+//		System.out.println("CacheImages: " + msg);
 	}
 	
 	public synchronized int size() {

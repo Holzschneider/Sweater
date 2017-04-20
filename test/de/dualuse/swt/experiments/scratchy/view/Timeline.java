@@ -13,9 +13,10 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
-import de.dualuse.swt.experiments.scratchy.view.VideoView.FrameListener;
+import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
+import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
 
-public class Timeline extends Canvas implements FrameListener {
+public class Timeline extends Canvas implements EditorListener { // FrameListener, EditorListener {
 
 	Display dsp;
 
@@ -25,9 +26,11 @@ public class Timeline extends Canvas implements FrameListener {
 	int totalFrames;
 	int currentFrame;
 
-	VideoView main;
+	VideoEditor editor;
 
-	public Timeline(Composite parent, int style, VideoView main, int totalFrames) {
+//==[ Constructor ]=================================================================================
+	
+	public Timeline(Composite parent, int style, VideoEditor editor) {
 		super(parent, style);
 
 		dsp = getDisplay();
@@ -35,19 +38,63 @@ public class Timeline extends Canvas implements FrameListener {
 		background = dsp.getSystemColor(SWT.COLOR_DARK_GRAY);
 		foreground = dsp.getSystemColor(SWT.COLOR_GRAY);
 
-		this.totalFrames = totalFrames;
-		this.main = main;
+		this.editor = editor;
+		this.totalFrames = editor.getVideo().numFrames();
+		
+		editor.addEditorListener(this);
 
 		addPaintListener(this::paintControl);
+
 		addListener(SWT.MouseDown, this::down);
+		addListener(SWT.MouseMove, this::move);
+		addListener(SWT.MouseUp, this::up);
 	}
 
-	void down(Event event) {
-		double ratio = Double.valueOf(event.x) / getSize().x;
-		int frame = (int) Math.round(ratio * totalFrames);
-		main.gotoFrame(frame);
+	@Override public boolean setFocus() {
+		return false;
 	}
+	
+//==[ Controls ]====================================================================================
+	
+	private boolean pressed = false;
+	private boolean dragged = false;
+	
+	private void down(Event event) {
+		
+//		double ratio = Double.valueOf(event.x) / getSize().x;
+//		int frame = (int) Math.round(ratio * totalFrames);
+		
+		int frame = xToFrame(event.x);
+		if (frame == currentFrame) return;
+		editor.moveTo(frame);
+		pressed = true;
+		
+	}
+	
+	private void up(Event e) {
+		if (dragged)
+			editor.moveTo(xToFrame(e.x));
+		pressed = dragged = false;
+	}
+	
+	private void move(Event e) {
+		if (pressed) {
+			dragged = true;
+			editor.scratchTo(xToFrame(e.x));
+		}
+	}
+	
+	private int xToFrame(int x) {
+		double ratio = Double.valueOf(x) / getSize().x;
+		return (int) Math.round(ratio * totalFrames);
+	}
+	
+//	private int frameToX(int frame) {
+//		return -1;
+//	}
 
+//==[ Paint Event ]=================================================================================
+	
 	protected void paintControl(PaintEvent event) {
 		GC gc = event.gc;
 
@@ -66,30 +113,29 @@ public class Timeline extends Canvas implements FrameListener {
 
 		gc.setBackground(foreground);
 		gc.fillRectangle(0, 0, x, height);
-
-		// System.out.println("Painting timeline (" + width + ")");
 	}
 
-	public void setCurrentFrame(int currentFrame) {
-		if (this.currentFrame == currentFrame)
-			return;
+//==[ EditorListener ]==============================================================================
 
-		this.currentFrame = currentFrame;
+	@Override public void scratchedTo(int from, int to) {
+		updatePosition(to);
+	}
+
+	@Override public void movedTo(int from, int to) {
+		updatePosition(to);
+	}
+	
+	private void updatePosition(int to) {
+		if (currentFrame == to) return;
+		currentFrame = to;
 		redraw();
 	}
-
-	@Override
-	public void currentFrame(int last, int current) {
-		if (currentFrame == current)
-			return;
-		currentFrame = current;
-		// System.out.println("current: " + current);
-		redraw();
-	}
-
-	@Override
-	public Point computeSize(int wHint, int hHint, boolean flush) {
+	
+//==[ Layout ]======================================================================================
+	
+	@Override public Point computeSize(int wHint, int hHint, boolean flush) {
 		// System.out.println("wHInt: " + wHint);
 		return new Point(wHint, 24);
 	}
+
 }

@@ -38,18 +38,32 @@ public class VideoEditor {
 	
 	public void scratchTo(int frame) {
 		int from = position;
-		position = frame;
+		position = limit(frame);
 		fireScratchedTo(from, position);
+	}
+	
+	public void scratchRelative(int frames) {
+		scratchTo(position + frames);
 	}
 	
 	public void moveTo(int frame) {
 		int from = position;
-		position = frame;
+		position = limit(frame);
 		fireMovedTo(from, position);
+	}
+	
+	public void moveRelative(int frames) {
+		moveTo(position + frames);
 	}
 	
 	public int getPosition() {
 		return position;
+	}
+
+	/////
+	
+	private int limit(int pos) {
+		return Math.max(0, Math.min(total-1, pos));
 	}
 	
 //==[ Listener ]====================================================================================

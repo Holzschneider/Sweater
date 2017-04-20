@@ -22,71 +22,61 @@ import de.dualuse.swt.util.Sleak;
 
 public class ScratchApp {
 
+//==[ Local Resource Dependencies for Testing Purposes ]============================================
+	
+	// XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
+	
+//	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
+//	static File root = new File(tripDir, "frames2");
+//	static File rootHD = new File(tripDir, "frames1");
+
+	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip4");
+	static File root = new File(tripDir, "frames2");
+	static File rootHD = new File(tripDir, "frames1");
+	
+//	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
+//	static File root = new File(tripDir, "frames1");
+
+	// macOS
+//	static File tripDir = new File("/Users/ihlefeld/Downloads/Schlangenbader.strip/");
+//	static File root = new File(tripDir, "frames");
+
+//==[ App-Main ]====================================================================================
+	
 	public static void main(String[] args) throws Exception {
-		
-		// XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
-//		File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
-//		File root = new File(tripDir, "frames2");
-//		File rootHD = new File(tripDir, "frames1");
 
-		File tripDir = new File("/home/sihlefeld/Documents/footage/trip4");
-		File root = new File(tripDir, "frames2");
-		File rootHD = new File(tripDir, "frames1");
-		
-//		File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
-//		File root = new File(tripDir, "frames1");
-
-		// macOS
-//		File tripDir = new File("/Users/ihlefeld/Downloads/Schlangenbader.strip/");
-//		File root = new File(tripDir, "frames");
-
-		Video video = new VideoDir(root);
-		Video videoHD = new VideoDir(rootHD);
-		
-		VideoEditor editor = new VideoEditor(video, videoHD);
-		
-		///// Window Setup
+		///// Debug SWT Resource Monitoring with Sleak
 		
 		DeviceData data = new DeviceData();
 		data.tracking = true;
 		
 		Display dsp = new Display(data);
+		//Display dsp = new Display();
 		
 		Sleak sleak = new Sleak();
 		sleak.open();
+
+		///// Setup Test Data
 		
-		//Display dsp = new Display();
+		Video video = new VideoDir(root);
+		Video videoHD = new VideoDir(rootHD);
+		VideoEditor editor = new VideoEditor(video, videoHD);
+
+		///// Setup UI
+
 		Shell sh = new Shell(dsp, SHELL_TRIM); // | NO_BACKGROUND); // | DOUBLE_BUFFERED);
 		// sh.setLayout(new FillLayout());
 		sh.setLayout(new BorderLayout());
 		sh.setText("MainView");
 
-		VideoView scratcher = new VideoView(sh, NO_BACKGROUND, editor);
+		VideoView videoview = new VideoView(sh, NO_BACKGROUND, editor);
+		Timeline timeline = new Timeline(sh, SWT.NONE, editor);
 		
-		Timeline timeline = new Timeline(sh, SWT.NONE, scratcher, video.numFrames());
-		scratcher.addFrameListener(timeline);
-		
-		scratcher.setLayoutData(BorderLayout.CENTER);
+		videoview.setLayoutData(BorderLayout.CENTER);
 		timeline.setLayoutData(BorderLayout.SOUTH);
-		
-		
-		sh.addListener(SWT.Activate, (e) -> {
-			System.out.println("Focus: " + scratcher.setFocus());	
-		});
 		
 		sh.setBounds(100, 100, 1200, 800);
 		sh.setVisible(true);
-		
-		sh.addDisposeListener(new DisposeListener() {
-			@Override public void widgetDisposed(DisposeEvent e) {
-				scratcher.dispose();
-			}
-		});
-		
-//		Thread concurrentExperiment = new Thread(() -> {
-//			Experiment3ConcurrentImageConstruction.run(dsp);
-//		});
-//		concurrentExperiment.start();
 		
 		///// Event Loop
 		

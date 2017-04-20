@@ -3,26 +3,19 @@ package de.dualuse.swt.experiments.scratchy.view;
 import static java.lang.Math.*;
 import static org.eclipse.swt.SWT.*;
 
-import java.io.File;
 import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.DisposeEvent;
-import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.widgets.*;
 
 import de.dualuse.swt.experiments.scratchy.ResourceManager;
 import de.dualuse.swt.experiments.scratchy.cache.ImageCache;
-import de.dualuse.swt.experiments.scratchy.video.Video;
-import de.dualuse.swt.experiments.scratchy.video.VideoDir;
+import de.dualuse.swt.experiments.scratchy.video.Animator;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
-import de.dualuse.swt.experiments.scratchy.view.Timeline;
-import de.dualuse.swt.layout.BorderLayout;
-import de.dualuse.swt.util.Sleak;
 
 
 /**
@@ -57,6 +50,8 @@ public class VideoView extends Canvas implements EditorListener {
 	ImageCache cache;
 	ImageCache cacheHD;
 	
+//	Animator animator; // XXX same animation code just refactored into its own class somehow slow/laggy?
+	
 //==[ Constructor ]=================================================================================
 	
 	public VideoView(Composite parent, int style, VideoEditor editor) {
@@ -76,14 +71,15 @@ public class VideoView extends Canvas implements EditorListener {
 		
 		ResourceManager<Image> manager = new ResourceManager<Image>(dsp);
 		cache = new ImageCache(dsp, editor.getVideo(), manager);
-		cacheHD = new ImageCache(dsp, editor.getVideoHD(), manager, 12, 4);
-		// cacheHD.manager = cache.manager; // XXX shared resource manager; hack to test SD/HD frame logic
+		cacheHD = new ImageCache(dsp, editor.getVideoHD(), manager, 64);
 		
-		totalFrames = editor.getVideo().numFrames();
+		numFrames = editor.getVideo().numFrames();
 		fps = editor.getVideo().fps();
 		
-		System.out.println("#frames: " + totalFrames);
+		System.out.println("#frames: " + numFrames);
 		System.out.println("fps: " + fps);
+		
+		editor.addEditorListener(this);
 	}
 	
 	@Override protected void checkSubclass() {}
@@ -100,18 +96,28 @@ public class VideoView extends Canvas implements EditorListener {
 
 //==[ Frame Listener ]==============================================================================
 
+	int currentFrame;
+	boolean scratching = false;
+	
 	@Override public void scratchedTo(int from, int to) {
-		
+		if (to == displayedFrame) return;
+		currentFrame = to;
+		scratching = true;
+		redraw();
 	}
 
 	@Override public void movedTo(int from, int to) {
-		
+		if (!scratching && to==displayedFrame) return;
+		currentFrame = to;
+		scratching = false;
+		redraw();
 	}
 	
 	
 //==[ Animation ]===================================================================================
 	
-	double fps; // = SimpleReader.loadDouble(new File(tripDir, "fps.txt"), 29.97); // 29.97; // 59.94;
+	int numFrames;
+	double fps;
 	
 	int startFrame;
 	long startTime;
@@ -125,10 +131,11 @@ public class VideoView extends Canvas implements EditorListener {
 	double fpsAverage;
 	
 	void start() {
+		if (playing) return;
 		System.out.println("Starting.");
 		
 		startTime = System.nanoTime();
-		startFrame = currentFrame;
+		startFrame = editor.getPosition();
 		
 		fpsIter = iter;
 		fpsStart = System.nanoTime();
@@ -142,12 +149,12 @@ public class VideoView extends Canvas implements EditorListener {
 	}
 	
 	void stop() {
+		if (!playing) return;
 		System.out.println("Stopping.");
 		
-		// startFrame = displayedFrame+1;
 		playing = false;
 		
-		redraw();
+		editor.moveTo(editor.getPosition());
 		
 		long now = System.nanoTime();
 		double elapsed = (now-startTime)/1e9;
@@ -157,20 +164,52 @@ public class VideoView extends Canvas implements EditorListener {
 	}
 	
 	void nextFrame() {
+		
 		long now = System.nanoTime();
 		double elapsed = (now-startTime)/1e9;
 		
 		int step = (int)(elapsed * fps);
 		// step = 2*(step/2); // XXX only use every second frame in automatic playback? // could be dependend on framerate
-		// XXX could be used for scrolling as well for larger frame distances (when the user isn't trying to select a specific frame with small frame deltas)
+		// could be used for scrolling as well for larger frame distances (when the user isn't trying to select a specific frame with small frame deltas)
 		
 		int nextFrame = (startFrame + step);
-		if (nextFrame >= totalFrames) {
-			nextFrame = nextFrame % totalFrames;
+		if (nextFrame >= numFrames) {
+			nextFrame = nextFrame % numFrames;
 			displayedFrame = -1; // XXX requestNearest/jobQueue pruning problems otherwise, as currentFrame<displayedFrame would indicate wrong direction (workaround works, but a bit ugly)
+			// just moveTo(0) instead of scratchTo(0) during wraparound
+			
+			// XXX same problem as with the wraparound when one jumps to a different part (using the timeline) while the animation is active
+			//     requestNearest too far off? jumping to another position should trigger moveTo? 
 		}
 		
-		gotoFrame(nextFrame);
+		editor.scratchTo(nextFrame);
+	}
+
+	void animTick() {
+		if (!playing) return;
+		
+		nextFrame();
+		// redraw();
+		dsp.asyncExec(() -> {
+			if (!isDisposed())
+				redraw();
+		}); // macOS sometimes doesn't redraw; paint request collapsed with current one? try async redraw request
+		
+		if (iter % 30 == 0)
+			 updateFPS();
+	}
+	
+	// Every x frames update the average fps of this period
+	private void updateFPS() {
+		 long now = System.nanoTime();
+		 
+		 double elapsed = (now - fpsStart)/1e9;
+		 fpsAverage = (iter - fpsIter) / elapsed;
+		 
+		 fpsStart = now;
+		 fpsIter = iter;
+		 
+		 fpsString = " (" + ((int)(100*fpsAverage))/100.0 + "fps)";
 	}
 	
 //==[ Controls ]====================================================================================
@@ -178,8 +217,8 @@ public class VideoView extends Canvas implements EditorListener {
 	private boolean pressed = false;
 	private boolean keyPressed = false;
 	private boolean keyRepeat = false;
-	
 	private Event l = null;
+	
 	
 	private void down(Event e) {
 		if (e.button != 3) return;
@@ -190,15 +229,16 @@ public class VideoView extends Canvas implements EditorListener {
 	private void up(Event e) {
 		if (e.button != 3) return;
 		pressed = false;
-		redraw();
+		
+		editor.moveTo(editor.getPosition());
+		
+//		redraw();
 	}
 	
 	private void move(Event e) {
 		if (pressed) {
 			
-			int newFrame = currentFrame + (e.x - l.x);
-			gotoFrame(newFrame);
-			
+			editor.scratchRelative(e.x - l.x);
 			l = e;
 		}
 	}
@@ -216,15 +256,24 @@ public class VideoView extends Canvas implements EditorListener {
 			}
 		}
 		
-		if (e.character == 'h') {
-			moveFrames(-1);
-		} else if (e.character == 'l') {
-			moveFrames(+1);
-		} else if (e.character == 'j') {
-			moveFrames(+16);
-		} else if (e.character == 'k') {
-			moveFrames(-16);
-		} else if (e.character == 'c') {
+		if (e.character == 'h' || e.character == 'l' || e.character == 'k' || e.character == 'j') {
+			int movement = 0;
+			switch(e.character) {
+				case 'h': movement = - 1; break;
+				case 'j': movement = +16; break;
+				case 'k': movement = -16; break;
+				case 'l': movement = + 1; break;
+			}
+			
+			if (keyRepeat)
+				editor.scratchRelative(movement);
+			else
+				editor.moveRelative(movement);
+			
+			return;
+		}
+		
+		if (e.character == 'c') {
 			System.out.println();
 			System.out.println("#cache (SD): " + cache.size());
 			cache.countDisposed();
@@ -232,6 +281,8 @@ public class VideoView extends Canvas implements EditorListener {
 			System.out.println();
 			System.out.println("#cache (HD): " + cacheHD.size());
 			cacheHD.countDisposed();
+			
+			return;
 		}
 		
 		if (e.keyCode == 27) {
@@ -240,31 +291,13 @@ public class VideoView extends Canvas implements EditorListener {
 	}
 	
 	private void keyUp(Event e) {
+		
+		if (keyRepeat)
+			editor.moveTo(editor.getPosition());
+		
 		keyPressed = keyRepeat = false;
-		redraw();
-	}
-	
-//==[ Frame Movement ]==============================================================================
-
-	int currentFrame;
-	int totalFrames;
-	
-	public void moveFrames(int step) {
-		gotoFrame(currentFrame + step);
-	}
-	
-	public void gotoFrame(int nextFrame) {
-		int lastFrame = currentFrame;
-		if (lastFrame == nextFrame) return;
 		
-		int last = currentFrame;
-		int next = max(0, min(totalFrames-1, nextFrame));
-		
-		currentFrame = next;
-		
-		fireFrameChanged(last, next);
-		
-		redraw();
+//		redraw();
 	}
 	
 //==[ Paint Code ]==================================================================================
@@ -285,27 +318,18 @@ public class VideoView extends Canvas implements EditorListener {
 	protected void paintControl(PaintEvent e) {
 		try {
 			
+			int currentFrame = editor.getPosition();
+			
 			// Init Graphics settings
 			e.gc.setAntialias(OFF);
 			e.gc.setInterpolation(NONE);
 			
 			// If animation loop is active, compute the current frame and request the next animation frame to be drawn
-			if (playing) {
-				nextFrame();
-				// redraw();
-				dsp.asyncExec(() -> {
-					if (!isDisposed())
-						redraw();
-				}); // macOS sometimes doesn't redraw; paint request collapsed with current one? try async redraw request
-				
-				if (iter % 30 == 0)
-					 updateFPS();
-			}
-			
+			animTick();
+
 			// Has current frame changed since last time a frame was painted? (or has requested resolution changed?)
-			boolean useHD = !playing && !pressed && !keyRepeat;
-			if (currentFrame != displayedFrame || displayedHD != useHD)
-				requestFrameImage();
+			if (currentFrame != displayedFrame || displayedHD == scratching)
+				requestFrameImage(currentFrame);
 			
 			// Debug me
 			// System.out.println("painting - current:" + currentFrame + ", displayed: " + displayedFrame);
@@ -344,22 +368,9 @@ public class VideoView extends Canvas implements EditorListener {
 		}
 	}
 
-	// Every x frames update the average fps of this period
-	private void updateFPS() {
-		 long now = System.nanoTime();
-		 
-		 double elapsed = (now - fpsStart)/1e9;
-		 fpsAverage = (iter - fpsIter) / elapsed;
-		 
-		 fpsStart = now;
-		 fpsIter = iter;
-		 
-		 fpsString = " (" + ((int)(100*fpsAverage))/100.0 + "fps)";
-	}
-	
 	// Paint HUD/Overlay of extra information on top of frame image
 	private void paintHUD(GC gc) {
-		String output = String.valueOf(currentFrame+1) + " / " + totalFrames;
+		String output = String.valueOf(currentFrame+1) + " / " + numFrames;
 		
 		if (playing && fpsAverage>0)
 			output += fpsString;
@@ -378,18 +389,18 @@ public class VideoView extends Canvas implements EditorListener {
 //==[ Request Next Frame Image from Image Cache ]===================================================
 	
 	// If current frame has changed, request frame image from cache
-	private void requestFrameImage() {
-		if (playing || pressed || keyRepeat) {
-			requestSDFrame();
+	private void requestFrameImage(int currentFrame) {
+		if (scratching) {
+			requestSDFrame(currentFrame);
 		} else { // use HD frames
-			if (!requestHDFrame())
-				requestSDFrame(); // fallback until HD frame available
+			if (!requestHDFrame(currentFrame))
+				requestSDFrame(currentFrame); // fallback until HD frame available
 		}
 	}
 	
 	// Request SD frames (requests 'closest' frame according to movement direction along timeline, doesn't require an exact match,
 	// will trigger another redraw once closer frames become available)
-	private void requestSDFrame() {
+	private void requestSDFrame(int currentFrame) {
 		// Request the frame image (or the one closest to it according to the current movment direction)
 		Entry<Integer,Image> entry = cache.requestNearest(displayedFrame, currentFrame, (k,v) -> {
 			if (k > displayedFrame && k <= currentFrame || // forward direction (implicit: displayedFrame <= currentFrame)
@@ -413,7 +424,7 @@ public class VideoView extends Canvas implements EditorListener {
 		}
 	}
 	
-	private boolean requestHDFrame() {
+	private boolean requestHDFrame(int currentFrame) {
 		
 		// Request image from cache, will be null if not present (but asynchronously triggers redraw once available)
 		Image frameImage = cacheHD.request(currentFrame, (k,v) -> {
