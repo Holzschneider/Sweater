@@ -31,46 +31,7 @@ import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Widget;
 
-
-
-/**
- *  IDEA: Cross Connected ResourcePools:
- *  
- *  ResourcePools may share static caches (per Device!)
- *  
- *  private static HashMap<Device, HashMap<Object, RefCountedResource>> globalCache = ...;
- *  
- *  
- *  ResourcePool () {
- *   //...
- *   ownCache = globalCache.getOrDefault(device);
- *   globalCache.put(device,ownCache)
- * }
- * 
- * 
- * ...
- * Color() {
- *   int id = ...;
- *   Color c = (Color)ownCache.get(id);
- *   if (c ==null)
- *      ownCache.put(id, this.registerRefCounted(c = new Color(...) ).incRefCountAndReturn());
- *      
- *   return c; 
- * }
- * 
- *  for (RefCountedResource rcr: registered)
- *     if(rcr.decRefCount()==0)
- *     		rcr.value.dispose();
- *  
- *  
- *  ok sieht geilaus, brauchen wir -> Philipp bildet sich ein, dass ein LocalResourcePool kein großen gewinn
- *  bringt. ggf. LocalResourcePool extends ResourcePool plus überschreiben der Globalen Zugriffs-Methoden 
- *  Refcounters (die Register Methode muss einfach nicht refcounten und der Construktor Lookup guckt einfach
- *  nicht im shared static Pool nach, sondern baut sich eine eigene HashMap)
- *  
- */
 
 
 public class ResourcePool implements Closeable, DisposeListener, Listener {
@@ -95,7 +56,6 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		}
 		
 		public void dispose() {
-			System.out.println("Disposing: "+reference);
 			reference.dispose();
 			reference = null;
 		}
@@ -108,7 +68,7 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	final static private HashMap<Device, HashMap<Object, SharedResourceHolder>> global =
 				new HashMap<Device, HashMap<Object, SharedResourceHolder>> ();
 	
-	private Display device; 
+	private Display device;
 	private HashMap<Object, SharedResourceHolder> pool;
 	private ArrayList<SharedResourceHolder> shared;
 	private ArrayList<Resource> owned;
@@ -116,6 +76,7 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	private int frame = 0;
 	private int[] sharedBase = new int[MAX_STACK_DEPTH];
 	private int[] ownedBase = new int[MAX_STACK_DEPTH];
+	private boolean empty = true;
 	
 	public ResourcePool push() {
 		sharedBase[frame] = shared.size();
@@ -139,35 +100,35 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		
 		sharedBase[frame] = shared.size();
 		
-
 		for (int i=ownedBase[frame],I=owned.size()-1;i<=I;I--)
 			owned.remove(I).dispose();
 		
 		ownedBase[frame] = owned.size();
 		
+		//if no resources are managed -> there's nothing to dispose and also no Display to be attached to 
+		empty = sharedBase[frame] ==0 && ownedBase[frame] ==0;
+		
+		if (empty) {
+			this.device.removeListener(Dispose, this);
+			System.out.println("remove listener");
+		}
+
 		return this;
 	}
 	
 	
 	public ResourcePool() { 
 		this(Display.getCurrent()); 
-	}
-	
-	public ResourcePool(Widget w) {
-		this(w.getDisplay());
-		w.addDisposeListener(this);
-	}
+	}	
 	
 	public ResourcePool(Display d) { 
 		this.device = d; 
-		d.addListener(Dispose, this);
 		
 		synchronized(global) {
 			if (!global.containsKey(d))
 				global.put(d, new HashMap<Object,SharedResourceHolder>());
 			
 			pool = global.get(d);
-			
 		}
 		
 		shared = new ArrayList<SharedResourceHolder>();
@@ -175,7 +136,7 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		
 		push();
 	}
-	
+
 	//////
 	public void dispose() {
 		while (frame>0)
@@ -184,6 +145,7 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		shared = null;
 		device = null;
 		pool = null;
+		
 	}
 	
 	@Override
@@ -198,8 +160,8 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	}
 	
 	
-	public void open() {
-		push();
+	public ResourcePool open() {
+		return push();
 	}
 	
 	@Override
@@ -221,6 +183,13 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	private<T extends Resource> T register(Object key, T r) {
 		SharedResourceHolder srh = new SharedResourceHolder(key, r);
 		pool.put(key, srh);
+		
+		if (empty) {
+			this.device.addListener(Dispose, this);
+			System.out.println("Add Listener");
+		}
+		
+		empty = false;
 		return r;
 	}
 	
@@ -232,6 +201,10 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	}
 	
 	private<T extends Resource> T register(T r) {
+		if (empty)
+			this.device.addListener(Dispose, this);
+
+		empty = false;
 		owned.add(r);
 		return r;
 	}
@@ -258,7 +231,7 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	public Color color(RGBA rgba) { return color(rgba.rgb.red,rgba.rgb.green,rgba.rgb.blue,rgba.alpha); }
 	public Color color(int r, int g, int b, int a) { 
 		int code = ((a&0xFF)<<24)|((r&0xFF)<<16)|((g&0xFF)<<8)|(b&0xFF);
-
+		
 		if (!registered(code)) 
 			register(code, new Color(device, r, g, b, a));
 		

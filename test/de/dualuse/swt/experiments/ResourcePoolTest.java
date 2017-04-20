@@ -24,12 +24,16 @@ public class ResourcePoolTest {
 		Canvas c = new Canvas(wnd, NONE);
 		
 		ResourcePool rp = new ResourcePool(app);
-//		System.out.println( rp.color(100,100,255) );
+		System.out.println( rp.color(100,100,255) );
 		
 		AtomicInteger ai = new AtomicInteger(5);
 		
 		c.addPaintListener( (e) -> {
-			try (ResourcePool r = rp) {
+//			ResourcePool r = rp.push();
+//			try (ResourcePool r = rp)
+			try (ResourcePool r = rp.push())
+//			try (ResourcePool r = new ResourcePool())
+			{
 				
 				Color c1 = r.color(100,100,255);
 				e.gc.setBackground(c1);
@@ -40,7 +44,7 @@ public class ResourcePoolTest {
 				
 				System.out.println( c1==c2 );
 			}
-			
+//			r.pop();
 		});
 		
 		
