@@ -26,6 +26,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
 
+
 public class ZoomCanvas extends Canvas implements PaintListener, Listener, ControlListener {
 	private ArrayList<Listener> listeners = new ArrayList<Listener>();
 	private ArrayList<PaintListener> paintListeners = new ArrayList<PaintListener>(); 
@@ -327,18 +328,30 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		float scy = elements[3];
 		float shy = elements[1];
 		float shx = elements[2];
+		float tx = elements[4];
+		float ty = elements[5];
+
 		
 		float deltaX = (q[0]-p[0]) * (scrollX?1:0);
 		float deltaY = (q[1]-p[1]) * (scrollY?1:0); 
+		float zx = (float)Math.hypot(scx, shy);
+		float zy = (float)Math.hypot(scy, shx);
 		
-		canvasTransform.translate(
-			(deltaX / (float)Math.hypot(scx, shy)),
-			(deltaY / (float)Math.hypot(scy, shx))
-		);
+		canvasTransform.translate( deltaX / zx, deltaY / zy );
+		
+		
 		respectCanvasBoundsAndUpdateScrollbars();
+
+		canvasTransform.getElements(elements);
+		float tx_ = elements[4], ty_ = elements[5];
+		
+		int dx = (int)(tx_-tx);
+		int dy = (int)(ty_-ty);
 		
 		setLocation(p, q);
-		redraw();
+		
+		Point size = getSize();
+		this.scroll(dx, dy, 0, 0, size.x, size.y,false);
 	}
 
 	private void mouseScrolled(Event e) {
@@ -413,7 +426,6 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 			canvasTransform.translate(-constrainX, -constrainY);
 		}		
 		/////////////
-		
 		
 		
 		if ((getStyle()&H_SCROLL)==H_SCROLL) {
