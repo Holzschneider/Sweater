@@ -43,6 +43,7 @@ public class ZoomCanvasTest {
 			e.gc.setBackground(c);
 			e.gc.fillRectangle(0, 0, image.getImageData().width, image.getImageData().height);
 			c.dispose();
+			
 		});
 		
 		zc.setCanvasBounds(0, 0, 1129, 750); //1f/0f);
