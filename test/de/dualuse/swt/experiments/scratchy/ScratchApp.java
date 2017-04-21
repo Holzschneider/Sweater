@@ -26,13 +26,13 @@ public class ScratchApp {
 	
 	// XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
 	
-//	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
-//	static File root = new File(tripDir, "frames2");
-//	static File rootHD = new File(tripDir, "frames1");
-
-	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip4");
+	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
 	static File root = new File(tripDir, "frames2");
 	static File rootHD = new File(tripDir, "frames1");
+
+//	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip4");
+//	static File root = new File(tripDir, "frames2");
+//	static File rootHD = new File(tripDir, "frames1");
 	
 //	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
 //	static File root = new File(tripDir, "frames1");
@@ -47,21 +47,22 @@ public class ScratchApp {
 
 		///// Debug SWT Resource Monitoring with Sleak
 		
-		DeviceData data = new DeviceData();
-		data.tracking = true;
+		Display dsp = new Display();
+
+		///// Sleak Debugging
 		
-		Display dsp = new Display(data);
-		//Display dsp = new Display();
-		
-		Sleak sleak = new Sleak();
-		sleak.open();
+		// DeviceData data = new DeviceData();
+		// data.tracking = true;
+		// Display dsp = new Display(data);
+		// Sleak sleak = new Sleak();
+		// sleak.open();
 
 		///// Setup Test Data
 		
 		Video video = new VideoDir(root);
 		Video videoHD = new VideoDir(rootHD);
 		VideoEditor editor = new VideoEditor(video, videoHD);
-
+	
 		///// Setup UI
 
 		Shell sh = new Shell(dsp, SHELL_TRIM); // | NO_BACKGROUND); // | DOUBLE_BUFFERED);
@@ -74,6 +75,8 @@ public class ScratchApp {
 		
 		videoview.setLayoutData(BorderLayout.CENTER);
 		timeline.setLayoutData(BorderLayout.SOUTH);
+		
+		sh.addListener(SWT.Activate, (e) -> videoview.setFocus() );
 		
 		sh.setBounds(100, 100, 1200, 800);
 		sh.setVisible(true);

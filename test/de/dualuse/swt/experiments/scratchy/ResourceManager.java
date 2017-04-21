@@ -83,6 +83,10 @@ public class ResourceManager<T extends Resource> {
 	
 //==[ Debug & Log ]=================================================================================
 	
+	public synchronized int size() {
+		return refCount.keySet().size();
+	}
+	
 	void log(String msg) {
 		System.out.println("ResourceManager: " + msg);
 	}

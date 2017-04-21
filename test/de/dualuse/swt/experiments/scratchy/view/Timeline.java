@@ -35,7 +35,7 @@ public class Timeline extends Canvas implements EditorListener { // FrameListene
 
 		dsp = getDisplay();
 
-		background = dsp.getSystemColor(SWT.COLOR_DARK_GRAY);
+		background = dsp.getSystemColor(SWT.COLOR_BLACK);
 		foreground = dsp.getSystemColor(SWT.COLOR_GRAY);
 
 		this.editor = editor;

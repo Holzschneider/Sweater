@@ -11,6 +11,7 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Pattern;
 import org.eclipse.swt.graphics.Point;
@@ -75,6 +76,15 @@ public class GCPathTest {
 			
 			
 			c.redraw();
+		});
+		
+		c.addListener(SWT.KeyDown, (e) -> {
+			if (e.keyCode == SWT.ESC)
+				sh.dispose();
+		});
+		
+		sh.addListener(SWT.Activate, (e) -> {
+			c.setFocus();
 		});
 		
 		
