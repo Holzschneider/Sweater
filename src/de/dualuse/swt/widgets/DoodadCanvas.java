@@ -121,7 +121,7 @@ public class DoodadCanvas extends Canvas implements Renderable, PaintListener {
 			at.scale(.5, .5);
 			at.translate(50, 50);
 //			at.rotate( 45*Math.PI /180 );
-//			at.rotate( (now-then)/1e9 );
+			at.rotate( (now-then)/1e9 );
 			at.translate(-50, -50);
 
 			d.set(at);

@@ -246,6 +246,7 @@ class Doodad implements Renderable {
 		final float N00 = (float) n.getScaleX(), N01 = (float) n.getShearX(), N02 = (float) n.getTranslateX();
 		final float N10 = (float) n.getShearY(), N11 = (float) n.getScaleY(), N12 = (float) n.getTranslateY();
 		
+		
 
 		//set Matrix to GC
 //		t.setElements(
@@ -263,6 +264,10 @@ class Doodad implements Renderable {
 		t.translate(+50, +50);
 //		t.rotate(44.999f);
 		t.translate(-50, -50);
+		
+		t.setElements(
+				N00, N10, N01, N11, 
+				N02, N12);
 		
 //		t.setElements(N00, N10, N01, N11, N02, N12);
 //		t.setElements(M11, M12, m21, m22, dx, dy);
