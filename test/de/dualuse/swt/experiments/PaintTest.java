@@ -27,42 +27,36 @@ public class PaintTest {
 		sh.setLayout(new FillLayout());
 		Canvas c = new Canvas(sh,NONE);
 		
+		long then = System.nanoTime();
 		
 		Image im  =new Image(app, PaintTest.class.getResourceAsStream("generic-cat.jpeg"));
 		c.addPaintListener(new PaintListener() {
 			Transform t = new Transform(app); 
-			
 			LineAttributes attr = new LineAttributes(1f, SWT.CAP_FLAT, SWT.JOIN_MITER);
-			
-			float angle = 0;
 			
 			public void paintControl(PaintEvent e) {
 
-				GC gc = e.gc;
+				long now = System.nanoTime();
+				e.gc.setAdvanced(true);
 				
 				t.identity();
 				t.translate(100,100);
 				t.scale(.5f, .5f);
-				
 				t.translate(+50, +50);
-				
-				t.rotate(angle);
-				
+				t.rotate( 2*(float)((now-then)/1e8) );
 				t.translate(-50, -50);
 				
 				e.gc.setTransform(t);
 
 				e.gc.drawImage(im, 0, 0);
-				
+
 //				e.gc.getGCData().state |= 1 << 14;
 				e.gc.setLineAttributes(attr);
-				
+
 				PathShape p = new PathShape(app, new RoundRectangle2D.Double(0,0,100,100,30,30));
 				e.gc.drawPath( p );
 				p.dispose();
-				
-//				e.gc.drawRectangle(0, 0, 100, 100);
-				angle += 0.128f;
+
 				c.redraw();
 			}
 		});
