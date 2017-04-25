@@ -27,12 +27,12 @@ public class ScratchApp {
 	// XXX Lösung ausdenken für diese "resource dependency" (z.B. Sub-Modules? maven build-Scripts? oder?)
 	
 	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip1");
-	static File root = new File(tripDir, "frames2");
-	static File rootHD = new File(tripDir, "frames1");
+	static File root = new File(tripDir, "frames1");
+	static File rootSD = new File(tripDir, "frames2");
 
 //	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip4");
-//	static File root = new File(tripDir, "frames2");
-//	static File rootHD = new File(tripDir, "frames1");
+//	static File rootSD = new File(tripDir, "frames2");
+//	static File root = new File(tripDir, "frames1");
 	
 //	static File tripDir = new File("/home/sihlefeld/Documents/footage/trip3");
 //	static File root = new File(tripDir, "frames1");
@@ -60,8 +60,9 @@ public class ScratchApp {
 		///// Setup Test Data
 		
 		Video video = new VideoDir(root);
-		Video videoHD = new VideoDir(rootHD);
-		VideoEditor editor = new VideoEditor(video, videoHD);
+		Video videoSD = new VideoDir(rootSD);
+		
+		VideoEditor editor = new VideoEditor(video, videoSD);
 	
 		///// Setup UI
 

@@ -5,7 +5,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class VideoEditor {
 	
 	Video video;
-	Video videoHD;
+	Video videoSD;
 		
 	int position;
 	int total;
@@ -17,21 +17,21 @@ public class VideoEditor {
 		this.total = video.numFrames();
 	}
 	
-	public VideoEditor(Video video, Video videoHD) {
+	public VideoEditor(Video video, Video videoSD) {
 		this.video = video;
-		this.videoHD = videoHD;
+		this.videoSD = videoSD;
 		this.total = video.numFrames();
 		
-		if (video.numFrames() != videoHD.numFrames())
+		if (video.numFrames() != videoSD.numFrames())
 			throw new IllegalArgumentException("Non-matching SD and HD frames (amount should be equal).");
 	}
-	
+
 	public Video getVideo() {
 		return video;
 	}
 	
-	public Video getVideoHD() {
-		return videoHD;
+	public Video getVideoSD() {
+		return videoSD;
 	}
 	
 //==[ Get/Set Position ]============================================================================

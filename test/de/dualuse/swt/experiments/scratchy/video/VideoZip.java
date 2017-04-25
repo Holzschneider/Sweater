@@ -12,6 +12,10 @@ public class VideoZip implements Video {
 	@Override public double fps() {
 		throw new RuntimeException("not yet implemented");
 	}
+	
+	@Override public int[] resolution() {
+		throw new RuntimeException("not yet implemented");
+	}
 
 	@Override public InputStream getFrame(int no) throws IOException {
 		throw new RuntimeException("not yet implemented");

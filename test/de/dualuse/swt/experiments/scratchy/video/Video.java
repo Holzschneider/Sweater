@@ -6,6 +6,8 @@ import java.io.InputStream;
 public interface Video {
 	
 	int numFrames();
+	
+	int[] resolution();
 	double fps();
 	
 	InputStream getFrame(int no) throws IOException;
