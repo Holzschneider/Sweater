@@ -35,11 +35,11 @@ class Doodad implements Renderable {
 	
 	private Renderable parent; 
 	private Renderable children[] = {};
-	private float M[] = new float[6];
+	private float M[] = new float[6]; // the local transformation Matrix
+	private float W[] = new float[6]; // the world matrix of this doodad, the last time it was rendered
+	
 	private float width, height;
 	
-	private AffineTransform at = new AffineTransform();
-
 	public double getWidth() { return width; }
 	public double getHeight() { return height; }
 	
@@ -51,12 +51,11 @@ class Doodad implements Renderable {
 	
 	public Renderable getParentRenderable() { return parent; }
 	
-	public Doodad set(AffineTransform at) {
-		M[T00] = (float) at.getScaleX(); M[T01] = (float) at.getShearX(); M[T02] = (float) at.getTranslateX();
-		M[T10] = (float) at.getShearY(); M[T11] = (float) at.getScaleY(); M[T12] = (float) at.getTranslateY();
-		this.at.setTransform(at);
-		return this;
-	}
+//	public Doodad set(AffineTransform at) {
+//		M[T00] = (float) at.getScaleX(); M[T01] = (float) at.getShearX(); M[T02] = (float) at.getTranslateX();
+//		M[T10] = (float) at.getShearY(); M[T11] = (float) at.getScaleY(); M[T12] = (float) at.getTranslateY();
+//		return this;
+//	}
 	
 	public Doodad rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
 	public Doodad translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
@@ -64,43 +63,44 @@ class Doodad implements Renderable {
 
 	public Doodad scale(double sx, double sy, double pivotX, double pivotY) { 
 		return this
-				.translate(+pivotX,+pivotY)
+				.translate(-pivotX,-pivotY) 
 				.scale(sx, sy)
-				.translate(-pivotX,-pivotY); 
+				.translate(+pivotX,+pivotY);
 	}
 	
 	public Doodad rotate(double theta, double pivotX, double pivotY) { 
 		return this
-				.translate(-pivotX,-pivotY)
+				.translate(pivotX,pivotY)
 				.rotate(theta)
-				.translate(pivotX,pivotY); 
+				.translate(-pivotX,-pivotY);
 	}
 	
 	
 	
 	//XXX redo transform with loops and accept variable sized m assuming any 3-by-k Matrices or even a 2-by-1 Vector!
 	public Doodad transform(float[] m) {
-		AffineTransform l = new AffineTransform(M[T00], M[T10], M[T01], M[T11], M[T02], M[T12]);
-		AffineTransform r = new AffineTransform(m[T00], m[T10], m[T01], m[T11], m[T02], m[T12]);
+//		AffineTransform l = new AffineTransform(M[T00], M[T10], M[T01], M[T11], M[T02], M[T12]);
+//		AffineTransform r = new AffineTransform(m[T00], m[T10], m[T01], m[T11], m[T02], m[T12]);
+//		
+//		l.concatenate(r);
+//		
+//		m[T00] = (float) l.getScaleX(); m[T01] = (float) l.getShearX(); m[T02] = (float) l.getTranslateX();
+//		m[T10] = (float) l.getShearY(); m[T11] = (float) l.getScaleY(); m[T12] = (float) l.getTranslateY();
+//		return this;
 		
-		l.concatenate(r);
+		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
+		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
+
+		final float r00 = m[T00], r01 = m[T01], r02 = m[T02];
+		final float r10 = m[T10], r11 = m[T11], r12 = m[T12];
+				
+		m[T00]=r10*l01+r00*l00; m[T01]= r11*l01+r01*l00; m[T02]= l02+r12*l01+r02*l00;
+		m[T10]=r10*l11+r00*l10; m[T11]= r11*l11+r01*l10; m[T12]= l12+r12*l11+r02*l10;
 		
-		m[T00] = (float) l.getScaleX(); m[T01] = (float) l.getShearX(); m[T02] = (float) l.getTranslateX();
-		m[T10] = (float) l.getShearY(); m[T11] = (float) l.getScaleY(); m[T12] = (float) l.getTranslateY();
-		
+		M[T00] = l00; M[T01] = l01; M[T02] = l02;
+		M[T10] = l10; M[T11] = l11; M[T12] = l12;
 		return this;
 		
-//		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
-//		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
-//
-//		final float r00 = m[T00], r01 = m[T01], r02 = m[T02];
-//		final float r10 = m[T10], r11 = m[T11], r12 = m[T12];
-//				
-//		m[T00]=r10*l01+r00*l00; m[T01]= r11*l01+r01*l00; m[T02]= l02+r12*l01+r02*l00;
-//		m[T10]=r10*l11+r00*l10; m[T11]= r11*l11+r01*l10; m[T12]= l12+r12*l11+r02*l10;
-//		
-//		M[T00] = l00; M[T01] = l01; M[T02] = l02;
-//		M[T10] = l10; M[T11] = l11; M[T12] = l12;
 	}
 
 	public Doodad identity() {
@@ -121,8 +121,6 @@ class Doodad implements Renderable {
 		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
 		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
 
-//		System.out.println(new AffineTransform(M));
-		
 		return this;
 	}
 
@@ -208,46 +206,41 @@ class Doodad implements Renderable {
 	//XXX make Knob by implementing getTransform in a custom way  
 	//use render and mouse hit with getTransform(Transform t) stuff - so it works
 
-	private float T[] = new float[6];
 	
 	@Override
 	final public void render(Rectangle clip, Transform t, GC c) {
 		//read out and store this matrix
-//		final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
-//		final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
+		final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
+		final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
 
-//		T[T00] = T[T11] = 1;
-//		T[T01] = T[T02] = 0;
-//		T[T10] = T[T12] = 0;
+		W[T00] = W[T11] = 1;
+		W[T01] = W[T02] = 0;
+		W[T10] = W[T12] = 0;
 
 		//transform the identity matrix by this Doodad's matrix
-//		transform(T);
+		transform(W);
 		
 		//read out this matrix
-//		final float m00 = T[T00], m01 = T[T01], m02 = T[T02];
-//		final float m10 = T[T10], m11 = T[T11], m12 = T[T12];
-//		
+		final float m00 = W[T00], m01 = W[T01], m02 = W[T02];
+		final float m10 = W[T10], m11 = W[T11], m12 = W[T12];
+		
 		//read world matrix to M
 		t.getElements(M);
 
-//		final float M00 = M[T00], M01 = M[T01], M02 = M[T02];
-//		final float M10 = M[T10], M11 = M[T11], M12 = M[T12];
-//		//compute N = t.m
-////		final float N00 = m10*M01+m00*M00, N01 = m11*M01+m01*M00, N02 = M02+m12*M01+m02*M00;
-////		final float N10 = m10*M11+m00*M10, N11 = m11*M11+m01*M10, N12 = M12+m12*M11+m02*M10;
-//		
+		final float M00 = M[T00], M01 = M[T01], M02 = M[T02];
+		final float M10 = M[T10], M11 = M[T11], M12 = M[T12];
+		//compute N = t.m
+		final float N00 = m10*M01+m00*M00, N01 = m11*M01+m01*M00, N02 = M02+m12*M01+m02*M00;
+		final float N10 = m10*M11+m00*M10, N11 = m11*M11+m01*M10, N12 = M12+m12*M11+m02*M10;
+		
 //		AffineTransform m = new AffineTransform(m00, m10, m01, m11, m02, m12);
 //		AffineTransform n = new AffineTransform(M00, M10, M01, M11, M02, M12);
-//		
 //		n.concatenate(m);
-//
-		
-		AffineTransform n  = at;
-		final float N00 = (float) n.getScaleX(), N01 = (float) n.getShearX(), N02 = (float) n.getTranslateX();
-		final float N10 = (float) n.getShearY(), N11 = (float) n.getScaleY(), N12 = (float) n.getTranslateY();
-		
-		
 
+//		AffineTransform n  = at;
+//		final float N00 = (float) n.getScaleX(), N01 = (float) n.getShearX(), N02 = (float) n.getTranslateX();
+//		final float N10 = (float) n.getShearY(), N11 = (float) n.getScaleY(), N12 = (float) n.getTranslateY();
+		
 		//set Matrix to GC
 //		t.setElements(
 //				(float)n.getScaleX(), 
@@ -258,12 +251,8 @@ class Doodad implements Renderable {
 //				(float)n.getTranslateY()
 //		);
 		
-		t.identity();
-		t.translate(100, 100);
-		t.scale(.5f, .5f);
-		t.translate(+50, +50);
-//		t.rotate(44.999f);
-		t.translate(-50, -50);
+		W[T00] = N00; W[T01] = N01; W[T02] = N02;
+		W[T10] = N10; W[T11] = N11; W[T12] = N12;
 		
 		t.setElements(
 				N00, N10, N01, N11, 
@@ -272,26 +261,25 @@ class Doodad implements Renderable {
 //		t.setElements(N00, N10, N01, N11, N02, N12);
 //		t.setElements(M11, M12, m21, m22, dx, dy);
 		
-		System.out.println(t);
 		c.setTransform(t);
 		
 		//render childnodes
 		render(clip, t, c, children);
 		
 		//transform this doodad's bounds with M 
-//		float ax = M02, ay = M02;
-//		float bx = width*M00+M02, by = width*M10+M12;
-//		float cx = height*M01+M02, cy = height*M11+M12;
-//		float dx = width*M00+height*M01+M02, dy = width*M10+height*M11+M12;
-//		
-//		//compute enclosing axis aligned bounding box
-//		float left = min(min(ax,bx),min(cx,dx));
-//		float top = min(min(ay,by),min(cy,dy));
-//		float right = max(max(ax,bx),max(cx,dx));
-//		float bottom = max(max(ay,by),max(cy,dy));
-//		
-//		//only render this Doodad if the GC's screen coordinate-transformed clips intersect that aabb 
-//		if (clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top)))
+		float ax = M02, ay = M02;
+		float bx = width*M00+M02, by = width*M10+M12;
+		float cx = height*M01+M02, cy = height*M11+M12;
+		float dx = width*M00+height*M01+M02, dy = width*M10+height*M11+M12;
+		
+		//compute enclosing axis aligned bounding box
+		float left = min(min(ax,bx),min(cx,dx));
+		float top = min(min(ay,by),min(cy,dy));
+		float right = max(max(ax,bx),max(cx,dx));
+		float bottom = max(max(ay,by),max(cy,dy));
+		
+		//only render this Doodad if the GC's screen coordinate-transformed clips intersect that aabb 
+		if (clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top)))
 			render(c);
 		
 		//restore c's Transform
@@ -299,8 +287,8 @@ class Doodad implements Renderable {
 		c.setTransform(t);
 
 		//restore own Doodads Matrix
-//		M[T00] = s00; M[T01] = s01; M[T02] = s02;
-//		M[T10] = s10; M[T11] = s11; M[T12] = s12;
+		M[T00] = s00; M[T01] = s01; M[T02] = s02;
+		M[T10] = s10; M[T11] = s11; M[T12] = s12;
 		
 	}
 	

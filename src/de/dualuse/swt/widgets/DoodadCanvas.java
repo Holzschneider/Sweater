@@ -1,6 +1,7 @@
 package de.dualuse.swt.widgets;
 
 import static org.eclipse.swt.SWT.NONE;
+import static org.eclipse.swt.SWT.getVersion;
 
 import java.awt.geom.AffineTransform;
 import java.util.Arrays;
@@ -8,6 +9,7 @@ import java.util.Arrays;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.layout.FillLayout;
@@ -93,54 +95,55 @@ public class DoodadCanvas extends Canvas implements Renderable, PaintListener {
 		sh.setLayout(new FillLayout());
 		
 		DoodadCanvas dc = new DoodadCanvas(sh, NONE);
-		Doodad d = new Doodad(dc) {
+		Doodad d = new Doodad(dc)
+//		.setSize(100, 100);
+		.rotate(0.5)
+		.translate(100, 100)
+		.scale(.5, .5);
+		
+		
+		Doodad e = new Doodad(d) {
 			@Override
 			protected void render(GC c) {
-				
-//				c.drawRectangle(0, 0, (int)getWidth(), (int)getHeight());
-				
+				c.setLineAttributes(new LineAttributes(1));
 				PathShape p = new PathShape(app, new java.awt.Rectangle(0, 0, 100, 100));
 				c.drawPath(p);
 				p.dispose();
 			}
-		}
-		.setSize(100, 100);
-//		.translate(100, 100)
-//		.scale(.5, .5);
+		}.setSize(100, 100);
 
 		long then = System.nanoTime();
-		dc.addPaintListener( (e) -> {
+		dc.addPaintListener( (ev) -> {
 			long now = System.nanoTime();
 
-			Doodad p = d; 
-			
-			p.identity();
-			
-			AffineTransform at = new AffineTransform();
-			at.translate(100, 100);
-			at.scale(.5, .5);
-			at.translate(50, 50);
-//			at.rotate( 45*Math.PI /180 );
-			at.rotate( (now-then)/1e9 );
-			at.translate(-50, -50);
-
-			d.set(at);
+//			Doodad p = d; 
+//			
+//			p.identity();
+//			
+//			AffineTransform at = new AffineTransform();
+//			at.translate(100, 100);
+//			at.scale(.5, .5);
+//			at.translate(50, 50);
+////			at.rotate( 45*Math.PI /180 );
+//			at.rotate( (now-then)/1e9 );
+//			at.translate(-50, -50);
+//
+//			d.set(at);
 			
 			
 //			d.identity();
 //			d.translate(100, 100);
 //			d.scale(.5, .5);
 //			
-//			d.translate(+50, +50);
-//			d.rotate( (now-then)/1e9 );
-//			d.translate(-50, -50);
-			
-//			d.rotate( (now-then)/1e9, 50, 50);
+////			d.translate(+50, +50);
+////			d.rotate( (now-then)/1e9 );
+////			d.translate(-50, -50);
+//			
+			e.identity();
+			e.rotate( (now-then)/1e9, 50, 50);
 			
 			dc.redraw();
 		});
-		
-		
 		
 		
 		
@@ -151,7 +154,7 @@ public class DoodadCanvas extends Canvas implements Renderable, PaintListener {
 		app.loop(sh);
 		
 		
-		
+//		System.out.println(getVersion());
 	}
 
 
