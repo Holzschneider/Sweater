@@ -1,9 +1,15 @@
 package de.dualuse.swt.widgets;
 
 import static java.lang.Math.cos;
+import static java.lang.Math.hypot;
 import static java.lang.Math.sin;
+import static org.eclipse.swt.SWT.MouseDoubleClick;
+import static org.eclipse.swt.SWT.MouseDown;
+import static org.eclipse.swt.SWT.MouseExit;
+import static org.eclipse.swt.SWT.MouseMove;
+import static org.eclipse.swt.SWT.MouseUp;
+import static org.eclipse.swt.SWT.MouseWheel;
 
-import java.awt.geom.AffineTransform;
 import java.util.Arrays;
 
 import org.eclipse.swt.graphics.GC;
@@ -22,7 +28,7 @@ interface Renderable {
 	public Renderable getParentRenderable();
 
 	public void render( Rectangle clip, Transform t, GC c );
-	public void onMouse( float x, float y, Event e );
+	public void onMouse( Event e );
 }
 
 class Doodad implements Renderable {
@@ -38,7 +44,7 @@ class Doodad implements Renderable {
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the world matrix of this doodad, the last time it was rendered
 	
-	private float width, height;
+	private float width = 1f/0f, height = 1f/0f;
 	
 	public double getWidth() { return width; }
 	public double getHeight() { return height; }
@@ -51,21 +57,16 @@ class Doodad implements Renderable {
 	
 	public Renderable getParentRenderable() { return parent; }
 	
-//	public Doodad set(AffineTransform at) {
-//		M[T00] = (float) at.getScaleX(); M[T01] = (float) at.getShearX(); M[T02] = (float) at.getTranslateX();
-//		M[T10] = (float) at.getShearY(); M[T11] = (float) at.getScaleY(); M[T12] = (float) at.getTranslateY();
-//		return this;
-//	}
-	
 	public Doodad rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
 	public Doodad translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
 	public Doodad scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
+	public Doodad scale(double s) { return concatenate(s,0,0,s,0,0); }
 
 	public Doodad scale(double sx, double sy, double pivotX, double pivotY) { 
 		return this
-				.translate(-pivotX,-pivotY) 
+				.translate(+pivotX,+pivotY)
 				.scale(sx, sy)
-				.translate(+pivotX,+pivotY);
+				.translate(-pivotX,-pivotY); 
 	}
 	
 	public Doodad rotate(double theta, double pivotX, double pivotY) { 
@@ -305,24 +306,97 @@ class Doodad implements Renderable {
 	//XXX no relative step by step, use Event e only, so it can rely on getTransform(Transform t) 
 	// or getTransform(float[] transform)
 	
+	private boolean captured = false;
+	private int downX, downY, downT, downM;
+	
+	private final static int CLICK_RADIUS = 3, CLICK_PERIOD = 500;
+	
 	@Override
-	final public void onMouse(float x, float y, Event e) {
-		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
-		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
+	final public void onMouse(Event e) {
+		final float m00 = W[T00], m01 = W[T01], m02 = W[T02];
+		final float m10 = W[T10], m11 = W[T11], m12 = W[T12];
 		
 		float det = m00 * m11 - m01 * m10;
 		float i00 = m11/det, i01 =-m01/det, i02 = (m01 * m12 - m11 * m02) / det;
 		float i10 =-m10/det, i11 = m00/det, i12 = (m10 * m02 - m00 * m12) / det;
 		
-		float x_ = i00*x+i01*y+i02;
-		float y_ = i10*x+i11*y+i12;
-		
+		float x = i00*e.x+i01*e.y+i02;
+		float y = i10*e.x+i11*e.y+i12;
+
 		for (Renderable r: children)
 			if (e.doit)
-				r.onMouse(x_, y_, e);
-		
+				r.onMouse(e);
+
+		boolean hit = x>=0 && x<width && y>=0 && y<height;
+		if (hit || captured) {
+			if (e.doit)
+				e.doit = onMouse(x, y, e);
+			
+			if (e.type==MouseDown) {
+				captured = true;
+				downX = e.x;
+				downY = e.y;
+				downT = e.time;
+				downM = e.stateMask;
+			}
+			
+			if (e.type==MouseUp) {
+				captured = false;
+				if (e.doit && e.time-downT<CLICK_PERIOD && hypot(e.x-downX, e.y-downY)<CLICK_RADIUS)
+					onMouseClick(x,y,e.button,downM);
+			}
+			
+			if (!entered) { 
+				onMouseEnter();
+				entered = true;
+			}
+		} else
+			if (entered) {
+				onMouseExit();
+				entered = false;
+			}
+			
 		//call local mouse events here
 	}
+	
+	private boolean entered = false;	
+	private boolean onMouse(float x, float y, Event e) {
+		switch (e.type) {
+		default: return false;
+		case MouseMove: return onMouseMove(x,y,e.stateMask);
+		case MouseUp: return onMouseUp(x,y,e.button,e.stateMask);
+		case MouseDown: return onMouseDown(x,y,e.button,e.stateMask);
+		case MouseWheel: return onMouseWheel(x,y,e.count,e.stateMask);
+		case MouseDoubleClick: return onDoubleClick(x,y,e.button,e.stateMask);
+		}
+	}
+
+	protected boolean onMouseClick(float x, float y, int button, int modifierKeys) {
+		return true;
+	}
+
+	protected boolean onDoubleClick(float x, float y, int button, int modifierKeys) {
+		return true;
+	}
+
+	protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
+		return true;
+	}
+
+	protected boolean onMouseUp(float x, float y, int button, int modifierKeys) {
+		return true;
+	}
+	
+	protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) {
+		return true;
+	}
+
+	protected boolean onMouseWheel(float x, float y, int tickCount, int modifierKeys) {
+		return true;
+	}
+	
+	protected void onMouseExit() { }
+	protected void onMouseEnter() { };
 	
 	//Focus?
 	//Keyboard Events?
