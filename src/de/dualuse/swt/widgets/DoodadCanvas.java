@@ -161,7 +161,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 				System.out.println("clicked!");
 				xl = x;
 				yl = y;
-				return false;
+				return true;
 			}
 			
 			protected boolean onMouseWheel(float x, float y, int tickCount, int modifierKeys) {
@@ -177,7 +177,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 				translate(-x,-y);
 
 				dc.redraw();
-				return false;
+				return true;
 			};
 			
 			protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) {

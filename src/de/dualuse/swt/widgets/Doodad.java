@@ -330,7 +330,7 @@ class Doodad implements Renderable {
 		boolean hit = x>=0 && x<width && y>=0 && y<height;
 		if (hit || captured) {
 			if (e.doit)
-				e.doit = onMouse(x, y, e);
+				e.doit = !onMouse(x, y, e);
 			
 			if (e.type==MouseDown) {
 				captured = true;
@@ -372,27 +372,27 @@ class Doodad implements Renderable {
 	}
 
 	protected boolean onMouseClick(float x, float y, int button, int modifierKeys) {
-		return true;
+		return false;
 	}
 
 	protected boolean onDoubleClick(float x, float y, int button, int modifierKeys) {
-		return true;
+		return false;
 	}
 
 	protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
-		return true;
+		return false;
 	}
 
 	protected boolean onMouseUp(float x, float y, int button, int modifierKeys) {
-		return true;
+		return false;
 	}
 	
 	protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) {
-		return true;
+		return false;
 	}
 
 	protected boolean onMouseWheel(float x, float y, int tickCount, int modifierKeys) {
-		return true;
+		return false;
 	}
 	
 	protected void onMouseExit() { }
