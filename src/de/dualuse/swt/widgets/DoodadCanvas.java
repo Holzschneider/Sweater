@@ -4,6 +4,7 @@ import static java.lang.Math.pow;
 import static org.eclipse.swt.SWT.ALT;
 import static org.eclipse.swt.SWT.BUTTON1;
 import static org.eclipse.swt.SWT.BUTTON3;
+import static org.eclipse.swt.SWT.ERROR_CANNOT_GET_COUNT;
 import static org.eclipse.swt.SWT.MouseDoubleClick;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
@@ -41,18 +42,18 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		addListener(MouseWheel, this);
 		addListener(MouseDoubleClick, this);
 	}
-
+	
 	////////////////////////////////////////////////////////////
-
+	
 	private Renderable parent = null;
 	private Renderable children[] = {};
-
+	
 	@Override
 	public DoodadCanvas add(Renderable r) {
 		(children = Arrays.copyOf(children, children.length+1))[children.length-1]=r;
 		return this;
 	}
-
+	
 	@Override
 	public DoodadCanvas remove(Renderable r) {
 		for (int i=0,I=children.length;i<I;i++)
@@ -64,6 +65,16 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 			}
 		
 		return this;
+	}
+	
+	@Override
+	public Renderable captive() {
+		return null;
+	}
+	
+	@Override
+	public void capture(Renderable r) {
+		
 	}
 	
 	@Override
@@ -137,6 +148,36 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		.scale(.5, .5);
 		
 		
+		Doodad f = new Doodad(d) {
+			protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) {
+				if (modifierKeysAndButtons==BUTTON1)
+					translate(x-xl, y-yl);
+				
+				dc.redraw();
+				return true;
+			};
+		
+			
+		
+			float xl, yl;
+			@Override
+			protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
+				moveAbove(null);
+				System.out.println("clicked!");
+				xl = x;
+				yl = y;
+				return true;
+			}
+			
+			@Override
+			protected void render(GC c) {
+				c.setLineAttributes(new LineAttributes(1));
+				PathShape p = new PathShape(app, new java.awt.Rectangle(0, 0, 100, 100));
+				c.drawPath(p);
+				p.dispose();
+			}
+		}.setBounds(0, 0, 100, 100).translate(300, 100);
+		
 		Doodad e = new Doodad(d) {
 			boolean in = false;
 			protected boolean onMouseEnter() { 
@@ -166,6 +207,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 			float xl, yl;
 			@Override
 			protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
+				moveAbove(null);
 				System.out.println("clicked!");
 				xl = x;
 				yl = y;
@@ -272,6 +314,36 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		
 		
 //		System.out.println(getVersion());
+	}
+
+	@Override
+	public Renderable[] getLayers() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void moveAbove(Renderable r) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void moveBelow(Renderable r) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public int indexOf(Renderable r) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void redraw(float x, float y, float width, float height, boolean all) {
+		// TODO Auto-generated method stub
+		
 	}
 
 
