@@ -3,6 +3,7 @@ package de.dualuse.swt.widgets;
 import static java.lang.Math.cos;
 import static java.lang.Math.hypot;
 import static java.lang.Math.sin;
+import static org.eclipse.swt.SWT.FOREGROUND;
 import static org.eclipse.swt.SWT.MouseDoubleClick;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
@@ -20,14 +21,26 @@ import org.eclipse.swt.widgets.Event;
 interface Renderable {
 	public Renderable add( Renderable r );
 	public Renderable remove( Renderable r );
+	
+	public Renderable[] getLayers();
 
 	public Renderable transform(float[] m); 
 	
 	public void setParentRenderable( Renderable r );
 	public Renderable getParentRenderable();
-
+	
+	public void moveAbove( Renderable r );
+	public void moveBelow( Renderable r );
+	public int indexOf( Renderable r );
+	
+	
+	public void redraw();
+	public void redraw(float x, float y, float width, float height, boolean all);
+	
 	public void render( Rectangle clip, Transform t, GC c );
 	public void point( Event e );
+	public void capture( Renderable r );
+	public Renderable captive();
 }
 
 
@@ -45,6 +58,11 @@ class Doodad implements Renderable {
 	private float left = -1f/0f, top= -1f/0f;
 	private float right = -1f/0f, bottom = -1f/0f;
 
+	public float getLeft() { return left; }
+	public float getRight() { return right; }
+	public float getTop() { return top; }
+	public float getBottom() { return bottom; }
+	
 	public float getWidth() { return right-left; }
 	public float getHeight() { return bottom-top; }
 	
@@ -70,7 +88,7 @@ class Doodad implements Renderable {
 	//////////////////////////////////////// CONSTRUCTOR & HIERARCHY ////////////////////////////////////////////
 	
 	public Doodad(Renderable parent) {
-		this.parent = this;
+		this.parent = parent;
 		parent.add(this);
 		
 		identity();
@@ -111,9 +129,65 @@ class Doodad implements Renderable {
 			parent.add(this);
 	}
 	
+	@Override
+	public Renderable[] getLayers() {
+		return children;
+	}
+	
+	@Override
+	public int indexOf(Renderable r) {
+		for (int i=0,I=children.length;i<I;i++)
+			if (children[i]==r)
+				return i;
+				
+		return -1;
+	}
+	
+	@Override
+	public void moveAbove(Renderable r) {
+		Renderable p = getParentRenderable();
+		Renderable[] cs = p.getLayers();
+
+		int ir = p.indexOf(this);
+		
+		for (int j=ir;j>=1;j--) {
+			Renderable t = cs[j];
+			cs[j] = cs[j-1];
+			cs[j-1] = t;
+		}
+	}
+	
+	@Override
+	public void moveBelow(Renderable r) {
+		Renderable p = getParentRenderable();
+		Renderable[] cs = p.getLayers();
+
+		int ir = p.indexOf(this);
+		
+		for (int j=ir,J=cs.length;j<J-1;j++) {
+			Renderable t = cs[j];
+			cs[j] = cs[j+1];
+			cs[j+1] = t;
+		}		
+	}
+	
 	public Renderable getParentRenderable() { return parent; }
 	
-
+	@Override
+	public void redraw() {
+		Renderable r = getParentRenderable();
+		if (r!=null)
+			r.redraw();
+		
+	}
+	
+	@Override
+	public void redraw(float x, float y, float width, float height, boolean all) {
+		redraw();
+		//XXX also do this with forward transformed region 
+	}
+	
+	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////// TRANSFORMATION ///////////////////////////////////////////////////
 	
@@ -272,15 +346,27 @@ class Doodad implements Renderable {
 	
 
 	
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// EVENT HANDLING //////////////////////////////////////////////////
 	
 	private final static int CLICK_RADIUS = 3, CLICK_PERIOD = 500;
 
-	private boolean entered = false;	
-	private boolean captured = false;
+	private boolean entered = false;
+	private Renderable captive = null;
 	private int downX, downY, downT, downM;
+	
+	@Override
+	public void capture(Renderable c) {
+		captive = c;
+		Renderable r = getParentRenderable();
+		if (r!=null)
+			r.capture(c);
+	}
+	
+	@Override
+	public Renderable captive() {
+		return captive;
+	}
 	
 	@Override
 	final public void point(Event e) {
@@ -295,16 +381,34 @@ class Doodad implements Renderable {
 		float y = i10*e.x+i11*e.y+i12;
 		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
+		
 		for (Renderable r: children)
-			if (e.doit && (!clipping || clipping && hit)) //TODO test mouse clipping!
-				r.point(e);
+			if (e.doit && (!clipping || clipping && hit)) { //TODO test mouse clipping!
+				if (r==null)
+					System.out.println("WHAT?");
+				if (r.captive()==captive)
+					r.point(e);
+			}
 
-		if (hit || captured) {
+		if (e.type==MouseUp) 
+			capture(null);
+		
+		if (hit || captive==this) {
+			if (e.doit && !entered) { 
+				e.doit = !onMouseEnter();
+				entered = true;
+			}
+
 			if (e.doit)
-				e.doit = !point(x, y, e);
+				if (onMouseEvent(x,y,e)) {
+					if (e.type==MouseDown)
+						capture(this);
+					
+					e.doit = false;
+				}
+					
 			
 			if (e.type==MouseDown) {
-				captured = true;
 				downX = e.x;
 				downY = e.y;
 				downT = e.time;
@@ -312,26 +416,20 @@ class Doodad implements Renderable {
 			}
 			
 			if (e.type==MouseUp) {
-				captured = false;
 				if (e.doit && e.time-downT<CLICK_PERIOD && hypot(e.x-downX, e.y-downY)<CLICK_RADIUS)
 					onMouseClick(x,y,e.button,downM);
 			}
 			
-			if (!entered) { 
-				e.doit = !onMouseEnter();
-				entered = true;
-			}
 		} else
 			if (entered) {
 				e.doit = !onMouseExit();
 				entered = false;
 			}
-			
-		//call local mouse events here
+		
 	}
 	
-
-	private boolean point(float x, float y, Event e) {
+	
+	private boolean onMouseEvent(float x, float y, Event e) {
 		switch (e.type) {
 		default: return false;
 		case MouseMove: return onMouseMove(x,y,e.stateMask);
@@ -353,7 +451,9 @@ class Doodad implements Renderable {
 	protected boolean onMouseExit() { return false; }
 	protected boolean onMouseEnter() { return false; }
 	
-
+	
+	
+	
 	//ControlListener?
 	//onTransformed!
 	
