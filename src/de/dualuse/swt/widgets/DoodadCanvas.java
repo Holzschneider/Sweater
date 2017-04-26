@@ -28,6 +28,8 @@ import org.eclipse.swt.widgets.Shell;
 import de.dualuse.swt.app.Application;
 import de.dualuse.swt.graphics.PathShape;
 
+
+
 public class DoodadCanvas extends Canvas implements Renderable, Listener {
 	
 	public DoodadCanvas(Composite parent, int style) {
@@ -198,7 +200,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 				c.drawPath(p);
 				p.dispose();
 			}
-		}.setSize(100, 100);
+		}.setBounds(0,0,100, 100);
 		
 		
 		dc.addListener(MouseDown, (ev) -> {
@@ -214,6 +216,15 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		});
 		
 		dc.addMouseMoveListener( (ev) -> sh.setText( ((ev.stateMask&BUTTON1)!=0)?"dragged":"moved" ) );
+		
+		
+		dc.addListener(MouseDown, (ev) -> {
+			
+			System.out.println("RIGHT DOWN: "+((ev.stateMask & BUTTON3)!=0));
+			
+			
+		});
+		
 		
 		long then = System.nanoTime();
 		dc.addPaintListener( (ev) -> {

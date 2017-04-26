@@ -31,9 +31,7 @@ interface Renderable {
 }
 
 
-// Mouse Event Clipping
 // paint clipping
-// Top Bottom left right
 class Doodad implements Renderable {
 	final static private int T00 = 0, T01 = 1, T10 = 2, T11 = 3, T02 = 4, T12 = 5;
 
@@ -43,17 +41,21 @@ class Doodad implements Renderable {
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the world matrix of this doodad, the last time it was rendered
 
-	/// 
-	private float width = 1f/0f, height = 1f/0f;
+	///
+	private float left = -1f/0f, top= -1f/0f;
+	private float right = -1f/0f, bottom = -1f/0f;
+
+	public float getWidth() { return right-left; }
+	public float getHeight() { return bottom-top; }
 	
-	public double getWidth() { return width; }
-	public double getHeight() { return height; }
-	
-	public Doodad setSize(double width, double height) {
-		this.width = (float)width;
-		this.height = (float)height;
+	public Doodad setBounds(double left, double top, double right, double bottom) {
+		this.left = (float) left;
+		this.top = (float) top;
+		this.right = (float) right;
+		this.bottom = (float) bottom;
 		return this;
 	}
+	
 	
 	///
 	private boolean clipping = false;
@@ -219,15 +221,15 @@ class Doodad implements Renderable {
 				N00, N10, N01, N11, 
 				N02, N12);
 		
+		
 		c.setTransform(t);
 		
-		
-		//transform this doodad's bounds with M 
-		float ax = M02, ay = M02;
-		float bx = width*M00+M02, by = width*M10+M12;
-		float cx = height*M01+M02, cy = height*M11+M12;
-		float dx = width*M00+height*M01+M02, dy = width*M10+height*M11+M12;
-		
+		//transform this doodad's bounds with M
+		float ax = left*M00+top*M01+M02, ay = left*M10+top*M11+M12;
+		float bx = right*M00+top*M01+M02, by = right*M10+top*M11+M12;
+		float cx = left*M00+bottom*M01+M02, cy = left*M10+bottom*M11+M12;
+		float dx = right*M00+bottom*M01+M02, dy = right*M10+bottom*M11+M12;
+
 		//compute enclosing axis aligned bounding box
 		float left = min(min(ax,bx),min(cx,dx));
 		float top = min(min(ay,by),min(cy,dy));
@@ -255,6 +257,11 @@ class Doodad implements Renderable {
 	}
 	
 	protected void render(Rectangle clip, Transform t, GC c, Renderable[] children) {
+//		if (clipping)
+		//TODO implement proper clipping
+		// Apply to clip and also to GC c
+		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
+		
 		for (Renderable r: children)
 			r.render(clip, t, c);
 	}
@@ -286,12 +293,12 @@ class Doodad implements Renderable {
 		
 		float x = i00*e.x+i01*e.y+i02;
 		float y = i10*e.x+i11*e.y+i12;
+		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
 		for (Renderable r: children)
-			if (e.doit)
+			if (e.doit && (!clipping || clipping && hit)) //TODO test mouse clipping!
 				r.point(e);
 
-		boolean hit = x>=0 && x<width && y>=0 && y<height;
 		if (hit || captured) {
 			if (e.doit)
 				e.doit = !point(x, y, e);
@@ -335,13 +342,13 @@ class Doodad implements Renderable {
 		}
 	}
 
-	protected boolean onMouseClick(float x, float y, int button, int modifierKeys) { return false; }
-	protected boolean onDoubleClick(float x, float y, int button, int modifierKeys) { return false; }
-	protected boolean onMouseDown(float x, float y, int button, int modifierKeys) { return false; }
+	protected boolean onMouseClick(float x, float y, int button, int modKeysAndButtons) { return false; }
+	protected boolean onDoubleClick(float x, float y, int button, int modKeysAndButtons) { return false; }
+	protected boolean onMouseDown(float x, float y, int button, int modKeysAndButtons) { return false; }
 
-	protected boolean onMouseUp(float x, float y, int button, int modifierKeys) { return false; }
-	protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) { return false; }
-	protected boolean onMouseWheel(float x, float y, int tickCount, int modifierKeys) { return false; }
+	protected boolean onMouseUp(float x, float y, int button, int modKeysAndButtons) { return false; }
+	protected boolean onMouseMove(float x, float y, int modKeysAndButtons) { return false; }
+	protected boolean onMouseWheel(float x, float y, int tickCount, int modKeysAndButtons) { return false; }
 
 	protected boolean onMouseExit() { return false; }
 	protected boolean onMouseEnter() { return false; }
