@@ -2,7 +2,6 @@ package de.dualuse.swt.experiments.scratchy.video;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Rectangle;
@@ -10,9 +9,11 @@ import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
+import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.*;
+
 public class AnnotationSign implements Annotation {
 
-	private AnnotatedCanvas canvas;
+	private AnnotatedVideoView canvas;
 	private int x, y, width, height;
 	
 	private Rectangle bounds;
@@ -22,25 +23,10 @@ public class AnnotationSign implements Annotation {
 	
 	private Color foreground;
 	private Color background;
+	
+	private Color selectedForeground;
+	private Color selectedBackground;
 
-	Display dsp = Display.getCurrent();
-	Cursor cursorNW = dsp.getSystemCursor(SWT.CURSOR_SIZENW);
-	Cursor cursorNE = dsp.getSystemCursor(SWT.CURSOR_SIZENE);
-	Cursor cursorSW = dsp.getSystemCursor(SWT.CURSOR_SIZESW);
-	Cursor cursorSE = dsp.getSystemCursor(SWT.CURSOR_SIZESE);
-	
-	Cursor cursorNS = dsp.getSystemCursor(SWT.CURSOR_SIZENS);
-	Cursor cursorWE = dsp.getSystemCursor(SWT.CURSOR_SIZEWE);
-	
-	Cursor cursorCE = dsp.getSystemCursor(SWT.CURSOR_HAND);
-	
-	enum DragType {
-		NW, N, NE,
-		W, C, E,
-		SW, S, SE
-	}
-	DragType type;
-	
 //==[ Constructor ]=================================================================================
 	
 	public AnnotationSign(int x, int y, int width, int height) {
@@ -54,6 +40,9 @@ public class AnnotationSign implements Annotation {
 		
 		background = Display.getCurrent().getSystemColor(SWT.COLOR_CYAN);
 		foreground = Display.getCurrent().getSystemColor(SWT.COLOR_DARK_CYAN);
+		
+		selectedBackground = Display.getCurrent().getSystemColor(SWT.COLOR_YELLOW);
+		selectedForeground = Display.getCurrent().getSystemColor(SWT.COLOR_DARK_YELLOW);
 		
 		isVisible = true;
 	}
@@ -118,12 +107,12 @@ public class AnnotationSign implements Annotation {
 	
 //==[ Add to/remove from AnnotatedCanvas ]==========================================================
 	
-	@Override public void added(AnnotatedCanvas canvas) {
+	@Override public void added(AnnotatedVideoView canvas) {
 		this.canvas = canvas;
 		// add additional listeners
 	}
 
-	@Override public void removed(AnnotatedCanvas canvas) {
+	@Override public void removed(AnnotatedVideoView canvas) {
 		if (this.canvas!=canvas) return;
 		// remove additional listeners
 		this.canvas = null;
@@ -132,13 +121,11 @@ public class AnnotationSign implements Annotation {
 //==[ Paint Annotation ]============================================================================
 	
 	@Override public void render(Rectangle clip, Transform t, GC gc) {
-		System.out.println("Rendering annotation (" + bounds + ")");
-		
 		int oldAlpha = gc.getAlpha();
 		gc.setAlpha(128);
 		
-		gc.setForeground(foreground);
-		gc.setBackground(background);
+		gc.setForeground(isSelected ? selectedForeground : foreground);
+		gc.setBackground(isSelected ? selectedBackground : background);
 		
 		gc.fillRectangle(x, y, width, height);
 		gc.drawRectangle(x, y, width, height);
@@ -186,18 +173,13 @@ public class AnnotationSign implements Annotation {
 
 	@Override public void onMouse(float mx, float my, Event e) {
 		
-		if (e.type == SWT.MouseDown && e.button == 1) {
-			
-			type = evaluateHover(mx, my);
-			
-		} else if (e.type == SWT.MouseUp && e.button == 1) {
-			
-		}
 	}
 	
-	@Override public boolean checkHover(float mx, float my) {
+//==[ Update HOver Information ]====================================================================
+	
+	@Override public HoverType checkHover(float mx, float my) {
 
-		if (!hitAtAll(mx, my)) return false;
+		if (!hitAtAll(mx, my)) return NONE;
 		
 		boolean hitTop = hitTop(mx, my);
 		boolean hitLeft = hitLeft(mx, my);
@@ -205,63 +187,23 @@ public class AnnotationSign implements Annotation {
 		boolean hitRight = hitRight(mx, my);
 		
 		if (hitTop && hitLeft) {
-			canvas.setCursor(cursorNW);
-			return true;
+			return NW;
 		} else if (hitTop && hitRight) {
-			canvas.setCursor(cursorNE);
-			return true;
+			return NE;
 		} else if (hitBottom && hitLeft) {
-			canvas.setCursor(cursorSW);
-			return true;
+			return SW;
 		} else if (hitBottom && hitRight) {
-			canvas.setCursor(cursorSE);
-			return true;
+			return SE;
 		} else if (hitTop) {
-			canvas.setCursor(cursorNS);
-			return true;
+			return N;
 		} else if (hitBottom) {
-			canvas.setCursor(cursorNS);
-			return true;
+			return S;
 		} else if (hitLeft) {
-			canvas.setCursor(cursorWE);
-			return true;
+			return W;
 		} else if (hitRight) {
-			canvas.setCursor(cursorWE);
-			return true;
+			return E;
 		} else {
-			canvas.setCursor(cursorCE);
-			return true;
-		}
-		
-	}
-	
-	private DragType evaluateHover(float mx, float my) {
-
-		if (!hitAtAll(mx, my)) return null;
-		
-		boolean hitTop = hitTop(mx, my);
-		boolean hitLeft = hitLeft(mx, my);
-		boolean hitBottom = hitBottom(mx, my);
-		boolean hitRight = hitRight(mx, my);
-		
-		if (hitTop && hitLeft) {
-			return DragType.NW;
-		} else if (hitTop && hitRight) {
-			return DragType.NE;
-		} else if (hitBottom && hitLeft) {
-			return DragType.SW;
-		} else if (hitBottom && hitRight) {
-			return DragType.SE;
-		} else if (hitTop) {
-			return DragType.N;
-		} else if (hitBottom) {
-			return DragType.S;
-		} else if (hitLeft) {
-			return DragType.W;
-		} else if (hitRight) {
-			return DragType.E;
-		} else {
-			return DragType.C;
+			return C;
 		}
 		
 	}
@@ -286,12 +228,76 @@ public class AnnotationSign implements Annotation {
 		return hit(x+width-r, y-r, x+width+r, y+height+r, mx, my);
 	}
 	
-	private boolean hitCenter(float mx, float my) {
-		return hit(x+r, y+r, x+width-r, y+height-r, mx, my);
-	}
-	
 	private static boolean hit(int x1, int y1, int x2, int y2, float mx, float my) {
 		return mx >= x1 && mx <= x2 && my >= y1 && my <= y2;
+	}
+	
+//==[ Drag Controls ]===============================================================================
+	
+	int startx, starty, startWidth, startHeight;
+	
+	@Override public void startDrag(float mx, float my, HoverType type) {
+		startx = x;
+		starty = y;
+		startWidth = width;
+		startHeight = height;
+	}
+	
+	@Override public void updateDrag(float dx, float dy, HoverType type) {
+		
+		int _dx = (int)Math.round(dx);
+		int _dy = (int)Math.round(dy);
+		
+		switch(type) {
+			case N: updateTop(_dx, _dy); break;
+			case W: updateLeft(_dx, _dy); break;
+			case S: updateBottom(_dx, _dy); break;
+			case E: updateRight(_dx, _dy); break;
+			case NE:
+				updateTop(_dx, _dy);
+				updateRight(_dx, _dy);
+				break;
+			case NW:
+				updateTop(_dx, _dy);
+				updateLeft(_dx, _dy);
+				break;
+			case SE:
+				updateBottom(_dx, _dy);
+				updateRight(_dx, _dy);
+				break;
+			case SW:
+				updateBottom(_dx, _dy);
+				updateLeft(_dx, _dy);
+				break;
+			case C:
+				translate(_dx, _dy);
+				break;
+		}
+		
+		invalidateShape();
+	}
+	
+	private void updateTop(int dx, int dy) {
+		y = starty + dy;
+		height = startHeight - dy;
+	}
+	
+	private void updateLeft(int dx, int dy) {
+		x = startx + dx;
+		width = startWidth - dx;
+	}
+	
+	private void updateBottom(int dx, int dy) {
+		height = startHeight + dy;
+	}
+	
+	private void updateRight(int dx, int dy) {
+		width = startWidth + dx;
+	}
+	
+	private void translate(int dx, int dy) {
+		x = startx + dx;
+		y = starty + dy;
 	}
 	
 //==[ Visibility ]==================================================================================
@@ -308,6 +314,17 @@ public class AnnotationSign implements Annotation {
 	
 	@Override public void dispose() {
 		invalidateShape();
+	}
+
+	
+	boolean isSelected;
+	
+	@Override public void setSelected(boolean selected) {
+		this.isSelected = selected;
+	}
+
+	@Override public boolean isSelected() {
+		return isSelected;
 	}
 
 }

@@ -3,12 +3,7 @@ package de.dualuse.swt.experiments.scratchy.view;
 import static java.lang.Math.*;
 import static org.eclipse.swt.SWT.*;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.PaintEvent;
@@ -17,11 +12,8 @@ import org.eclipse.swt.widgets.*;
 
 import de.dualuse.swt.experiments.scratchy.ResourceManager;
 import de.dualuse.swt.experiments.scratchy.cache.ImageCache;
-import de.dualuse.swt.experiments.scratchy.video.AnnotatedCanvas;
-import de.dualuse.swt.experiments.scratchy.video.AnnotationSign;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
-import de.dualuse.swt.widgets.ZoomCanvas;
 
 
 /**
@@ -47,7 +39,8 @@ import de.dualuse.swt.widgets.ZoomCanvas;
  *
  */
 
-public class VideoView extends AnnotatedCanvas implements EditorListener {
+// VideoCanvas
+public class VideoView extends Canvas implements EditorListener {
 // public class VideoView extends ZoomCanvas implements EditorListener {
 	
 	Display dsp;
@@ -57,7 +50,7 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 	ImageCache cache;
 	ImageCache cacheSD;
 	
-	int videoWidth, videoHeight;
+	protected int videoWidth, videoHeight;
 	
 	ResourceManager<Image> manager;
 	
@@ -81,7 +74,7 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 		addListener(KeyDown, this::keyPressed);
 		addListener(KeyUp, this::keyUp);
 		
-		addListener(Dispose, this::disposeResources);
+		addListener(Dispose, this::onDispose);
 		
 		manager = new ResourceManager<Image>(dsp);
 		cache = new ImageCache(dsp, editor.getVideo(), manager, 64);
@@ -100,7 +93,7 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 		
 		setBackground(dsp.getSystemColor(SWT.COLOR_DARK_GRAY));
 		
-		setCanvasSize(videoWidth, videoHeight);
+		
 	}
 	
 	@Override protected void checkSubclass() {}
@@ -236,10 +229,11 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 	private boolean keyPressed = false;
 	private boolean keyRepeat = false;
 	
-	private void keyPressed(Event  e) {
+	protected void keyPressed(Event  e) {
 		if (keyPressed) keyRepeat = true;
 		keyPressed = true;
 		
+		// Start/stop playback?
 		if (e.keyCode == 32) {
 			if (!playing) {
 				start();
@@ -248,6 +242,7 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 			}
 		}
 		
+		// Key-Navigation (vim)
 		if (e.character == 'h' || e.character == 'l' || e.character == 'k' || e.character == 'j') {
 			int movement = 0;
 			switch(e.character) {
@@ -281,17 +276,13 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 			return;
 		}
 		
-//		if (e.keyCode == SWT.ESC) {
-//			getParent().dispose();
-//		} else if (e.keyCode == SWT.DEL) {
-//			for (Annotation a : selectedAnnotations)
-//				controlPoints.remove(a);
-//			selectedAnnotations.clear();
-//			redraw();
-//		}
+		// Quit?
+		if (e.keyCode == SWT.ESC) {
+			getParent().dispose();
+		}
 	}
 	
-	private void keyUp(Event e) {
+	protected void keyUp(Event e) {
 		if (keyRepeat)
 			editor.moveTo(editor.getPosition());
 		
@@ -302,60 +293,25 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 	
 	private Event l = null;
 	
-	@Override protected void down(Event e) {
-		super.down(e);
-		if (!e.doit) return;
-		
-//		boolean shiftPressed = (e.stateMask&SWT.SHIFT  ) != 0;
-//		boolean ctrlPressed =  (e.stateMask&SWT.CONTROL) != 0;
-		
-		if (e.button == 3) {
-			startScratch(e);
-		}
-//		else if (e.button == 1) {
-//			clearSelection();
-//			if (hoverActive) {
-//				select(hoveredAnnotation);
-//				startDrag(e);
-//			} else {
-//				createSign = ctrlPressed;
-//				startSelection(e);ff
-//			}
-//		}
-		
+	protected void down(Event e) {
+		if (e.button == 3) startScratch(e);
 		l = e;
 	}
 
-	@Override protected void up(Event e) {
-		super.up(e);
-		if (!e.doit) return;
-		
+	protected void up(Event e) {
 		if (e.button == 3) stopScratch(e);
-//		else if (e.button == 1 && selectionActive) stopSelection(e);
-//		else if (e.button == 1 && draggingActive) stopDrag(e);
-		
 		l = e;
 	}
 	
-	@Override protected void move(Event e) {
-		super.move(e);
-		if (!e.doit) return;
-		
+	protected void move(Event e) {
 		if (scratchActive) updateScratch(e);
-//		else if (selectionActive) updateSelection(e);
-//		else if (draggingActive) updateDrag(e);
-//		else detectHover(e);
-		
 		l = e;
+	}
+	
+	protected void doubleClick(Event e) {
+		
 	}
 
-//	private void doubleClick(Event e) {
-//		if (e.button == 1) {
-//			Point pOnCanvas = componentToCanvas(e.x, e.y);
-//			controlPoints.add(new Annotation(pOnCanvas));
-//		}
-//	}
-	
 //==[ Controls: Scratching ]========================================================================
 	
 	private boolean scratchActive = false;
@@ -425,9 +381,6 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 			// Paint HUD (Extra Information)
 			paintHUD(e.gc);
 
-			// XXX
-			paintAnnotations(e);
-
 		} catch (Exception ex) {
 			System.err.println("Paint exception: " + ex.getMessage());
 			ex.printStackTrace();
@@ -435,7 +388,6 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 			paintedFrames++;
 		}
 	}
-
 	
 	// Paint HUD/Overlay of extra information on top of frame image
 	private void paintHUD(GC gc) {
@@ -536,7 +488,7 @@ public class VideoView extends AnnotatedCanvas implements EditorListener {
 	
 //==[ Disposal ]====================================================================================
 	
-	private void disposeResources(Event e) {
+	protected void onDispose(Event e) {
 		cache.dispose();
 		cacheSD.dispose();
 		

@@ -2,6 +2,7 @@ package de.dualuse.swt.experiments.scratchy.video;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
+// VideoSource + Cursor
 public class VideoEditor {
 	
 	Video video;

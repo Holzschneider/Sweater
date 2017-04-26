@@ -8,9 +8,16 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Event;
 
 public interface Annotation {
-			
-	void added(AnnotatedCanvas canvas);
-	void removed(AnnotatedCanvas canvas);
+
+	public enum HoverType {
+		NW, N, NE,
+		W, C, E,
+		SW, S, SE,
+		NONE
+	}
+	
+	void added(AnnotatedVideoView canvas);
+	void removed(AnnotatedVideoView canvas);
 	
 	void onMouse(float x, float y, Event e);
 	void onKey(Event e);
@@ -20,7 +27,13 @@ public interface Annotation {
 	Rectangle getBounds();
 	Path getShape();
 	
-	boolean checkHover(float x, float y);
+	void startDrag(float x, float y, HoverType type);
+	void updateDrag(float dx, float dy, HoverType type);
+	
+	HoverType checkHover(float x, float y);
+
+	void setSelected(boolean selected);
+	boolean isSelected();
 	
 	void setVisible(boolean isVisible);
 	boolean isVisible();
