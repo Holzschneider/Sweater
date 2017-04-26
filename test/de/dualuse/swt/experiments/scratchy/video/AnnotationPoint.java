@@ -57,9 +57,9 @@ public class AnnotationPoint implements Annotation {
 	
 //==[ Added/Removed from Parent ]===================================================================
 	
-	@Override public void added(AnnotatedCanvas canvas) {}
+	@Override public void added(AnnotatedVideoView canvas) {}
 
-	@Override public void removed(AnnotatedCanvas canvas) {}
+	@Override public void removed(AnnotatedVideoView canvas) {}
 
 //==[ Handle Input ]================================================================================
 	
@@ -127,15 +127,39 @@ public class AnnotationPoint implements Annotation {
 		return isVisible;
 	}
 
-	@Override public boolean checkHover(float x, float y) {
+	@Override public HoverType checkHover(float x, float y) {
 		// XXX todo
-		return false;
+		return HoverType.NONE;
 	}
 	
 //==[ Dispose: Free Resources ]=====================================================================
 	
 	@Override public void dispose() {
 		annotationColorDark.dispose();
+	}
+
+	@Override
+	public void startDrag(float x, float y, HoverType type) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void updateDrag(float dx, float dy, HoverType type) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setSelected(boolean selected) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isSelected() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 }
