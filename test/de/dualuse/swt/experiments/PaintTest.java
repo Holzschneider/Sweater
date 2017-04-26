@@ -53,6 +53,7 @@ public class PaintTest {
 				
 				e.gc.setLineAttributes(new LineAttributes(1));
 
+				
 				PathShape p = new PathShape(app, new RoundRectangle2D.Double(0,0,100,100,30,30));
 				e.gc.drawPath( p );
 				p.dispose();

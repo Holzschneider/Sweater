@@ -78,10 +78,10 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 	}
 
 	@Override
-	final public void onMouse(Event e) {
+	final public void point(Event e) {
 		for (Renderable r: children)
 			if (e.doit)
-				r.onMouse(e);
+				r.point(e);
 	}
 
 	@Override
@@ -106,7 +106,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		case MouseMove:
 		case MouseWheel:
 		case MouseDoubleClick:
-			onMouse(event);
+			point(event);
 		}
 	}
 	
@@ -134,10 +134,12 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		
 		Doodad e = new Doodad(d) {
 			boolean in = false;
-			protected void onMouseEnter() { 
+			protected boolean onMouseEnter() { 
 				in = true;
 				System.out.println("IN");
 				dc.redraw();
+				
+				return false;
 			};
 			
 			protected boolean onMouseClick(float x, float y, int button, int modifierKeys) {
@@ -149,10 +151,11 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 				return true;
 			};
 			
-			protected void onMouseExit() { 
+			protected boolean onMouseExit() { 
 				in = false; 
 				System.out.println("OUT");
 				dc.redraw();
+				return true;
 			};
 			
 			float xl, yl;
@@ -200,7 +203,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		
 		dc.addListener(MouseDown, (ev) -> {
 			for (Renderable rnd: dc.children)
-				rnd.onMouse(ev);
+				rnd.point(ev);
 				
 //			System.out.println((ev.stateMask&ALT)!=0);
 //			System.out.println((ev.stateMask&MOD1)!=0);
