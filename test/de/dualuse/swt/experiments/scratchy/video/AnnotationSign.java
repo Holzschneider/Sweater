@@ -175,7 +175,7 @@ public class AnnotationSign implements Annotation {
 		
 	}
 	
-//==[ Update HOver Information ]====================================================================
+//==[ Update Hover Information ]====================================================================
 	
 	@Override public HoverType checkHover(float mx, float my) {
 

@@ -85,12 +85,15 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 			if (e.doit)
 				r.point(e);
 	}
-
+	
 	@Override
 	final public void render(Rectangle clip, Transform t, GC c) {
+		renderBackground(clip, t, c);
 		for (Renderable r: children)
 			r.render(clip, t, c);
 	}
+	
+	protected void renderBackground(Rectangle clip, Transform t, GC c) {}
 	
 	Transform canvasTransform = new Transform(getDisplay());
 	
@@ -123,7 +126,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		
 		DoodadCanvas dc = new DoodadCanvas(sh, NONE);
 		Doodad d = new Doodad(dc) {
-			protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
+			@Override protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
 				System.out.println("clocked");
 				return true;
 			};

@@ -14,6 +14,7 @@ import de.dualuse.swt.experiments.scratchy.ResourceManager;
 import de.dualuse.swt.experiments.scratchy.cache.ImageCache;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
+import de.dualuse.swt.widgets.DoodadCanvas;
 
 
 /**
@@ -40,7 +41,7 @@ import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
  */
 
 // VideoCanvas
-public class VideoView extends Canvas implements EditorListener {
+public class VideoView extends DoodadCanvas implements EditorListener {
 // public class VideoView extends ZoomCanvas implements EditorListener {
 	
 	Display dsp;
@@ -64,7 +65,7 @@ public class VideoView extends Canvas implements EditorListener {
 		this.dsp = getDisplay();
 		this.editor = editor;
 		
-		addPaintListener(this::paintView);
+		// addPaintListener(this::paintView);
 
 		addListener(MouseDoubleClick, this::doubleClick);
 		addListener(MouseDown, this::down);
@@ -342,14 +343,19 @@ public class VideoView extends Canvas implements EditorListener {
 	Color HUDtextColor = Display.getCurrent().getSystemColor(SWT.COLOR_WHITE);
 	Color HUDfillColor = new Color(Display.getCurrent(), 64, 64, 64, 32);
 	
-	protected void paintView(PaintEvent e) {
+	@Override protected void renderBackground(Rectangle clip, Transform t, GC gc) {
+		paintView(gc);
+	}
+	
+	// protected void paintView(PaintEvent e) {
+	protected void paintView(GC gc) {
 		try {
 			
 			int currentFrame = editor.getPosition();
 			
 			// Init Graphics settings
-			e.gc.setAntialias(OFF);
-			e.gc.setInterpolation(NONE);
+			gc.setAntialias(OFF);
+			gc.setInterpolation(NONE);
 			
 			// If animation loop is active, compute the current frame and request the next animation frame to be drawn
 			animTick();
@@ -366,20 +372,20 @@ public class VideoView extends Canvas implements EditorListener {
 			// Display image (if one is available)
 			if (displayedImage != null) { //  && !displayedImage.isDisposed()) {
 				
-				e.gc.getTransform(originalTransform);
-				e.gc.getTransform(imageTransform);
+				gc.getTransform(originalTransform);
+				gc.getTransform(imageTransform);
 				
 				updateImageTransform(imageTransform, displayedImage);
-				e.gc.setTransform(imageTransform);
+				gc.setTransform(imageTransform);
 				
 				// XXX on macOS it still happens that disposed images survive to this point and cause an exception
-				e.gc.drawImage(displayedImage, 0, 0);
+				gc.drawImage(displayedImage, 0, 0);
 
-				e.gc.setTransform(originalTransform);
+				gc.setTransform(originalTransform);
 			}
 			
 			// Paint HUD (Extra Information)
-			paintHUD(e.gc);
+			paintHUD(gc);
 
 		} catch (Exception ex) {
 			System.err.println("Paint exception: " + ex.getMessage());

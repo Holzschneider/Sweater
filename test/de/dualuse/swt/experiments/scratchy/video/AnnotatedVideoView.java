@@ -103,6 +103,7 @@ public class AnnotatedVideoView extends VideoView {
 	@Override protected void down(Event e) {
 		super.down(e);
 		
+		boolean ctrlPressed = (e.stateMask&SWT.CTRL)!=0;
 		boolean shiftPressed = (e.stateMask&SWT.SHIFT)!=0;
 		
 		if (e.button == 1) {
@@ -112,7 +113,7 @@ public class AnnotatedVideoView extends VideoView {
 				select(hoveredAnnotation);
 				startDrag(e);
 			} else {
-				startSelection(e);
+				if (ctrlPressed) startSelection(e);
 			}
 			
 		}
@@ -181,7 +182,11 @@ public class AnnotatedVideoView extends VideoView {
 		if (type==SelectionType.BoundingBox) {
 			Point p1 = componentToCanvas(selectRect.x, selectRect.y);
 			Point p2 = componentToCanvas(selectRect.x + selectRect.width, selectRect.y + selectRect.height);
-			addAnnotation(new AnnotationSign(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y));
+			
+			// addAnnotation(new AnnotationSign(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y));
+			
+			new AnnotationDoodad(this, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
+			
 		}
 		redraw();
 	}
@@ -345,14 +350,19 @@ public class AnnotatedVideoView extends VideoView {
 	
 //==[ Paint Canvas ]================================================================================
 
-	@Override protected void paintView(PaintEvent e) {
-		super.paintView(e);
-		paintAnnotations(e);
+	@Override protected void renderBackground(Rectangle clip, Transform t, GC gc) {
+		super.renderBackground(clip,  t, gc);
+		paintAnnotations(clip, gc);
 	}
 	
-	protected void paintAnnotations(PaintEvent e) {
-		
-		GC gc = e.gc;
+//	@Override protected void paintView(PaintEvent e) {
+//		super.paintView(e);
+//		paintAnnotations(e);
+//	}
+	
+//	protected void paintAnnotations(PaintEvent e) {
+	protected void paintAnnotations(Rectangle e, GC gc) {
+//		GC gc = e.gc;
 		
 		Point p1 = componentToCanvas(e.x, e.y);
 		Point p2 = componentToCanvas(e.x + e.width, e.y + e.height);
