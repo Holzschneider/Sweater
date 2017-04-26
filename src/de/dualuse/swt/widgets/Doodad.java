@@ -1,5 +1,14 @@
 package de.dualuse.swt.widgets;
 
+import static java.lang.Math.cos;
+import static java.lang.Math.hypot;
+import static java.lang.Math.sin;
+import static org.eclipse.swt.SWT.MouseDoubleClick;
+import static org.eclipse.swt.SWT.MouseDown;
+import static org.eclipse.swt.SWT.MouseMove;
+import static org.eclipse.swt.SWT.MouseUp;
+import static org.eclipse.swt.SWT.MouseWheel;
+
 import java.util.Arrays;
 
 import org.eclipse.swt.graphics.GC;
@@ -9,112 +18,56 @@ import org.eclipse.swt.widgets.Event;
 
 
 interface Renderable {
-	public void add( Renderable r );
-	public void remove( Renderable r );
+	public Renderable add( Renderable r );
+	public Renderable remove( Renderable r );
 
-	public void transform(float[] m); 
+	public Renderable transform(float[] m); 
 	
-	public void setParent( Renderable r );
+	public void setParentRenderable( Renderable r );
+	public Renderable getParentRenderable();
+
 	public void render( Rectangle clip, Transform t, GC c );
-	
-	public void onMouse( float x, float y, Event e );
-	public Renderable getParent();
+	public void point( Event e );
 }
 
+
+// paint clipping
 class Doodad implements Renderable {
-	final static private int T00 = 0;
-	final static private int T01 = 1;
-	final static private int T10 = 2;
-	final static private int T11 = 3;
-	final static private int T02 = 4;
-	final static private int T12 = 5;
-	
-	
+	final static private int T00 = 0, T01 = 1, T10 = 2, T11 = 3, T02 = 4, T12 = 5;
+
+	/// Attributes
 	private Renderable parent; 
 	private Renderable children[] = {};
-	private float M[] = new float[6];
-	private float width, height;
+	private float M[] = new float[6]; // the local transformation Matrix
+	private float W[] = new float[6]; // the world matrix of this doodad, the last time it was rendered
 
-	public double getWidth() { return width; }
-	public double getHeight() { return height; }
-	public Renderable getParent() { return parent; }
-	
-	public Doodad translate(float tx, float ty) { return concatenate(1,0,0,1,tx,ty); }
-	public Doodad scale(float sx, float sy) { return concatenate(sx,0,0,sy,0,0); }
-	
-	public void transform(float[] m) {
-		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
-		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
+	///
+	private float left = -1f/0f, top= -1f/0f;
+	private float right = -1f/0f, bottom = -1f/0f;
 
-		final float r00 = m[T00], r01 = m[T01], r02 = m[T02];
-		final float r10 = m[T10], r11 = m[T11], r12 = m[T12];
-		
-		final float m00 = l00*r00+l01*r10, m01 = l00*r01+l01*r11, m02 = l00*r02+l01*r12+l02;
-		final float m10 = l10*r00+l11*r10, m11 = l10*r01+l11*r11, m12 = l10*r02+l11*r12+l12;
-		
-		M[T00] = m00; M[T01] = m01; M[T02] = m02;
-		M[T10] = m10; M[T11] = m11; M[T12] = m12;
-	}
-
-	interface Coordinate<T> { T set(float x, float y); }
-	protected<T> T transform(float x, float y, Coordinate<T> c) {
-		float x_ = M[T00]*x+M[T01]*y+M[T02];
-		float y_ = M[T10]*x+M[T11]*y+M[T12];
-		
-		Renderable r = getParent();
-		if (r!=null)
-			return ((Doodad)r).transform(x_, y_, c);
-		else
-			return c.set(x_, y_);
-	}
+	public float getWidth() { return right-left; }
+	public float getHeight() { return bottom-top; }
 	
-	protected<T> T inverse(float x, float y, Coordinate<T> c) {
-		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
-		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
-		
-		identity();
-		transform(M);
-		
-		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
-		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
-		
-		float det = m00 * m11 - m01 * m10;
-		float i00 = m11/det, i01 =-m01/det, i02 = (m01 * m12 - m11 * m02) / det;
-		float i10 =-m10/det, i11 = m00/det, i12 = (m10 * m02 - m00 * m12) / det;
-		
-		float x_ = i00*x+i01*y+i02;
-		float y_ = i10*x+i11*y+i12;
-		
-		//restore
-		M[T00] = l00; M[T01] = l01; M[T02] = l02;
-		M[T10] = l10; M[T11] = l11; M[T12] = l12;
-		
-		return c.set(x_, y_);
-	}
-	
-	public Doodad identity() {
-		M[T00] = M[T11] = 1;
-		M[T01] = M[T02] = 0;
-		M[T10] = M[T12] = 0;
-		
-		return this;
-	}
-	
-	public Doodad concatenate(float scX, float shY, float shX, float scY, float tx, float ty) {
-		final float m00 = scX, m01 = shX, m02 = tx;
-		final float m10 = shY, m11 = scY, m12 = ty;
-		
-		final float M00 = m00*M[T00]+m01*M[T10], M01 = m00*M[T01]+m01*M[T11], M02 = m00*M[T02]+m01*M[T12]+m02;
-		final float M10 = m10*M[T00]+m11*M[T10], M11 = m10*M[T01]+m11*M[T11], M12 = m10*M[T02]+m11*M[T12]+m12;
-		
-		M[T00] = M00; M[T01] = M01; M[T02] = M02;
-		M[T10] = M10; M[T11] = M11; M[T02] = M12;
-		
+	public Doodad setBounds(double left, double top, double right, double bottom) {
+		this.left = (float) left;
+		this.top = (float) top;
+		this.right = (float) right;
+		this.bottom = (float) bottom;
 		return this;
 	}
 	
 	
-	////////
+	///
+	private boolean clipping = false;
+	public void setClipping(boolean clipping) {
+		this.clipping = clipping;
+	}
+	public boolean isClipping() {
+		return clipping;
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////// CONSTRUCTOR & HIERARCHY ////////////////////////////////////////////
 	
 	public Doodad(Renderable parent) {
 		this.parent = this;
@@ -129,65 +82,169 @@ class Doodad implements Renderable {
 	}
 
 	@Override
-	public void add(Renderable r) {
+	public Doodad add(Renderable r) {
 		(children = Arrays.copyOf(children, children.length+1))[children.length-1]=r;
+		return this;
 	}
 
 	@Override
-	public void remove(Renderable r) {
+	public Doodad remove(Renderable r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
-				r.setParent(null);
+				r.setParentRenderable(null);
 				children[i] = children[children.length-1];
 				children = Arrays.copyOf(children, children.length-1);
-				return;
+				return this;
 			}
+		
+		return this;
 	}
 	
 	@Override
-	public void setParent(Renderable r) {
+	public void setParentRenderable(Renderable r) {
+		if (parent!=null)
+			parent.remove(this);
+			
 		parent = r;
+		
+		if (parent!=null)
+			parent.add(this);
 	}
 	
-	//////////////////
+	public Renderable getParentRenderable() { return parent; }
 	
-	//XXX make Knob by implementing getTransform in a custom way  
-	//use render and mouse hit with getTransform(Transform t) stuff - so it works
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////// TRANSFORMATION ///////////////////////////////////////////////////
+	
+	public Doodad rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+	public Doodad translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
+	public Doodad scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
+	public Doodad scale(double s) { return concatenate(s,0,0,s,0,0); }
+
+	public Doodad scale(double sx, double sy, double pivotX, double pivotY) { 
+		return this
+				.translate(+pivotX,+pivotY)
+				.scale(sx, sy)
+				.translate(-pivotX,-pivotY); 
+	}
+	
+	public Doodad rotate(double theta, double pivotX, double pivotY) { 
+		return this
+				.translate(pivotX,pivotY)
+				.rotate(theta)
+				.translate(-pivotX,-pivotY);
+	}
+	
+
+	public Doodad identity() {
+		M[T00] = M[T11] = 1;
+		M[T01] = M[T02] = 0;
+		M[T10] = M[T12] = 0;
+		
+		return this;
+	}
+	
+	public Doodad concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+		final float m00 = (float) scX, m01 = (float) shX, m02 = (float) tx;
+		final float m10 = (float) shY, m11 = (float) scY, m12 = (float) ty;
+		
+		final float M00 = M[T00], M01 = M[T01], M02 = M[T02];
+		final float M10 = M[T10], M11 = M[T11], M12 = M[T12];
+
+		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
+		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
+
+		return this;
+	}
+	
+	////////// READOUT
+	
+	//XXX redo transform with loops and accept variable sized m assuming any 3-by-k Matrices or even a 2-by-1 Vector!
+	public Doodad transform(float[] m) {
+		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
+		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
+
+		final float r00 = m[T00], r01 = m[T01], r02 = m[T02];
+		final float r10 = m[T10], r11 = m[T11], r12 = m[T12];
+				
+		m[T00]=r10*l01+r00*l00; m[T01]= r11*l01+r01*l00; m[T02]= l02+r12*l01+r02*l00;
+		m[T10]=r10*l11+r00*l10; m[T11]= r11*l11+r01*l10; m[T12]= l12+r12*l11+r02*l10;
+		
+		M[T00] = l00; M[T01] = l01; M[T02] = l02;
+		M[T10] = l10; M[T11] = l11; M[T12] = l12;
+		return this;
+		
+	}
+
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////// RENDERING //////////////////////////////////////////////////////
+	
 	
 	@Override
 	final public void render(Rectangle clip, Transform t, GC c) {
-		//read out this matrix
-		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
-		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
+		//read out and store this matrix
+		final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
+		final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
+		
+		//////// BUILD THE CURRENT WORLD MATRIX: W = T.(M.I) 
+		W[T00] = W[T11] = 1;
+		W[T01] = W[T02] = 0;
+		W[T10] = W[T12] = 0;
 
+		//transform the identity matrix by this Doodad's matrix
+		transform(W); /// W = M.I
+		
+		//read out this matrix
+		final float m00 = W[T00], m01 = W[T01], m02 = W[T02];
+		final float m10 = W[T10], m11 = W[T11], m12 = W[T12];
+		
 		//read world matrix to M
 		t.getElements(M);
 
-		//compute M_ = t.m
-		final float M00 = M[T00]*m00+M[T01]*m10, M01 = M[T00]*m01+M[T01]*m11, M02 = M[T00]*m02+M[T01]*m12+M[T02];
-		final float M10 = M[T10]*m00+M[T11]*m10, M11 = M[T10]*m01+M[T11]*m11, M12 = M[T10]*m02+M[T11]*m12+M[T12];
+		final float M00 = M[T00], M01 = M[T01], M02 = M[T02];
+		final float M10 = M[T10], M11 = M[T11], M12 = M[T12];
+		
+		//compute W = T.(M.I)
+		final float N00 = m10*M01+m00*M00, N01 = m11*M01+m01*M00, N02 = M02+m12*M01+m02*M00;
+		final float N10 = m10*M11+m00*M10, N11 = m11*M11+m01*M10, N12 = M12+m12*M11+m02*M10;
 
-		//set Matrix to GC
-		t.setElements(M00, M01, M10, M11, M02, M12);
+		
+		W[T00] = N00; W[T01] = N01; W[T02] = N02;
+		W[T10] = N10; W[T11] = N11; W[T12] = N12;
+		
+		//////////////////////// Render Node and Childnodes
+		
+		t.setElements(
+				N00, N10, N01, N11, 
+				N02, N12);
+		
+		
 		c.setTransform(t);
 		
-		//render childnodes
-		render(clip, t, c, children);
-		
-		//transform this doodad's bounds with M 
-		float ax = M02, ay = M02;
-		float bx = width*M00+M02, by = width*M10+M12;
-		float cx = height*M01+M02, cy = height*M11+M12;
-		float dx = width*M00+height*M01+M02, dy = width*M10+height*M11+M12;
-		
+		//transform this doodad's bounds with M
+		float ax = left*M00+top*M01+M02, ay = left*M10+top*M11+M12;
+		float bx = right*M00+top*M01+M02, by = right*M10+top*M11+M12;
+		float cx = left*M00+bottom*M01+M02, cy = left*M10+bottom*M11+M12;
+		float dx = right*M00+bottom*M01+M02, dy = right*M10+bottom*M11+M12;
+
 		//compute enclosing axis aligned bounding box
 		float left = min(min(ax,bx),min(cx,dx));
 		float top = min(min(ay,by),min(cy,dy));
 		float right = max(max(ax,bx),max(cx,dx));
 		float bottom = max(max(ay,by),max(cy,dy));
 		
+		boolean intersects = clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top));
+		
+		//render childnodes 
+		//unless they have to be clipped and this Doodad isn't visible
+		if (!clipping || clipping && intersects)
+			render(clip, t, c, children);
+				
 		//only render this Doodad if the GC's screen coordinate-transformed clips intersect that aabb 
-		if (clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top)))
+		if (intersects)
 			render(c);
 		
 		//restore c's Transform
@@ -195,11 +252,16 @@ class Doodad implements Renderable {
 		c.setTransform(t);
 
 		//restore own Doodads Matrix
-		M[T00] = m00; M[T01] = m01; M[T02] = m02;
-		M[T10] = m10; M[T11] = m11; M[T12] = m12;
+		M[T00] = s00; M[T01] = s01; M[T02] = s02;
+		M[T10] = s10; M[T11] = s11; M[T12] = s12;
 	}
 	
 	protected void render(Rectangle clip, Transform t, GC c, Renderable[] children) {
+//		if (clipping)
+		//TODO implement proper clipping
+		// Apply to clip and also to GC c
+		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
+		
 		for (Renderable r: children)
 			r.render(clip, t, c);
 	}
@@ -208,43 +270,97 @@ class Doodad implements Renderable {
 		/// implement this
 	}
 	
-	//////////////
-	//XXX no relative step by step, use Event e only, so it can rely on getTransform(Transform t) 
-	// or getTransform(float[] transform)
+
+	
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////// EVENT HANDLING //////////////////////////////////////////////////
+	
+	private final static int CLICK_RADIUS = 3, CLICK_PERIOD = 500;
+
+	private boolean entered = false;	
+	private boolean captured = false;
+	private int downX, downY, downT, downM;
 	
 	@Override
-	final public void onMouse(float x, float y, Event e) {
-		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
-		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
+	final public void point(Event e) {
+		final float m00 = W[T00], m01 = W[T01], m02 = W[T02];
+		final float m10 = W[T10], m11 = W[T11], m12 = W[T12];
 		
 		float det = m00 * m11 - m01 * m10;
 		float i00 = m11/det, i01 =-m01/det, i02 = (m01 * m12 - m11 * m02) / det;
 		float i10 =-m10/det, i11 = m00/det, i12 = (m10 * m02 - m00 * m12) / det;
 		
-		float x_ = i00*x+i01*y+i02;
-		float y_ = i10*x+i11*y+i12;
-		
+		float x = i00*e.x+i01*e.y+i02;
+		float y = i10*e.x+i11*e.y+i12;
+		boolean hit = x>=left && x<right && y>=top && y<bottom;
+
 		for (Renderable r: children)
+			if (e.doit && (!clipping || clipping && hit)) //TODO test mouse clipping!
+				r.point(e);
+
+		if (hit || captured) {
 			if (e.doit)
-				r.onMouse(x_, y_, e);
-		
+				e.doit = !point(x, y, e);
+			
+			if (e.type==MouseDown) {
+				captured = true;
+				downX = e.x;
+				downY = e.y;
+				downT = e.time;
+				downM = e.stateMask;
+			}
+			
+			if (e.type==MouseUp) {
+				captured = false;
+				if (e.doit && e.time-downT<CLICK_PERIOD && hypot(e.x-downX, e.y-downY)<CLICK_RADIUS)
+					onMouseClick(x,y,e.button,downM);
+			}
+			
+			if (!entered) { 
+				e.doit = !onMouseEnter();
+				entered = true;
+			}
+		} else
+			if (entered) {
+				e.doit = !onMouseExit();
+				entered = false;
+			}
+			
 		//call local mouse events here
 	}
 	
-	//Focus?
-	//Keyboard Events?
+
+	private boolean point(float x, float y, Event e) {
+		switch (e.type) {
+		default: return false;
+		case MouseMove: return onMouseMove(x,y,e.stateMask);
+		case MouseUp: return onMouseUp(x,y,e.button,e.stateMask);
+		case MouseDown: return onMouseDown(x,y,e.button,e.stateMask);
+		case MouseWheel: return onMouseWheel(x,y,e.count,e.stateMask);
+		case MouseDoubleClick: return onDoubleClick(x,y,e.button,e.stateMask);
+		}
+	}
+
+	protected boolean onMouseClick(float x, float y, int button, int modKeysAndButtons) { return false; }
+	protected boolean onDoubleClick(float x, float y, int button, int modKeysAndButtons) { return false; }
+	protected boolean onMouseDown(float x, float y, int button, int modKeysAndButtons) { return false; }
+
+	protected boolean onMouseUp(float x, float y, int button, int modKeysAndButtons) { return false; }
+	protected boolean onMouseMove(float x, float y, int modKeysAndButtons) { return false; }
+	protected boolean onMouseWheel(float x, float y, int tickCount, int modKeysAndButtons) { return false; }
+
+	protected boolean onMouseExit() { return false; }
+	protected boolean onMouseEnter() { return false; }
+	
+
 	//ControlListener?
 	//onTransformed!
 	
 	//////////////
 	
-	private static float min(float a, float b) {
-		return a<b?a:b;
-	}
-	
-	private static float max(float a, float b) {
-		return a>b?a:b;
-	}
+	private static float min(float a, float b) { return a<b?a:b; }
+	private static float max(float a, float b) { return a>b?a:b; }
 
 }
 
