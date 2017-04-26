@@ -14,7 +14,7 @@ import de.dualuse.swt.experiments.scratchy.ResourceManager;
 import de.dualuse.swt.experiments.scratchy.cache.ImageCache;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
-import de.dualuse.swt.widgets.DoodadCanvas;
+import de.dualuse.swt.widgets.LayerCanvas;
 
 
 /**
@@ -41,7 +41,7 @@ import de.dualuse.swt.widgets.DoodadCanvas;
  */
 
 // VideoCanvas
-public class VideoView extends DoodadCanvas implements EditorListener {
+public class VideoView extends LayerCanvas implements EditorListener {
 // public class VideoView extends ZoomCanvas implements EditorListener {
 	
 	Display dsp;

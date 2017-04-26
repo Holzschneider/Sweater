@@ -4,7 +4,6 @@ import static java.lang.Math.pow;
 import static org.eclipse.swt.SWT.ALT;
 import static org.eclipse.swt.SWT.BUTTON1;
 import static org.eclipse.swt.SWT.BUTTON3;
-import static org.eclipse.swt.SWT.ERROR_CANNOT_GET_COUNT;
 import static org.eclipse.swt.SWT.MouseDoubleClick;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
@@ -29,11 +28,9 @@ import org.eclipse.swt.widgets.Shell;
 import de.dualuse.swt.app.Application;
 import de.dualuse.swt.graphics.PathShape;
 
-
-
-public class DoodadCanvas extends Canvas implements Renderable, Listener {
+public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
-	public DoodadCanvas(Composite parent, int style) {
+	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
 		addListener(Paint, this);
 		addListener(MouseUp, this);
@@ -45,72 +42,64 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 	
 	////////////////////////////////////////////////////////////
 	
-	private Renderable parent = null;
-	private Renderable children[] = {};
+	private Layer children[] = {};
+	
+	public Layer[] getLayers() {
+		return children;
+	}
 	
 	@Override
-	public DoodadCanvas add(Renderable r) {
+	public int indexOf(Layer r) {
+		for (int i=0,I=children.length;i<I;i++)
+			if (children[i]==r)
+				return i;
+				
+		return -1;
+	}
+	
+	@Override
+	public LayerCanvas addLayer(Layer r) {
 		(children = Arrays.copyOf(children, children.length+1))[children.length-1]=r;
+		r.setRoot(this);
+		
 		return this;
 	}
 	
 	@Override
-	public DoodadCanvas remove(Renderable r) {
+	public LayerCanvas removeLayer(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
-				r.setParentRenderable(null);
+				r.setParentLayer(null);
 				children[i] = children[children.length-1];
 				children = Arrays.copyOf(children, children.length-1);
-				return this;
 			}
+		
+		r.setRoot(null);
 		
 		return this;
 	}
 	
-	@Override
-	public Renderable captive() {
-		return null;
-	}
-	
-	@Override
-	public void capture(Renderable r) {
-		
-	}
-	
-	@Override
-	public DoodadCanvas transform(float[] m) { return this; }
-
-	@Override
-	public void setParentRenderable(Renderable r) {
-		parent = r;
-	}
-
-	@Override
-	public Renderable getParentRenderable() {
-		return parent;
-	}
-
-	@Override
-	final public void point(Event e) {
-		for (Renderable r: children)
+	final protected void point(Event e) {
+		for (Layer r: children)
 			if (e.doit)
 				r.point(e);
 	}
 	
-	@Override
-	final public void render(Rectangle clip, Transform t, GC c) {
+
+	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
+	
+	final protected void render(Rectangle clip, Transform t, GC c) {
 		renderBackground(clip, t, c);
-		for (Renderable r: children)
+		
+		for (Layer r: children)
 			r.render(clip, t, c);
 	}
 	
-	protected void renderBackground(Rectangle clip, Transform t, GC c) {}
-	
-	Transform canvasTransform = new Transform(getDisplay());
+	protected Transform canvasTransform = new Transform(getDisplay());
 	
 	
 	@Override
-	final public void handleEvent(Event event) {
+	public void handleEvent(Event event) {
 		switch (event.type) {
 		case Paint:
 			canvasTransform.identity();
@@ -135,8 +124,8 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		
 		sh.setLayout(new FillLayout());
 		
-		DoodadCanvas dc = new DoodadCanvas(sh, NONE);
-		Doodad d = new Doodad(dc) {
+		LayerCanvas dc = new LayerCanvas(sh, NONE);
+		Layer d = new Layer(dc) {
 			@Override protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
 				System.out.println("clocked");
 				return true;
@@ -148,7 +137,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		.scale(.5, .5);
 		
 		
-		Doodad f = new Doodad(d) {
+		Layer f = new Layer(d) {
 			protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) {
 				if (modifierKeysAndButtons==BUTTON1)
 					translate(x-xl, y-yl);
@@ -178,7 +167,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 			}
 		}.setBounds(0, 0, 100, 100).translate(300, 100);
 		
-		Doodad e = new Doodad(d) {
+		Layer e = new Layer(d) {
 			boolean in = false;
 			protected boolean onMouseEnter() { 
 				in = true;
@@ -249,7 +238,7 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		
 		
 		dc.addListener(MouseDown, (ev) -> {
-			for (Renderable rnd: dc.children)
+			for (Layer rnd: dc.children)
 				rnd.point(ev);
 				
 //			System.out.println((ev.stateMask&ALT)!=0);
@@ -315,37 +304,6 @@ public class DoodadCanvas extends Canvas implements Renderable, Listener {
 		
 //		System.out.println(getVersion());
 	}
-
-	@Override
-	public Renderable[] getLayers() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void moveAbove(Renderable r) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void moveBelow(Renderable r) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public int indexOf(Renderable r) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public void redraw(float x, float y, float width, float height, boolean all) {
-		// TODO Auto-generated method stub
-		
-	}
-
 
 
 }

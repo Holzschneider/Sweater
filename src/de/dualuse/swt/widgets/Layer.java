@@ -3,7 +3,6 @@ package de.dualuse.swt.widgets;
 import static java.lang.Math.cos;
 import static java.lang.Math.hypot;
 import static java.lang.Math.sin;
-import static org.eclipse.swt.SWT.FOREGROUND;
 import static org.eclipse.swt.SWT.MouseDoubleClick;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
@@ -17,13 +16,16 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Event;
 
+//missing things
 // paint clipping
-public class Doodad implements Renderable {
+// auto-redraw on change
+public class Layer implements LayerContainer {
 	final static private int T00 = 0, T01 = 1, T10 = 2, T11 = 3, T02 = 4, T12 = 5;
 
 	/// Attributes
-	private Renderable parent; 
-	private Renderable children[] = {};
+	private Layer parent; 
+	private LayerCanvas root;
+	private Layer children[] = {};
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the world matrix of this doodad, the last time it was rendered
 
@@ -39,14 +41,13 @@ public class Doodad implements Renderable {
 	public float getWidth() { return right-left; }
 	public float getHeight() { return bottom-top; }
 	
-	public Doodad setBounds(double left, double top, double right, double bottom) {
+	public Layer setBounds(double left, double top, double right, double bottom) {
 		this.left = (float) left;
 		this.top = (float) top;
 		this.right = (float) right;
 		this.bottom = (float) bottom;
 		return this;
 	}
-	
 	
 	///
 	private boolean clipping = false;
@@ -59,30 +60,31 @@ public class Doodad implements Renderable {
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////// CONSTRUCTOR & HIERARCHY ///////////////////////////////
-	
-	public Doodad(Renderable parent) {
-		this.parent = parent;
-		parent.add(this);
+	public Layer(LayerContainer parent) {
+		parent.addLayer(this);
 		
 		identity();
 	}
 	
 	public void dispose() {
-		parent.remove(this);
+		parent.removeLayer(this);
+		setRoot(null);
 		parent = null;
 	}
 
-	@Override
-	public Doodad add(Renderable r) {
-		(children = Arrays.copyOf(children, children.length+1))[children.length-1]=r;
+	
+	public Layer addLayer(Layer r) {
+		if (r.setParentLayer(this))
+			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
+
 		return this;
 	}
 
-	@Override
-	public Doodad remove(Renderable r) {
+	public Layer removeLayer(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
-				r.setParentRenderable(null);
+				r.setParentLayer(null);
+				r.setRoot(null);
 				children[i] = children[children.length-1];
 				children = Arrays.copyOf(children, children.length-1);
 				return this;
@@ -91,24 +93,29 @@ public class Doodad implements Renderable {
 		return this;
 	}
 	
-	@Override
-	public void setParentRenderable(Renderable r) {
-		if (parent!=null)
-			parent.remove(this);
+	
+	public boolean setParentLayer(Layer r) {
+		if (parent==r)
+			return false;
+		
+		if (parent!=null) 
+			parent.removeLayer(this);
 			
 		parent = r;
 		
 		if (parent!=null)
-			parent.add(this);
+			parent.addLayer(this);
+		
+		return true;
 	}
 	
-	@Override
-	public Renderable[] getLayers() {
+	
+	public Layer[] getLayers() {
 		return children;
 	}
 	
-	@Override
-	public int indexOf(Renderable r) {
+	
+	public int indexOf(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r)
 				return i;
@@ -116,45 +123,51 @@ public class Doodad implements Renderable {
 		return -1;
 	}
 	
-	@Override
-	public void moveAbove(Renderable r) {
-		Renderable p = getParentRenderable();
-		Renderable[] cs = p.getLayers();
+	
+	public void moveAbove(Layer r) {
+		LayerContainer p = getParentLayer();
+		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
 		
 		for (int j=ir;j>=1;j--) {
-			Renderable t = cs[j];
+			Layer t = cs[j];
 			cs[j] = cs[j-1];
 			cs[j-1] = t;
 		}
 	}
 	
-	@Override
-	public void moveBelow(Renderable r) {
-		Renderable p = getParentRenderable();
-		Renderable[] cs = p.getLayers();
+	
+	public void moveBelow(Layer r) {
+		LayerContainer p = getParentLayer();
+		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
 		
 		for (int j=ir,J=cs.length;j<J-1;j++) {
-			Renderable t = cs[j];
+			Layer t = cs[j];
 			cs[j] = cs[j+1];
 			cs[j+1] = t;
 		}		
 	}
 	
-	public Renderable getParentRenderable() { return parent; }
+	public Layer getParentLayer() { return parent; }
 	
-	@Override
+	public LayerCanvas getRoot() { return root; }
+	protected void setRoot(LayerCanvas root) { 
+		this.root = root;
+		for (Layer child: children)
+			child.setRoot(root);
+	}
+	
 	public void redraw() {
-		Renderable r = getParentRenderable();
+		Layer r = getParentLayer();
 		if (r!=null)
 			r.redraw();
 		
 	}
 	
-	@Override
+	
 	public void redraw(float x, float y, float width, float height, boolean all) {
 		redraw();
 		//XXX also do this with forward transformed region 
@@ -164,19 +177,19 @@ public class Doodad implements Renderable {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////// TRANSFORMATION ///////////////////////////////////////////////////
 	
-	public Doodad rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
-	public Doodad translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
-	public Doodad scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
-	public Doodad scale(double s) { return concatenate(s,0,0,s,0,0); }
+	public Layer rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+	public Layer translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
+	public Layer scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
+	public Layer scale(double s) { return concatenate(s,0,0,s,0,0); }
 
-	public Doodad scale(double sx, double sy, double pivotX, double pivotY) { 
+	public Layer scale(double sx, double sy, double pivotX, double pivotY) { 
 		return this
 				.translate(+pivotX,+pivotY)
 				.scale(sx, sy)
 				.translate(-pivotX,-pivotY); 
 	}
 	
-	public Doodad rotate(double theta, double pivotX, double pivotY) { 
+	public Layer rotate(double theta, double pivotX, double pivotY) { 
 		return this
 				.translate(pivotX,pivotY)
 				.rotate(theta)
@@ -184,7 +197,7 @@ public class Doodad implements Renderable {
 	}
 	
 
-	public Doodad identity() {
+	public Layer identity() {
 		M[T00] = M[T11] = 1;
 		M[T01] = M[T02] = 0;
 		M[T10] = M[T12] = 0;
@@ -192,7 +205,7 @@ public class Doodad implements Renderable {
 		return this;
 	}
 	
-	public Doodad concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+	public Layer concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
 		final float m00 = (float) scX, m01 = (float) shX, m02 = (float) tx;
 		final float m10 = (float) shY, m11 = (float) scY, m12 = (float) ty;
 		
@@ -208,7 +221,7 @@ public class Doodad implements Renderable {
 	////////// READOUT
 	
 	//XXX redo transform with loops and accept variable sized m assuming any 3-by-k Matrices or even a 2-by-1 Vector!
-	public Doodad transform(float[] m) {
+	public Layer transform(float[] m) {
 		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
 		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
 
@@ -230,7 +243,7 @@ public class Doodad implements Renderable {
 	//////////////////////////////////////////// RENDERING /////////////////////////////////////////
 	
 	
-	@Override
+	
 	final public void render(Rectangle clip, Transform t, GC c) {
 		//read out and store this matrix
 		final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
@@ -303,13 +316,13 @@ public class Doodad implements Renderable {
 		M[T10] = s10; M[T11] = s11; M[T12] = s12;
 	}
 	
-	protected void render(Rectangle clip, Transform t, GC c, Renderable[] children) {
+	protected void render(Rectangle clip, Transform t, GC c, Layer[] children) {
 //		if (clipping)
 		//TODO implement proper clipping
 		// Apply to clip and also to GC c
 		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
 		
-		for (Renderable r: children)
+		for (Layer r: children)
 			r.render(clip, t, c);
 	}
 	
@@ -322,23 +335,20 @@ public class Doodad implements Renderable {
 	private final static int CLICK_RADIUS = 3, CLICK_PERIOD = 500;
 
 	private boolean entered = false;
-	private Renderable captive = null;
+	private Layer captive = null;
 	private int downX, downY, downT, downM;
 	
-	@Override
-	public void capture(Renderable c) {
+	public void capture(Layer c) {
 		captive = c;
-		Renderable r = getParentRenderable();
+		Layer r = getParentLayer();
 		if (r!=null)
 			r.capture(c);
 	}
 	
-	@Override
-	public Renderable captive() {
+	public Layer captive() {
 		return captive;
 	}
 	
-	@Override
 	final public void point(Event e) {
 		final float m00 = W[T00], m01 = W[T01], m02 = W[T02];
 		final float m10 = W[T10], m11 = W[T11], m12 = W[T12];
@@ -352,7 +362,7 @@ public class Doodad implements Renderable {
 		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
 		
-		for (Renderable r: children)
+		for (Layer r: children)
 			if (e.doit && (!clipping || clipping && hit)) { //TODO test mouse clipping!
 				if (r==null)
 					System.out.println("WHAT?");

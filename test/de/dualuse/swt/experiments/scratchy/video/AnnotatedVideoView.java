@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
@@ -22,6 +21,7 @@ import org.eclipse.swt.widgets.Event;
 
 import de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType;
 import de.dualuse.swt.experiments.scratchy.view.VideoView;
+import de.dualuse.swt.widgets.Layer;
 
 public class AnnotatedVideoView extends VideoView {
 
@@ -50,6 +50,9 @@ public class AnnotatedVideoView extends VideoView {
 	///// Annotations
 
 	List<Annotation> annotations = new ArrayList<Annotation>();
+	
+	Layer root = new Layer(this);
+	
 
 //==[ Constructor ]=================================================================================
 	
@@ -185,7 +188,7 @@ public class AnnotatedVideoView extends VideoView {
 			
 			// addAnnotation(new AnnotationSign(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y));
 			
-			new AnnotationDoodad(this, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
+			new AnnotationDoodad(root, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
 			
 		}
 		redraw();

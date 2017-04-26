@@ -11,7 +11,6 @@ import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.SE;
 import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.SW;
 import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.W;
 import static java.lang.Math.pow;
-import static org.eclipse.swt.SWT.ALT;
 import static org.eclipse.swt.SWT.BUTTON1;
 import static org.eclipse.swt.SWT.BUTTON2;
 import static org.eclipse.swt.SWT.BUTTON3;
@@ -20,17 +19,16 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 
 import de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType;
-import de.dualuse.swt.widgets.Doodad;
-import de.dualuse.swt.widgets.DoodadCanvas;
-import de.dualuse.swt.widgets.Renderable;
+import de.dualuse.swt.widgets.Layer;
 
-public class AnnotationDoodad extends Doodad {
+public class AnnotationDoodad extends Layer {
 
 	float xl, yl;
-	DoodadCanvas parent;
+//	Layer parent;
 
 	private Color foreground;
 	private Color background;
@@ -52,9 +50,9 @@ public class AnnotationDoodad extends Doodad {
 	
 	Cursor cursorCE = dsp.getSystemCursor(SWT.CURSOR_HAND);
 	
-	public AnnotationDoodad(Renderable parent, float left, float top, float right, float bottom) {
+	public AnnotationDoodad(Layer parent, float left, float top, float right, float bottom) {
 		super(parent);
-		this.parent = (DoodadCanvas)parent; // XXX just for testing purposes now, since I will add them to the canvas directly
+//		this.parent = parent; // XXX just for testing purposes now, since I will add them to the canvas directly
 		this.setBounds(left, top, right, bottom);
 
 		background = Display.getCurrent().getSystemColor(SWT.COLOR_CYAN);
@@ -123,7 +121,7 @@ public class AnnotationDoodad extends Doodad {
 			setBounds(l, t, r, b);
 			
 //			translate(x-xl, y-yl);
-			parent.redraw();
+			redraw();
 			return true;
 			
 		} else if ((modifierKeysAndButtons & buttons)==0) {
@@ -148,12 +146,12 @@ public class AnnotationDoodad extends Doodad {
 		
 		setBounds(getLeft() - dw/2, getTop()-dh/2, getRight() + dw/2, getBottom() + dh/2);
 		
-		parent.redraw();
+		redraw();
 		return true;
 	}
 	
 	@Override protected boolean onMouseExit() {
-		parent.setCursor(cursorArrow);
+		getRoot().setCursor(cursorArrow);
 		return true;
 	}
 
@@ -164,15 +162,16 @@ public class AnnotationDoodad extends Doodad {
 	
 	private void updateHover(float x, float y) {
 		hoverType = checkHover(x, y);
+		Canvas root = getRoot();
 		switch(hoverType) {
-			case NONE: parent.setCursor(cursorArrow); break;
-			case N: case S: parent.setCursor(cursorNS); break;
-			case E: case W: parent.setCursor(cursorWE); break;
-			case NE: parent.setCursor(cursorNE); break;
-			case NW: parent.setCursor(cursorNW); break;
-			case SE: parent.setCursor(cursorSE); break;
-			case SW: parent.setCursor(cursorSW); break;
-			case C: parent.setCursor(cursorCE); break;
+			case NONE: root.setCursor(cursorArrow); break;
+			case N: case S: root.setCursor(cursorNS); break;
+			case E: case W: root.setCursor(cursorWE); break;
+			case NE: root.setCursor(cursorNE); break;
+			case NW: root.setCursor(cursorNW); break;
+			case SE: root.setCursor(cursorSE); break;
+			case SW: root.setCursor(cursorSW); break;
+			case C: root.setCursor(cursorCE); break;
 		}
 	}
 	
