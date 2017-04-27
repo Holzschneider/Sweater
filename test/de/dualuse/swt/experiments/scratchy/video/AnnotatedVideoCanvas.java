@@ -89,6 +89,7 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 
 	@Override protected void down(Event e) {
 		super.down(e);
+		if (!e.doit) return;
 		
 		boolean shiftPressed = (e.stateMask&SWT.SHIFT)!=0;
 		
@@ -102,11 +103,15 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 
 	@Override protected void up(Event e) {
 		super.up(e);
+		if (!e.doit) return;
+		
 		if (e.button == 1 && selectionActive) stopSelection(e);
 	}
 	
 	@Override protected void move(Event e) {
 		super.move(e);
+		if (!e.doit) return;
+		
 		if (selectionActive) updateSelection(e);
 	}
 	
@@ -122,17 +127,18 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 
 	enum SelectionType {
 		Selection,
-		BoundingBox
+		LayerCreation
 	}
-	SelectionType type;
+	
+	SelectionType selectionType;
 	
 	Point tmp = new Point(0,0);
 	
 	protected void startSelection(Event e) {
 		if ((e.stateMask&SWT.CTRL) != 0)
-			type = SelectionType.BoundingBox;
+			selectionType = SelectionType.LayerCreation;
 		else
-			type = SelectionType.Selection;
+			selectionType = SelectionType.Selection;
 		
 		selectionActive = true;
 		selectRect.x = selectFrom.x = selectTo.x = e.x;
@@ -143,15 +149,10 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	
 	protected void stopSelection(Event e) {
 		selectionActive = false;
-		if (type==SelectionType.BoundingBox) {
+		if (selectionType==SelectionType.LayerCreation) {
 			Point p1 = componentToCanvas(selectRect.x, selectRect.y);
 			Point p2 = componentToCanvas(selectRect.x + selectRect.width, selectRect.y + selectRect.height);
-			
-			// addAnnotation(new AnnotationSign(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y));
-			
 			annotations.add(new AnnotationLayer(this, p1.x, p1.y, p2.x, p2.y ));
-			// new AnnotationLayer(this, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
-			
 		}
 		redraw();
 	}
@@ -176,43 +177,30 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		selectRect.width  = (x2 - x1);
 		selectRect.height = (y2 - y1);
 
+		// Draw new selection
+		redrawSelection();
+		
+		if (selectionType != SelectionType.Selection)
+			return;
+		
 		// Convert to canvas coordinates for hit detection
-		Point p1 = componentToCanvas(x1, y1);
-		Point p2 = componentToCanvas(x2, y2);
-		Rectangle canvasRect = new Rectangle(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y);
-		
-		point[0] = x1;
-		point[1] = y1;
-		componentToCanvas(point);
-		float cx1 = point[0];
-		float cy1 = point[1];
-		
-		point[0] = x2;
-		point[1] = y2;
-		componentToCanvas(point);
-		float cx2 = point[0];
-		float cy2 = point[1];
-		
-		Rectangle2D canvasRect_ = new Rectangle2D.Float(cx1, cy1, cx2-cx1, cy2-cy1);
+		Rectangle2D.Float canvasRect = new Rectangle2D.Float(x1, y1, x2-x1, y2-y1);
+		transformComponentToCanvas(canvasRect);
 		
 		// Reset selection and find matching points
 		clearSelection();
 		
+		// Select AnnotationLayers that intersect selection rectangle
 		for (AnnotationLayer layer : annotations) {
 			
 			float left=layer.getLeft(), top=layer.getTop(), right=layer.getRight(), bottom=layer.getBottom();
 			Rectangle2D layerRect = new Rectangle2D.Float(left, top, right-left, bottom-top);
 			
-			boolean hit = layerRect.intersects(canvasRect_);
-			if (hit) {
-				layer.setSelected(true);
-				selectedAnnotations.add(layer);
-			}
+			boolean hit = layerRect.intersects(canvasRect);
+			if (hit) select(layer);
 				
 		}
 		
-		// Draw new selection
-		redrawSelection();
 	}
 	
 	void redrawSelection() {
@@ -222,85 +210,6 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 			false
 		);
 	}
-
-//==[ Hover State ]=================================================================================
-	
-//	Annotation hoveredAnnotation;
-//	HoverType hoverType;
-	
-	/*
-	void updateHoverState(float x, float y) {
-		HoverType hoverInfo = HoverType.NONE;
-		HoverType prevType = hoverType;
-		
-		for (Annotation sign : annotations) {
-			if ((hoverInfo = sign.checkHover(x, y)) != HoverType.NONE) {
-				hoveredAnnotation = sign;
-				hoverType = hoverInfo;
-				break;
-			}
-		}
-
-		if (hoverInfo == HoverType.NONE) {
-			hoveredAnnotation = null;
-			hoverType = hoverInfo;
-		}
-		
-		if (hoverType != prevType) {
-			switch(hoverType) {
-				case NONE: setCursor(cursorArrow); break;
-				case N: case S: setCursor(cursorNS); break;
-				case E: case W: setCursor(cursorWE); break;
-				case NE: setCursor(cursorNE); break;
-				case NW: setCursor(cursorNW); break;
-				case SE: setCursor(cursorSE); break;
-				case SW: setCursor(cursorSW); break;
-				case C: setCursor(cursorCE); break;
-			}
-		}
-		
-	}
-	*/
-	
-//==[ Controls: Drag ]==============================================================================
-	
-	/*
-	Annotation draggedAnnotation;
-	
-	Point startMouse = new Point(0,0);
-	Point startPoint = new Point(0,0);
-	
-	boolean draggingActive;
-	
-	private void startDrag(Event e) {
-		draggingActive = true;
-		draggedAnnotation = hoveredAnnotation;
-		Point p = componentToCanvas(e.x, e.y);
-		startMouse.x = p.x;
-		startMouse.y = p.y;
-		
-		draggedAnnotation.startDrag(p.x, p.y, hoverType);
-	}
-	
-	private void stopDrag(Event e) {
-		draggingActive = false;
-		draggedAnnotation = null;
-	}
-	
-	private void updateDrag(Event e) {
-		// Erase previous marker
-		redraw(draggedAnnotation);
-		
-		// Compute new position
-		Point p = componentToCanvas(e.x, e.y);
-		int dx = p.x - startMouse.x;
-		int dy = p.y - startMouse.y;
-		
-		draggedAnnotation.updateDrag(dx, dy, hoverType);
-		
-		redraw(draggedAnnotation);
-	}
-	*/
 	
 //==[ Manage Selection ]============================================================================
 	
@@ -336,54 +245,19 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 
 	@Override protected void renderBackground(Rectangle clip, Transform t, GC gc) {
 		super.renderBackground(clip,  t, gc);
-//		paintAnnotations(clip, gc);
 		paintSelection(gc);
 	}
-	
-	/*
-	protected void paintAnnotations(Rectangle e, GC gc) {
-		Point p1 = componentToCanvas(e.x, e.y);
-		Point p2 = componentToCanvas(e.x + e.width, e.y + e.height);
-
-		int x1 = p1.x, x2 = p2.x;
-		int y1 = p1.y, y2 = p2.y;
-		
-		Rectangle clip = new Rectangle(e.x, e.y, e.width, e.height);
-		
-		gc.getTransform(originalTransform);
-		gc.getTransform(canvasTransform);
-		updateCanvasTransform(canvasTransform);
-		gc.setTransform(canvasTransform);
-		
-		// gc.getClipping(); // slows down rendering
-		
-		for (Annotation annotation : annotations) {
-			if (!annotation.isVisible())
-				continue;
-			
-			Rectangle bounds = annotation.getBounds();
-			if (bounds.x > x2 || (bounds.x+bounds.width) < x1)
-				continue;
-			if (bounds.y > y2 || (bounds.y+bounds.height) < y1)
-				continue;
-			
-			annotation.render(clip, canvasTransform, gc);
-		}
-
-		gc.setTransform(originalTransform);
-	}
-	*/
 	
 	// Paint Selection
 	private void paintSelection(GC gc) {
 		if (!selectionActive) return;
 		
-		if (type == SelectionType.Selection) {
+		if (selectionType == SelectionType.Selection) {
 			gc.setForeground(selectionColor);
 			gc.setLineWidth(lineWidth);
 			gc.setLineStyle(SWT.LINE_DASH);
 			gc.drawRectangle(selectRect);
-		} else if (type == SelectionType.BoundingBox) {
+		} else if (selectionType == SelectionType.LayerCreation) {
 			gc.setForeground(boundingBoxForeground);
 			gc.setBackground(boundingBoxBackground);
 			gc.fillRectangle(selectRect);

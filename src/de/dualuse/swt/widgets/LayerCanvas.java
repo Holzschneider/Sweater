@@ -78,7 +78,6 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			if (e.doit)
 				if (r.captive()==captive) //either captive == null, or set to a specific layer
 					r.point(e);
-		handleMouseEvent(e);
 	}
 	
 	Layer captive = null;
@@ -136,8 +135,6 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 //==[ To be implemented by subclasses ]=============================================================
-
-	protected void handleMouseEvent(Event e) {}
 
 	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
 
