@@ -31,6 +31,7 @@ import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Widget;
 
 
 
@@ -137,6 +138,11 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		push();
 	}
 
+	public ResourcePool(Widget w) {
+		this(w.getDisplay());
+		//XXX LEAKAGE!!
+	}
+	
 	//////
 	public void dispose() {
 		while (frame>0)

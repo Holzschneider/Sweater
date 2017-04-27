@@ -6,5 +6,9 @@ public interface LayerContainer {
 	public int indexOf( Layer r );
 	
 	public Layer[] getLayers();
+
+	
+	public void capture(Layer c);
+	public LayerContainer transform(float[] v);
 }
 

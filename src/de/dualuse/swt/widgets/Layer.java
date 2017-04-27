@@ -91,7 +91,7 @@ public class Layer implements LayerContainer, Runnable {
 
 	
 	public Layer addLayer(Layer r) {
-		if (r.setParentLayer(this))
+		if (r.setParent(this))
 			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
 
 		if (redraw)
@@ -103,7 +103,7 @@ public class Layer implements LayerContainer, Runnable {
 	public Layer removeLayer(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
-				r.setParentLayer(null);
+				r.setParent(null);
 				r.setRoot(null);
 				children[i] = children[children.length-1];
 				children = Arrays.copyOf(children, children.length-1);
@@ -116,7 +116,7 @@ public class Layer implements LayerContainer, Runnable {
 		return this;
 	}
 	
-	protected boolean setParentLayer(Layer r) {
+	protected boolean setParent(Layer r) {
 		if (parent==r)
 			return false;
 		
@@ -135,7 +135,6 @@ public class Layer implements LayerContainer, Runnable {
 		return children;
 	}
 	
-
 	public int indexOf(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r)
@@ -145,7 +144,7 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	public void moveAbove(Layer r) {
-		LayerContainer p = getParentLayer();
+		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
@@ -162,7 +161,7 @@ public class Layer implements LayerContainer, Runnable {
 	
 	
 	public void moveBelow(Layer r) {
-		LayerContainer p = getParentLayer();
+		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
@@ -177,7 +176,7 @@ public class Layer implements LayerContainer, Runnable {
 			redraw();
 	}
 	
-	public Layer getParentLayer() { return parent; }
+	public LayerContainer getParent() { return parent==null?root:parent; }
 	
 	public LayerCanvas getRoot() { return root; }
 	protected void setRoot(LayerCanvas root) { 
@@ -241,20 +240,9 @@ public class Layer implements LayerContainer, Runnable {
 	////////// READOUT
 	
 	//XXX redo transform with loops and accept variable sized m assuming any 3-by-k Matrices or even a 2-by-1 Vector!
-	protected Layer transform(float[] m) {
-		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
-		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
-
-		final float r00 = m[T00], r01 = m[T01], r02 = m[T02];
-		final float r10 = m[T10], r11 = m[T11], r12 = m[T12];
-				
-		m[T00]=r10*l01+r00*l00; m[T01]= r11*l01+r01*l00; m[T02]= l02+r12*l01+r02*l00;
-		m[T10]=r10*l11+r00*l10; m[T11]= r11*l11+r01*l10; m[T12]= l12+r12*l11+r02*l10;
-		
-		M[T00] = l00; M[T01] = l01; M[T02] = l02;
-		M[T10] = l10; M[T11] = l11; M[T12] = l12;
+	public Layer transform(float[] m) {
+		concatenate(M, m, m);
 		return this;
-		
 	}
 
 
@@ -303,8 +291,7 @@ public class Layer implements LayerContainer, Runnable {
 	
 	final public void run() {
 		//TODO check whether the world transformation actually changed
-		
-		Layer r = getParentLayer();
+		LayerContainer r = getParent();
 	
 		float left = dirtyLeft, top = dirtyTop, right = dirtyRight, bottom = dirtyBottom;
 		
@@ -316,7 +303,15 @@ public class Layer implements LayerContainer, Runnable {
 
 		identity(W);
 		transform(W); /// W = M.I
-		concatenate(getParentLayer().W, W, W);
+
+		final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
+		final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
+
+		identity(M);
+		r.transform(M);
+		concatenate(M, W, W);
+		M[T00] = s00; M[T01] = s01; M[T02] = s02;
+		M[T10] = s10; M[T11] = s11; M[T12] = s12;
 		
 		// Bounds as it's after rebuilding W 
 		final float ax_ = left*W[T00]+top*W[T01]+W[T02], ay_ = left*W[T10]+top*W[T11]+W[T12];
@@ -340,7 +335,8 @@ public class Layer implements LayerContainer, Runnable {
 			//TODO also traverse childnodes and extend the rectangle by their transformed bounding boxes
 		}
 		
-		r.getRoot().redraw((int)left-1,(int)top-1, (int)right-(int)left+2, (int)bottom-(int)top+2, dirtyAll);
+		final int M = 2; 
+		root.redraw((int)left-M,(int)top-M, (int)right-(int)left+M+M, (int)bottom-(int)top+M+M, dirtyAll);
 		dirty = false;
 	};
 	
@@ -433,9 +429,7 @@ public class Layer implements LayerContainer, Runnable {
 	
 	public void capture(Layer c) {
 		captive = c;
-		Layer r = getParentLayer();
-		if (r!=null)
-			r.capture(c);
+		getParent().capture(c);
 	}
 	
 	public Layer captive() {
@@ -456,12 +450,9 @@ public class Layer implements LayerContainer, Runnable {
 		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
 		for (Layer r: children)
-			if (e.doit && (!clipping || clipping && hit)) { //TODO test mouse clipping!
-				if (r==null)
-					System.out.println("WHAT?");
-				if (r.captive()==captive)
+			if (e.doit && (!clipping || clipping && hit))
+				if (r.captive()==captive) //either captive == null, or set to a specific layer
 					r.point(e);
-			}
 
 		if (hit || captive==this) {
 			if (e.doit && !entered) { 
@@ -535,13 +526,13 @@ public class Layer implements LayerContainer, Runnable {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// HELPER FUNCTIONS //////////////////////////////////////////////////
 	
-	private static float min(float a, float b) { return a<b?a:b; }
-	private static float max(float a, float b) { return a>b?a:b; }
+	static float min(float a, float b) { return a<b?a:b; }
+	static float max(float a, float b) { return a>b?a:b; }
 	
-	private static float floor(float a) { return (float)Math.floor(a); }
-	private static float ceil(float a) { return (float)Math.ceil(a); }
+	static float floor(float a) { return (float)Math.floor(a); }
+	static float ceil(float a) { return (float)Math.ceil(a); }
 
-	private static void concatenate(float[] A, float B[], float[] AB) {
+	static void concatenate(float[] A, float B[], float[] AB) {
 		//read out this matrix
 		final float W00 = B[T00], W01 = B[T01], W02 = B[T02];
 		final float W10 = B[T10], W11 = B[T11], W12 = B[T12];
@@ -565,7 +556,7 @@ public class Layer implements LayerContainer, Runnable {
 //		}
 //	}
 	
-	private static void identity(float[] W) {
+	static void identity(float[] W) {
 		W[T00] = W[T11] = 1;
 		W[T01] = W[T02] = 0;
 		W[T10] = W[T12] = 0;
