@@ -2,6 +2,8 @@ package de.dualuse.swt.experiments.scratchy.video;
 
 import static java.lang.Math.min;
 
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -9,7 +11,6 @@ import java.util.Set;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Point;
@@ -19,7 +20,6 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
-import de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType;
 import de.dualuse.swt.experiments.scratchy.view.VideoCanvas;
 
 public class AnnotatedVideoCanvas extends VideoCanvas {
@@ -29,26 +29,15 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	Display dsp = getDisplay();
 	
 	Transform originalTransform = new Transform(dsp);
-	Transform canvasTransform = new Transform(dsp);
+	// Transform canvasTransform = new Transform(dsp);
 
 	Color boundingBoxForeground = dsp.getSystemColor(SWT.COLOR_DARK_CYAN);
 	Color boundingBoxBackground = dsp.getSystemColor(SWT.COLOR_CYAN);
-
-	Cursor cursorArrow = dsp.getSystemCursor(SWT.CURSOR_ARROW);
-	
-	Cursor cursorNW = dsp.getSystemCursor(SWT.CURSOR_SIZENW);
-	Cursor cursorNE = dsp.getSystemCursor(SWT.CURSOR_SIZENE);
-	Cursor cursorSW = dsp.getSystemCursor(SWT.CURSOR_SIZESW);
-	Cursor cursorSE = dsp.getSystemCursor(SWT.CURSOR_SIZESE);
-	
-	Cursor cursorNS = dsp.getSystemCursor(SWT.CURSOR_SIZENS);
-	Cursor cursorWE = dsp.getSystemCursor(SWT.CURSOR_SIZEWE);
-	
-	Cursor cursorCE = dsp.getSystemCursor(SWT.CURSOR_HAND);
 	
 	///// Annotations
 
-	List<Annotation> annotations = new ArrayList<Annotation>();
+	List<AnnotationLayer> annotations = new ArrayList<AnnotationLayer>();
+	Set<AnnotationLayer> selectedAnnotations = new HashSet<AnnotationLayer>();
 	
 //==[ Constructor ]=================================================================================
 	
@@ -70,13 +59,14 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	
 //==[ Add/Remove Annotations ]======================================================================
 	
-	public void addAnnotation(Annotation annotation) {
-		annotation.added(this);
-		annotations.add(0, annotation);
+	public void addAnnotation(AnnotationLayer annotation) {
+		annotations.add(annotation);
 	}
 	
-	public void removeAnnotation(Annotation annotation) {
+	public void removeAnnotation(AnnotationLayer annotation) {
 		annotations.remove(annotation);
+		selectedAnnotations.remove(annotation);
+		annotation.dispose();
 	}
 
 //==[ Controls: Keyboard ]==========================================================================
@@ -85,10 +75,8 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		super.keyPressed(e);
 		
 		 if (e.keyCode == SWT.DEL) {
-			for (Annotation a : selectedAnnotations)
-				annotations.remove(a);
-			selectedAnnotations.clear();
-			redraw();
+			for (AnnotationLayer a : new ArrayList<>(selectedAnnotations))
+				removeAnnotation(a);
 		}
 	}
 	
@@ -102,47 +90,24 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	@Override protected void down(Event e) {
 		super.down(e);
 		
-		boolean ctrlPressed = (e.stateMask&SWT.CTRL)!=0;
 		boolean shiftPressed = (e.stateMask&SWT.SHIFT)!=0;
 		
 		if (e.button == 1) {
 			
 			if (!shiftPressed) clearSelection();
-			if (hoveredAnnotation!=null) {
-				select(hoveredAnnotation);
-				startDrag(e);
-			} else {
-				if (ctrlPressed) startSelection(e);
-			}
+			startSelection(e);
 			
 		}
 	}
 
 	@Override protected void up(Event e) {
 		super.up(e);
-		
 		if (e.button == 1 && selectionActive) stopSelection(e);
-		else if (e.button == 1 && draggingActive) stopDrag(e);
 	}
 	
 	@Override protected void move(Event e) {
 		super.move(e);
-		
 		if (selectionActive) updateSelection(e);
-		else if (draggingActive) updateDrag(e);
-		else {
-			
-			point[0] = e.x; point[1] = e.y;
-			componentToCanvas(point);
-			float x = point[0], y = point[1];
-			
-			updateHoverState(x, y);
-		}
-	}
-
-	@Override protected void doubleClick(Event e) {
-		super.doubleClick(e);
-		
 	}
 	
 //==[ Controls: Selection ]=========================================================================
@@ -184,7 +149,8 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 			
 			// addAnnotation(new AnnotationSign(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y));
 			
-			new AnnotationLayer(this, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
+			annotations.add(new AnnotationLayer(this, p1.x, p1.y, p2.x, p2.y ));
+			// new AnnotationLayer(this, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
 			
 		}
 		redraw();
@@ -215,13 +181,34 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		Point p2 = componentToCanvas(x2, y2);
 		Rectangle canvasRect = new Rectangle(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y);
 		
+		point[0] = x1;
+		point[1] = y1;
+		componentToCanvas(point);
+		float cx1 = point[0];
+		float cy1 = point[1];
+		
+		point[0] = x2;
+		point[1] = y2;
+		componentToCanvas(point);
+		float cx2 = point[0];
+		float cy2 = point[1];
+		
+		Rectangle2D canvasRect_ = new Rectangle2D.Float(cx1, cy1, cx2-cx1, cy2-cy1);
+		
 		// Reset selection and find matching points
 		clearSelection();
 		
-		for (Annotation a : annotations) {
-			Rectangle bounds = a.getBounds();
-			if (bounds.intersects(canvasRect))
-				select(a);
+		for (AnnotationLayer layer : annotations) {
+			
+			float left=layer.getLeft(), top=layer.getTop(), right=layer.getRight(), bottom=layer.getBottom();
+			Rectangle2D layerRect = new Rectangle2D.Float(left, top, right-left, bottom-top);
+			
+			boolean hit = layerRect.intersects(canvasRect_);
+			if (hit) {
+				layer.setSelected(true);
+				selectedAnnotations.add(layer);
+			}
+				
 		}
 		
 		// Draw new selection
@@ -237,10 +224,11 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	}
 
 //==[ Hover State ]=================================================================================
-
-	Annotation hoveredAnnotation;
-	HoverType hoverType;
 	
+//	Annotation hoveredAnnotation;
+//	HoverType hoverType;
+	
+	/*
 	void updateHoverState(float x, float y) {
 		HoverType hoverInfo = HoverType.NONE;
 		HoverType prevType = hoverType;
@@ -272,9 +260,11 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		}
 		
 	}
+	*/
 	
 //==[ Controls: Drag ]==============================================================================
 	
+	/*
 	Annotation draggedAnnotation;
 	
 	Point startMouse = new Point(0,0);
@@ -310,40 +300,35 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		
 		redraw(draggedAnnotation);
 	}
+	*/
 	
 //==[ Manage Selection ]============================================================================
-		
-	Set<Annotation> selectedAnnotations = new HashSet<Annotation>();
 	
-	public void select(Annotation a) {
-		if (selectedAnnotations.contains(a))
-			return;
-		
-		selectedAnnotations.add(a);
+	public void select(AnnotationLayer a) {
 		a.setSelected(true);
-		
-		redraw(a);
+		selectedAnnotations.add(a);
+	}
+
+	public void deselect(AnnotationLayer a) {
+		a.setSelected(false);
+		selectedAnnotations.remove(a);
 	}
 	
-	public void deselect(Annotation a) {
-		if (!selectedAnnotations.contains(a))
-			return;
-		
-		selectedAnnotations.remove(a);
-		a.setSelected(false);
-		
-		redraw(a);
+	public void selectExclusive(AnnotationLayer a) {
+		clearSelection();
+		select(a);
+	}
+	
+	public void toggleSelection(AnnotationLayer a) {
+		if (!a.isSelected())
+			select(a);
+		else
+			deselect(a);
 	}
 	
 	public void clearSelection() {
-		if (selectedAnnotations.isEmpty())
-			return;
-		
-		for (Annotation a : selectedAnnotations) {
+		for (AnnotationLayer a : selectedAnnotations)
 			a.setSelected(false);
-			redraw(a);
-		}
-		
 		selectedAnnotations.clear();
 	}
 	
@@ -351,18 +336,12 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 
 	@Override protected void renderBackground(Rectangle clip, Transform t, GC gc) {
 		super.renderBackground(clip,  t, gc);
-		paintAnnotations(clip, gc);
+//		paintAnnotations(clip, gc);
+		paintSelection(gc);
 	}
 	
-//	@Override protected void paintView(PaintEvent e) {
-//		super.paintView(e);
-//		paintAnnotations(e);
-//	}
-	
-//	protected void paintAnnotations(PaintEvent e) {
+	/*
 	protected void paintAnnotations(Rectangle e, GC gc) {
-//		GC gc = e.gc;
-		
 		Point p1 = componentToCanvas(e.x, e.y);
 		Point p2 = componentToCanvas(e.x + e.width, e.y + e.height);
 
@@ -392,10 +371,9 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		}
 
 		gc.setTransform(originalTransform);
-		
-		paintSelection(gc);
 	}
-
+	*/
+	
 	// Paint Selection
 	private void paintSelection(GC gc) {
 		if (!selectionActive) return;
@@ -437,6 +415,7 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	
 //==[ Update Canvas Transform ]=====================================================================
 	
+	// XXX now uses canvasTrasnform from parent LayerCanvas; works, but should be looked at in more detail
 	Transform invertedCanvasTransform = new Transform(getDisplay());
 	
 	// Compute & Set the Canvas Transform (canvas coordinates -> video coordinates)
@@ -461,6 +440,8 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	
 //==[ Coordinate Transformations ]==================================================================
 
+	// XXX probably should be migrated/merged to LayerCanvas along with the whole canvasTransform handling
+	
 	float[] elements = new float[6];
 	float[] point = new float[2];
 	
@@ -508,14 +489,31 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		if (array.length != 2) throw new IllegalArgumentException("Illegal dimension for point conversion.");
 		return new Point(Math.round(array[0]), Math.round(array[1]));
 	}
+	
+	/////
 
+	void transformComponentToCanvas(Point2D.Float p) {
+		point[0] = p.x; point[1] = p.y;
+		componentToCanvas(point);
+		p.x = point[0]; p.y = point[1];
+	}
+	
+	float[] coords = new float[4];
+	void transformComponentToCanvas(Rectangle2D.Float rect) {
+		coords[0] = rect.x; coords[1] = rect.y;
+		coords[2] = rect.x + rect.width; coords[3] = rect.y + rect.height;
+		componentToCanvas(coords);
+		rect.x = coords[0]; rect.y = coords[1];
+		rect.width = coords[2] - coords[0]; rect.height = coords[3] - coords[1];
+	}
+	
 //==[ Dispose Annotations ]=========================================================================
 	
 	@Override protected void onDispose(Event e) {
 		super.onDispose(e);
 		
-		for (Annotation annotation : annotations)
-			annotation.dispose();
+//		for (Annotation annotation : annotations)
+//			annotation.dispose();
 		
 		originalTransform.dispose();
 		canvasTransform.dispose();

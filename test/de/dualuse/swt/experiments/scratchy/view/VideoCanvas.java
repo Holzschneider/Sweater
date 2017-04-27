@@ -67,10 +67,10 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 		
 		// addPaintListener(this::paintView);
 
-		addListener(MouseDoubleClick, this::doubleClick);
-		addListener(MouseDown, this::down);
-		addListener(MouseUp, this::up);
-		addListener(MouseMove, this::move);
+//		addListener(MouseDoubleClick, this::doubleClick);
+//		addListener(MouseDown, this::down);
+//		addListener(MouseUp, this::up);
+//		addListener(MouseMove, this::move);
 
 		addListener(KeyDown, this::keyPressed);
 		addListener(KeyUp, this::keyUp);
@@ -294,6 +294,16 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	
 	private Event l = null;
 	
+	@Override protected void handleMouseEvent(Event e) {
+		if (e.doit) {
+			switch(e.type) {
+				case SWT.MouseDown: down(e); break;
+				case SWT.MouseUp: up(e); break;
+				case SWT.MouseMove: move(e); break;
+			}
+		}
+	}
+	
 	protected void down(Event e) {
 		if (e.button == 3) startScratch(e);
 		l = e;
@@ -307,10 +317,6 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	protected void move(Event e) {
 		if (scratchActive) updateScratch(e);
 		l = e;
-	}
-	
-	protected void doubleClick(Event e) {
-		
 	}
 
 //==[ Controls: Scratching ]========================================================================
