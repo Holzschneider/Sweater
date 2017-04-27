@@ -296,10 +296,10 @@ public class Layer implements LayerContainer, Runnable {
 		float left = dirtyLeft, top = dirtyTop, right = dirtyRight, bottom = dirtyBottom;
 		
 		// Bounding box as it's been last time in drawing
-		final float _ax = left*W[T00]+top*W[T01]+W[T02], _ay = left*W[T10]+top*W[T11]+W[T12];
-		final float _bx = right*W[T00]+top*W[T01]+W[T02], _by = right*W[T10]+top*W[T11]+W[T12];
-		final float _cx = left*W[T00]+bottom*W[T01]+W[T02], _cy = left*W[T10]+bottom*W[T11]+W[T12];
-		final float _dx = right*W[T00]+bottom*W[T01]+W[T02], _dy = right*W[T10]+bottom*W[T11]+W[T12];
+		final float _ax = renderedLeft*W[T00]+renderedTop*W[T01]+W[T02], _ay = renderedLeft*W[T10]+renderedTop*W[T11]+W[T12];
+		final float _bx = renderedRight*W[T00]+renderedTop*W[T01]+W[T02], _by = renderedRight*W[T10]+renderedTop*W[T11]+W[T12];
+		final float _cx = renderedLeft*W[T00]+renderedBottom*W[T01]+W[T02], _cy = renderedLeft*W[T10]+renderedBottom*W[T11]+W[T12];
+		final float _dx = renderedRight*W[T00]+renderedBottom*W[T01]+W[T02], _dy = renderedRight*W[T10]+renderedBottom*W[T11]+W[T12];
 
 		identity(W);
 		transform(W); /// W = M.I
@@ -331,6 +331,11 @@ public class Layer implements LayerContainer, Runnable {
 		right = ceil(max(max(Ax,Bx),max(Cx,Dx)));
 		bottom = ceil(max(max(Ay,By),max(Cy,Dy)));
 		
+		renderedLeft = left;
+		renderedTop = top;
+		renderedRight = right;
+		renderedBottom = bottom;
+		
 		if (dirtyAll&&!clipping) {
 			//TODO also traverse childnodes and extend the rectangle by their transformed bounding boxes
 		}
@@ -344,7 +349,7 @@ public class Layer implements LayerContainer, Runnable {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////// RENDERING /////////////////////////////////////////
-	
+	float renderedLeft, renderedTop, renderedRight, renderedBottom;
 	
 	final public void render(Rectangle clip, Transform t, GC c) {
 		//read out and store this matrix
@@ -373,6 +378,11 @@ public class Layer implements LayerContainer, Runnable {
 		final float W00 = W[T00], W01 = W[T01], W02 = W[T02];
 		final float W10 = W[T10], W11 = W[T11], W12 = W[T12];
 
+		renderedLeft = left;
+		renderedTop = top;
+		renderedRight = right;
+		renderedBottom = bottom;
+		
 		final float ax = left*W00+top*W01+W02, ay = left*W10+top*W11+W12;
 		final float bx = right*W00+top*W01+W02, by = right*W10+top*W11+W12;
 		final float cx = left*W00+bottom*W01+W02, cy = left*W10+bottom*W11+W12;
