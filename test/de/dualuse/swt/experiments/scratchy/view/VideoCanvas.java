@@ -41,7 +41,7 @@ import de.dualuse.swt.widgets.LayerCanvas;
  */
 
 // VideoCanvas
-public class VideoView extends LayerCanvas implements EditorListener {
+public class VideoCanvas extends LayerCanvas implements EditorListener {
 // public class VideoView extends ZoomCanvas implements EditorListener {
 	
 	Display dsp;
@@ -59,7 +59,7 @@ public class VideoView extends LayerCanvas implements EditorListener {
 	
 //==[ Constructor ]=================================================================================
 	
-	public VideoView(Composite parent, int style, VideoEditor editor) {
+	public VideoCanvas(Composite parent, int style, VideoEditor editor) {
 		super(parent, style | SWT.DOUBLE_BUFFERED); // | NO_BACKGROUND); // | SWT.DOUBLE_BUFFERED);
 		
 		this.dsp = getDisplay();

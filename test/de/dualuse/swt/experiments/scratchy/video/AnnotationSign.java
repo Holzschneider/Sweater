@@ -13,7 +13,7 @@ import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.*;
 
 public class AnnotationSign implements Annotation {
 
-	private AnnotatedVideoView canvas;
+	private AnnotatedVideoCanvas canvas;
 	private int x, y, width, height;
 	
 	private Rectangle bounds;
@@ -107,12 +107,12 @@ public class AnnotationSign implements Annotation {
 	
 //==[ Add to/remove from AnnotatedCanvas ]==========================================================
 	
-	@Override public void added(AnnotatedVideoView canvas) {
+	@Override public void added(AnnotatedVideoCanvas canvas) {
 		this.canvas = canvas;
 		// add additional listeners
 	}
 
-	@Override public void removed(AnnotatedVideoView canvas) {
+	@Override public void removed(AnnotatedVideoCanvas canvas) {
 		if (this.canvas!=canvas) return;
 		// remove additional listeners
 		this.canvas = null;

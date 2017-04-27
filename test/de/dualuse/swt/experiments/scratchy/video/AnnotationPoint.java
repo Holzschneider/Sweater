@@ -57,9 +57,9 @@ public class AnnotationPoint implements Annotation {
 	
 //==[ Added/Removed from Parent ]===================================================================
 	
-	@Override public void added(AnnotatedVideoView canvas) {}
+	@Override public void added(AnnotatedVideoCanvas canvas) {}
 
-	@Override public void removed(AnnotatedVideoView canvas) {}
+	@Override public void removed(AnnotatedVideoCanvas canvas) {}
 
 //==[ Handle Input ]================================================================================
 	

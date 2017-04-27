@@ -20,10 +20,9 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
 import de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType;
-import de.dualuse.swt.experiments.scratchy.view.VideoView;
-import de.dualuse.swt.widgets.Layer;
+import de.dualuse.swt.experiments.scratchy.view.VideoCanvas;
 
-public class AnnotatedVideoView extends VideoView {
+public class AnnotatedVideoCanvas extends VideoCanvas {
 
 	int canvasWidth, canvasHeight;
 	
@@ -51,12 +50,9 @@ public class AnnotatedVideoView extends VideoView {
 
 	List<Annotation> annotations = new ArrayList<Annotation>();
 	
-	Layer root = new Layer(this);
-	
-
 //==[ Constructor ]=================================================================================
 	
-	public AnnotatedVideoView(Composite parent, int style, VideoEditor editor) {
+	public AnnotatedVideoCanvas(Composite parent, int style, VideoEditor editor) {
 		super(parent, style, editor);
 		
 		this.canvasWidth = parent.getSize().x;
@@ -188,7 +184,7 @@ public class AnnotatedVideoView extends VideoView {
 			
 			// addAnnotation(new AnnotationSign(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y));
 			
-			new AnnotationDoodad(root, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
+			new AnnotationLayer(this, selectRect.x, selectRect.y, selectRect.x + selectRect.width, selectRect.y + selectRect.height );
 			
 		}
 		redraw();

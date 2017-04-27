@@ -12,12 +12,12 @@ import org.eclipse.swt.graphics.DeviceData;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
-import de.dualuse.swt.experiments.scratchy.video.AnnotatedVideoView;
+import de.dualuse.swt.experiments.scratchy.video.AnnotatedVideoCanvas;
 import de.dualuse.swt.experiments.scratchy.video.Video;
 import de.dualuse.swt.experiments.scratchy.video.VideoDir;
 import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
 import de.dualuse.swt.experiments.scratchy.view.Timeline;
-import de.dualuse.swt.experiments.scratchy.view.VideoView;
+import de.dualuse.swt.experiments.scratchy.view.VideoCanvas;
 import de.dualuse.swt.layout.BorderLayout;
 import de.dualuse.swt.util.Sleak;
 
@@ -73,7 +73,7 @@ public class ScratchApp {
 		sh.setText("MainView");
 
 		// VideoView videoview = new VideoView(sh, NO_BACKGROUND, editor);
-		AnnotatedVideoView videoview = new AnnotatedVideoView(sh, NO_BACKGROUND, editor);
+		AnnotatedVideoCanvas videoview = new AnnotatedVideoCanvas(sh, NO_BACKGROUND, editor);
 		Timeline timeline = new Timeline(sh, SWT.NONE, editor);
 		
 		videoview.setLayoutData(BorderLayout.CENTER);
