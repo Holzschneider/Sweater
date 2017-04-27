@@ -1,5 +1,6 @@
 package de.dualuse.swt.widgets;
 
+import static org.eclipse.swt.SWT.Dispose;
 import static org.eclipse.swt.SWT.MouseDoubleClick;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
@@ -17,16 +18,20 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 
+import de.dualuse.swt.graphics.ResourcePool;
+
 public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
-		addListener(Paint, this);
-		addListener(MouseUp, this);
-		addListener(MouseDown, this);
-		addListener(MouseMove, this);
-		addListener(MouseWheel, this);
-		addListener(MouseDoubleClick, this);
+		super.addListener(Paint, this);
+		super.addListener(MouseUp, this);
+		super.addListener(MouseDown, this);
+		super.addListener(MouseMove, this);
+		super.addListener(MouseWheel, this);
+		super.addListener(MouseDoubleClick, this);
+		
+		super.addListener(Dispose, this::disposer);
 	}
 	
 	////////////////////////////////////////////////////////////
@@ -58,7 +63,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	public LayerCanvas removeLayer(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
-				r.setParentLayer(null);
+				r.setParent(null);
 				children[i] = children[children.length-1];
 				children = Arrays.copyOf(children, children.length-1);
 			}
@@ -82,18 +87,32 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		
 		for (int I=children.length-1,i=0;I>=i;I--)
 			children[I].render(clip,t,c);
-		
 	}
 	
-	protected Transform canvasTransform = new Transform(getDisplay());
+	
+	private void disposer(Event e) {
+		ownTransform.dispose();
+	}
+	
+	private float[] backup = new float[6];
+	private Transform ownTransform = new Transform(getDisplay());
+	private Transform layerTransform = ownTransform;
+	public void setLayerTransform(Transform layerTransform) {
+		this.layerTransform = layerTransform;
+	}
+	
+	public Transform getLayerTransform() {
+		return layerTransform;
+	}
 	
 	
 	@Override
 	public void handleEvent(Event event) {
 		switch (event.type) {
 		case Paint:
-			canvasTransform.identity();
-			render(event.gc.getClipping(), canvasTransform, event.gc);
+			layerTransform.getElements(backup);
+			render(event.gc.getClipping(), layerTransform, event.gc);
+			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
 			break;
 		
 		case MouseDown:
@@ -106,5 +125,5 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	////////////////////////////////////////////////////////////
-
+	
 }

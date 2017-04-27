@@ -91,7 +91,7 @@ public class Layer implements LayerContainer, Runnable {
 
 	
 	public Layer addLayer(Layer r) {
-		if (r.setParentLayer(this))
+		if (r.setParent(this))
 			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
 
 		if (redraw)
@@ -103,7 +103,7 @@ public class Layer implements LayerContainer, Runnable {
 	public Layer removeLayer(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
-				r.setParentLayer(null);
+				r.setParent(null);
 				r.setRoot(null);
 				children[i] = children[children.length-1];
 				children = Arrays.copyOf(children, children.length-1);
@@ -116,7 +116,7 @@ public class Layer implements LayerContainer, Runnable {
 		return this;
 	}
 	
-	protected boolean setParentLayer(Layer r) {
+	protected boolean setParent(Layer r) {
 		if (parent==r)
 			return false;
 		
@@ -135,7 +135,6 @@ public class Layer implements LayerContainer, Runnable {
 		return children;
 	}
 	
-
 	public int indexOf(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r)
@@ -145,7 +144,7 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	public void moveAbove(Layer r) {
-		LayerContainer p = getParentLayer();
+		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
@@ -162,7 +161,7 @@ public class Layer implements LayerContainer, Runnable {
 	
 	
 	public void moveBelow(Layer r) {
-		LayerContainer p = getParentLayer();
+		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
@@ -177,7 +176,7 @@ public class Layer implements LayerContainer, Runnable {
 			redraw();
 	}
 	
-	public Layer getParentLayer() { return parent; }
+	public LayerContainer getParent() { return parent==null?root:parent; }
 	
 	public LayerCanvas getRoot() { return root; }
 	protected void setRoot(LayerCanvas root) { 
@@ -304,7 +303,7 @@ public class Layer implements LayerContainer, Runnable {
 	final public void run() {
 		//TODO check whether the world transformation actually changed
 		
-		Layer r = getParentLayer();
+		Layer r = parent;
 	
 		float left = dirtyLeft, top = dirtyTop, right = dirtyRight, bottom = dirtyBottom;
 		
@@ -316,7 +315,20 @@ public class Layer implements LayerContainer, Runnable {
 
 		identity(W);
 		transform(W); /// W = M.I
-		concatenate(getParentLayer().W, W, W);
+		
+		if (r!=null)
+			concatenate(r.W, W, W);
+		else {
+//			final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
+//			final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
+//			root.canvasTransform.getElements(M); //read world matrix to M
+//			
+//
+//			//restore own Layers Matrix
+//			M[T00] = s00; M[T01] = s01; M[T02] = s02;
+//			M[T10] = s10; M[T11] = s11; M[T12] = s12;
+			root.redraw();
+		}
 		
 		// Bounds as it's after rebuilding W 
 		final float ax_ = left*W[T00]+top*W[T01]+W[T02], ay_ = left*W[T10]+top*W[T11]+W[T12];
@@ -340,7 +352,7 @@ public class Layer implements LayerContainer, Runnable {
 			//TODO also traverse childnodes and extend the rectangle by their transformed bounding boxes
 		}
 		
-		r.getRoot().redraw((int)left-1,(int)top-1, (int)right-(int)left+2, (int)bottom-(int)top+2, dirtyAll);
+		root.redraw((int)left-1,(int)top-1, (int)right-(int)left+2, (int)bottom-(int)top+2, dirtyAll);
 		dirty = false;
 	};
 	
@@ -433,7 +445,7 @@ public class Layer implements LayerContainer, Runnable {
 	
 	public void capture(Layer c) {
 		captive = c;
-		Layer r = getParentLayer();
+		Layer r = parent;
 		if (r!=null)
 			r.capture(c);
 	}

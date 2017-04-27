@@ -27,7 +27,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
 
 
-public class ZoomCanvas extends Canvas implements PaintListener, Listener, ControlListener {
+public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, ControlListener {
 	private ArrayList<Listener> listeners = new ArrayList<Listener>();
 	private ArrayList<PaintListener> paintListeners = new ArrayList<PaintListener>(); 
 	
@@ -36,13 +36,14 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	public ZoomCanvas(Composite parent, int style) {
 		super(parent, style);
 
-		canvasTransform = new Transform(getDisplay());
+//		canvasTransform = new Transform(getDisplay());
+		canvasTransform = getLayerTransform();
 		
-		super.addListener(Paint, this);
-		super.addListener(MouseWheel, this);
-		super.addListener(MouseMove, this);
-		super.addListener(MouseDown, this);
-		super.addListener(MouseUp, this);
+//		super.addListener(Paint, this);
+//		super.addListener(MouseWheel, this);
+//		super.addListener(MouseMove, this);
+//		super.addListener(MouseDown, this);
+//		super.addListener(MouseUp, this);
 		super.addPaintListener(this);
 		
 		this.addControlListener(this);
@@ -91,27 +92,34 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	
 	@Override
 	final public void handleEvent(Event event) {
-		switch (event.type) {
-		case Paint:
+		
+		if (event.type==Paint)
 			for (Listener l: listeners)
 				if (event.doit)
 					l.handleEvent(event);
-			break;
+				
+		super.handleEvent(event);
+		
+		switch (event.type) {
 			
 		case MouseMove:
-			mouseMove(event);
+			if (event.doit)
+				mouseMove(event);
 			break;
 
 		case MouseDown:
-			mouseDown(event);
+			if (event.doit)
+				mouseDown(event);
 			break;
 			
 		case MouseUp:
-			mouseUp(event);
+			if (event.doit)
+				mouseUp(event);
 			break;
 			
 		case MouseWheel:
-			mouseScrolled(event);
+			if (event.doit)
+				mouseScrolled(event);
 			event.doit = !zoomX && !zoomY; 
 			//prevent scrolling from happening when zooming should happen instead 
 			break;
@@ -121,11 +129,15 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		}
 	}
 
+	Transform bt = new Transform(getDisplay());
+	Transform at = new Transform(getDisplay());
+
 	@Override
 	final public void paintControl(PaintEvent e) {
 		GC gc = e.gc;
+	
+		gc.getTransform(bt);
 		
-		Transform at = new Transform(getDisplay());
 		gc.getTransform(at);
 		at.multiply(canvasTransform);
 		
@@ -146,6 +158,8 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		paintCanvas(e);
 		for (PaintListener pl: paintListeners)
 			pl.paintControl(e);
+		
+		gc.setTransform(bt);
 	}
 	
 	protected void paintCanvas(PaintEvent e) {
