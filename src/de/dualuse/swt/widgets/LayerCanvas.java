@@ -1,32 +1,21 @@
 package de.dualuse.swt.widgets;
 
-import static java.lang.Math.pow;
-import static org.eclipse.swt.SWT.ALT;
-import static org.eclipse.swt.SWT.BUTTON1;
-import static org.eclipse.swt.SWT.BUTTON3;
 import static org.eclipse.swt.SWT.MouseDoubleClick;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
 import static org.eclipse.swt.SWT.MouseUp;
 import static org.eclipse.swt.SWT.MouseWheel;
-import static org.eclipse.swt.SWT.NONE;
 import static org.eclipse.swt.SWT.Paint;
 
 import java.util.Arrays;
 
 import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Shell;
-
-import de.dualuse.swt.app.Application;
-import de.dualuse.swt.graphics.PathShape;
 
 public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	

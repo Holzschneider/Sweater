@@ -7,7 +7,10 @@ import java.util.Random;
 
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Shell;
 
@@ -30,11 +33,12 @@ public class LayerCanvasTest2 {
 		
 		@Override
 		protected void render(GC c) {
-			Color rc = new Color(getRoot().getDisplay(), col);
-			c.setBackground(rc);
-			c.fillRectangle(getBounds());
-			rc.dispose();
+//			Color rc = new Color(getRoot().getDisplay(), col);
+//			c.setBackground(rc);
+//			c.fillRectangle(getBounds());
+//			rc.dispose();
 			
+			c.setLineAttributes(new LineAttributes(1));
 			c.drawRectangle(getBounds());
 		}
 		
@@ -44,7 +48,7 @@ public class LayerCanvasTest2 {
 		@Override
 		protected boolean onMouseDown(float x, float y, int button, int modKeysAndButtons) {
 			moveAbove(null);
-			getRoot().redraw();
+			redraw();
 			x0 = x;
 			y0 = y;
 			return true;
@@ -52,17 +56,23 @@ public class LayerCanvasTest2 {
 		
 		@Override
 		protected boolean onMouseMove(float x, float y, int modKeysAndButtons) {
-			if (modKeysAndButtons!=0)
+			if (modKeysAndButtons!=0) {
 				translate(x-x0, y-y0);
-
-			getRoot().redraw();
+//				redraw();
+			}
+			
 			return true;
 		}
 		
 		@Override
 		protected boolean onMouseWheel(float x, float y, int tickCount, int modKeysAndButtons) {
-			scale( pow(1.0337, tickCount), x,y );
-			getRoot().redraw();
+			
+			if (modKeysAndButtons==0)
+				scale( pow(1.0337, tickCount), x,y );
+			else
+				rotate( tickCount/10f, x,y );
+			
+			redraw();
 			
 			return true;
 		}
@@ -76,13 +86,22 @@ public class LayerCanvasTest2 {
 
 		sh.setLayout(new FillLayout());
 
-		LayerCanvas dc = new LayerCanvas(sh, NONE);
+		LayerCanvas dc = new LayerCanvas(sh, NONE) {
+			final Random rng = new Random(1337);
+			
+			@Override
+			protected void renderBackground(Rectangle clip, Transform t, GC gc) {
+				Color random = new Color(getDisplay(), new RGB(rng.nextFloat()*360f,0.8f,0.9f));
+				gc.setBackground(random);
+				gc.fillRectangle(getBounds());
+				random.dispose();
+			}
+		};
 		Layer d = new Layer(dc)
 				// .setSize(100, 100);
 				// .rotate(0.5)
 				.translate(100, 100).scale(.5, .5);
 
-		
 		Frame a = new Frame(d);
 		Frame b = new Frame(d);
 		Frame c = new Frame(d);
