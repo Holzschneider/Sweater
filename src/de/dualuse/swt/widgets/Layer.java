@@ -18,34 +18,51 @@ import org.eclipse.swt.widgets.Event;
 
 //missing things
 // paint clipping
-// auto-redraw on change
-public class Layer implements LayerContainer {
-	final static private int T00 = 0, T01 = 1, T10 = 2, T11 = 3, T02 = 4, T12 = 5;
+public class Layer implements LayerContainer, Runnable {
+	final static private int T00=0, T01=1, T10=2, T11=3, T02=4, T12=5; //, T20=3, T21=4, T22=5;
 
 	/// Attributes
 	private Layer parent; 
 	private LayerCanvas root;
 	private Layer children[] = {};
 	private float M[] = new float[6]; // the local transformation Matrix
-	private float W[] = new float[6]; // the world matrix of this doodad, the last time it was rendered
-
+	private float W[] = new float[6]; // the world matrix of this Layer, the last time it was rendered
+//	private float B[] = new float[8*3]; // the oriented bounds of this Layer in world coordinates
+	
+	boolean redraw = true; //whether redraws are triggerd upon change 
+	
 	///
 	private float left = -1f/0f, top= -1f/0f;
-	private float right = -1f/0f, bottom = -1f/0f;
+	private float right = +1f/0f, bottom = +1f/0f;
 
 	public float getLeft() { return left; }
 	public float getRight() { return right; }
 	public float getTop() { return top; }
 	public float getBottom() { return bottom; }
 	
-	public float getWidth() { return right-left; }
-	public float getHeight() { return bottom-top; }
+	public float getWidth() { return Float.isFinite(right)&&Float.isFinite(left)?right-left:1f/0f; }
+	public float getHeight() { return Float.isFinite(bottom)&&Float.isFinite(top)?bottom-top:1f/0f; }
+	
+	public Rectangle getBounds() {
+		//XXX fix integer truncation to always contain floating point bounds
+		return new Rectangle((int)floor(left), (int)floor(top), (int)ceil(getWidth()), (int)ceil(getHeight()));
+	}
+	
+	public boolean isFinite() {
+		return Float.isFinite(left) && Float.isFinite(right) && Float.isFinite(top) && Float.isFinite(bottom);
+	}
 	
 	public Layer setBounds(double left, double top, double right, double bottom) {
+		boolean changed = this.left!=left || this.top!=top || this.right!=right || this.bottom!=bottom;
+		
 		this.left = (float) left;
 		this.top = (float) top;
 		this.right = (float) right;
 		this.bottom = (float) bottom;
+		
+		if (redraw && changed)
+			redraw();
+		
 		return this;
 	}
 	
@@ -77,6 +94,9 @@ public class Layer implements LayerContainer {
 		if (r.setParentLayer(this))
 			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
 
+		if (redraw)
+			redraw();
+
 		return this;
 	}
 
@@ -89,12 +109,14 @@ public class Layer implements LayerContainer {
 				children = Arrays.copyOf(children, children.length-1);
 				return this;
 			}
-		
+	
+		if (redraw)
+			redraw();
+				
 		return this;
 	}
 	
-	
-	public boolean setParentLayer(Layer r) {
+	protected boolean setParentLayer(Layer r) {
 		if (parent==r)
 			return false;
 		
@@ -109,12 +131,11 @@ public class Layer implements LayerContainer {
 		return true;
 	}
 	
-	
 	public Layer[] getLayers() {
 		return children;
 	}
 	
-	
+
 	public int indexOf(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r)
@@ -123,18 +144,20 @@ public class Layer implements LayerContainer {
 		return -1;
 	}
 	
-	
 	public void moveAbove(Layer r) {
 		LayerContainer p = getParentLayer();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
 		
-		for (int j=ir;j>=1;j--) {
+		for (int j=ir;j>=1 && cs[j]!=r;j--) {
 			Layer t = cs[j];
 			cs[j] = cs[j-1];
 			cs[j-1] = t;
 		}
+		
+		if (redraw)
+			redraw();
 	}
 	
 	
@@ -144,11 +167,14 @@ public class Layer implements LayerContainer {
 
 		int ir = p.indexOf(this);
 		
-		for (int j=ir,J=cs.length;j<J-1;j++) {
+		for (int j=ir,J=cs.length;j<J-1 && cs[j]!=r;j++) {
 			Layer t = cs[j];
 			cs[j] = cs[j+1];
 			cs[j+1] = t;
-		}		
+		}
+		
+		if (redraw)
+			redraw();
 	}
 	
 	public Layer getParentLayer() { return parent; }
@@ -160,33 +186,23 @@ public class Layer implements LayerContainer {
 			child.setRoot(root);
 	}
 	
-	public void redraw() {
-		Layer r = getParentLayer();
-		if (r!=null)
-			r.redraw();
-		
-	}
-	
-	
-	public void redraw(float x, float y, float width, float height, boolean all) {
-		redraw();
-		//XXX also do this with forward transformed region 
-	}
-	
 	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////// TRANSFORMATION ///////////////////////////////////////////////////
 	
 	public Layer rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
 	public Layer translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
+	public Layer scale(double s, double px, double py) { return scale(s,s,px,py); }
 	public Layer scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
 	public Layer scale(double s) { return concatenate(s,0,0,s,0,0); }
 
 	public Layer scale(double sx, double sy, double pivotX, double pivotY) { 
-		return this
+		this
 				.translate(+pivotX,+pivotY)
 				.scale(sx, sy)
-				.translate(-pivotX,-pivotY); 
+				.translate(-pivotX,-pivotY);
+		
+		return this;
 	}
 	
 	public Layer rotate(double theta, double pivotX, double pivotY) { 
@@ -215,13 +231,17 @@ public class Layer implements LayerContainer {
 		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
 		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
 
+		if (redraw)
+			redraw();
+		
 		return this;
 	}
+	
 	
 	////////// READOUT
 	
 	//XXX redo transform with loops and accept variable sized m assuming any 3-by-k Matrices or even a 2-by-1 Vector!
-	public Layer transform(float[] m) {
+	protected Layer transform(float[] m) {
 		final float l00 = M[T00], l01 = M[T01], l02 = M[T02];
 		final float l10 = M[T10], l11 = M[T11], l12 = M[T12];
 
@@ -239,9 +259,95 @@ public class Layer implements LayerContainer {
 
 
 
+	
+	
+
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
+
+	
+	public void setRedraw(boolean redraw) {
+		this.redraw = redraw;
+	}
+	
+	public void redraw() {
+		if (isFinite())
+			redraw(left, top, right-left, bottom-top, true);
+		else
+			root.redraw();
+	}
+	
+	
+	private boolean dirty = false, dirtyAll = false;
+	private float dirtyLeft, dirtyTop, dirtyRight, dirtyBottom;
+	
+	public void redraw(float x, float y, float width, float height, boolean all) {
+		if (!dirty) { //if Event has not been scheduled, do so, and initialize dirty bounds 
+			root.getDisplay().asyncExec(this);
+			
+			dirty = true;
+			dirtyLeft = x;
+			dirtyTop = y;
+			dirtyRight = x+width;
+			dirtyBottom = y+height;
+			dirtyAll = all;
+		} else { //otherwise just extend bounds of dirt.
+			dirtyLeft = min(dirtyLeft,x);
+			dirtyTop = min(dirtyTop,y);
+			dirtyRight = max(dirtyRight,x+width);
+			dirtyBottom = max(dirtyBottom,y+height);
+			dirtyAll |= all;
+		}
+		
+	}
+	
+	final public void run() {
+		//TODO check whether the world transformation actually changed
+		
+		Layer r = getParentLayer();
+	
+		float left = dirtyLeft, top = dirtyTop, right = dirtyRight, bottom = dirtyBottom;
+		
+		// Bounding box as it's been last time in drawing
+		final float _ax = left*W[T00]+top*W[T01]+W[T02], _ay = left*W[T10]+top*W[T11]+W[T12];
+		final float _bx = right*W[T00]+top*W[T01]+W[T02], _by = right*W[T10]+top*W[T11]+W[T12];
+		final float _cx = left*W[T00]+bottom*W[T01]+W[T02], _cy = left*W[T10]+bottom*W[T11]+W[T12];
+		final float _dx = right*W[T00]+bottom*W[T01]+W[T02], _dy = right*W[T10]+bottom*W[T11]+W[T12];
+
+		identity(W);
+		transform(W); /// W = M.I
+		concatenate(getParentLayer().W, W, W);
+		
+		// Bounds as it's after rebuilding W 
+		final float ax_ = left*W[T00]+top*W[T01]+W[T02], ay_ = left*W[T10]+top*W[T11]+W[T12];
+		final float bx_ = right*W[T00]+top*W[T01]+W[T02], by_ = right*W[T10]+top*W[T11]+W[T12];
+		final float cx_ = left*W[T00]+bottom*W[T01]+W[T02], cy_ = left*W[T10]+bottom*W[T11]+W[T12];
+		final float dx_ = right*W[T00]+bottom*W[T01]+W[T02], dy_ = right*W[T10]+bottom*W[T11]+W[T12];
+		
+		/// Merge Bounds (TODO aaaactually if the bounds dont overlap due to large changes, there's no need for merging)
+		final float ax = min(_ax,ax_), ay = min(_ay,ay_), Ax = max(_ax,ax_), Ay = max(_ay,ay_);
+		final float bx = min(_bx,bx_), by = min(_by,by_), Bx = max(_bx,bx_), By = max(_by,by_);
+		final float cx = min(_cx,cx_), cy = min(_cy,cy_), Cx = max(_cx,cx_), Cy = max(_cy,cy_);
+		final float dx = min(_dx,dx_), dy = min(_dy,dy_), Dx = max(_dx,dx_), Dy = max(_dy,dy_);
+		
+		//compute enclosing axis aligned bounding box
+		left = floor(min(min(ax,bx),min(cx,dx)));
+		top = floor(min(min(ay,by),min(cy,dy)));
+		right = ceil(max(max(Ax,Bx),max(Cx,Dx)));
+		bottom = ceil(max(max(Ay,By),max(Cy,Dy)));
+		
+		if (dirtyAll&&!clipping) {
+			//TODO also traverse childnodes and extend the rectangle by their transformed bounding boxes
+		}
+		
+		r.getRoot().redraw((int)left-1,(int)top-1, (int)right-(int)left+2, (int)bottom-(int)top+2, dirtyAll);
+		dirty = false;
+	};
+	
+	
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////// RENDERING /////////////////////////////////////////
-	
 	
 	
 	final public void render(Rectangle clip, Transform t, GC c) {
@@ -250,60 +356,46 @@ public class Layer implements LayerContainer {
 		final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
 		
 		//////// BUILD THE CURRENT WORLD MATRIX: W = T.(M.I) 
-		W[T00] = W[T11] = 1;
-		W[T01] = W[T02] = 0;
-		W[T10] = W[T12] = 0;
-
-		//transform the identity matrix by this Doodad's matrix
-		transform(W); /// W = M.I
+		identity(W); /// = I
 		
-		//read out this matrix
-		final float m00 = W[T00], m01 = W[T01], m02 = W[T02];
-		final float m10 = W[T10], m11 = W[T11], m12 = W[T12];
+		//transform the identity matrix by this Layers's matrix
+		transform(W); /// = M.I
 		
-		//read world matrix to M
-		t.getElements(M);
-
-		final float M00 = M[T00], M01 = M[T01], M02 = M[T02];
-		final float M10 = M[T10], M11 = M[T11], M12 = M[T12];
+		t.getElements(M); //read world matrix to M
 		
-		//compute W = T.(M.I)
-		final float N00 = m10*M01+m00*M00, N01 = m11*M01+m01*M00, N02 = M02+m12*M01+m02*M00;
-		final float N10 = m10*M11+m00*M10, N11 = m11*M11+m01*M10, N12 = M12+m12*M11+m02*M10;
-
-		
-		W[T00] = N00; W[T01] = N01; W[T02] = N02;
-		W[T10] = N10; W[T11] = N11; W[T12] = N12;
+		concatenate(M, W, W); /// = T.M.I
 		
 		//////////////////////// Render Node and Childnodes
-		
-		t.setElements(
-				N00, N10, N01, N11, 
-				N02, N12);
-		
+
+		//XXX CAUTION! the method's parameter description seems to be wrong, it sez: T00, T01, T10, T11, T02, T12
+		t.setElements( 	W[T00], W[T10],  W[T01], W[T11],  W[T02], W[T12]  );
 		
 		c.setTransform(t);
 		
-		//transform this doodad's bounds with M
-		float ax = left*M00+top*M01+M02, ay = left*M10+top*M11+M12;
-		float bx = right*M00+top*M01+M02, by = right*M10+top*M11+M12;
-		float cx = left*M00+bottom*M01+M02, cy = left*M10+bottom*M11+M12;
-		float dx = right*M00+bottom*M01+M02, dy = right*M10+bottom*M11+M12;
+		//transform this Layers's bounds with M
+		
+		final float W00 = W[T00], W01 = W[T01], W02 = W[T02];
+		final float W10 = W[T10], W11 = W[T11], W12 = W[T12];
+
+		final float ax = left*W00+top*W01+W02, ay = left*W10+top*W11+W12;
+		final float bx = right*W00+top*W01+W02, by = right*W10+top*W11+W12;
+		final float cx = left*W00+bottom*W01+W02, cy = left*W10+bottom*W11+W12;
+		final float dx = right*W00+bottom*W01+W02, dy = right*W10+bottom*W11+W12;
 
 		//compute enclosing axis aligned bounding box
-		float left = min(min(ax,bx),min(cx,dx));
-		float top = min(min(ay,by),min(cy,dy));
-		float right = max(max(ax,bx),max(cx,dx));
-		float bottom = max(max(ay,by),max(cy,dy));
+		final float left = min(min(ax,bx),min(cx,dx));
+		final float top = min(min(ay,by),min(cy,dy));
+		final float right = max(max(ax,bx),max(cx,dx));
+		final float bottom = max(max(ay,by),max(cy,dy));
 		
 		boolean intersects = clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top));
 		
 		//render childnodes 
-		//unless they have to be clipped and this Doodad isn't visible
+		//unless they have to be clipped and this Layer isn't visible
 		if (!clipping || clipping && intersects)
 			render(clip, t, c, children);
 				
-		//only render this Doodad if the GC's screen coordinate-transformed clips intersect that aabb 
+		//only render this Layer if the GC's screen coordinate-transformed clips intersect that aabb 
 		if (intersects)
 			render(c);
 		
@@ -311,7 +403,7 @@ public class Layer implements LayerContainer {
 		t.setElements(M[0],M[1],M[2],M[3],M[4],M[5]);
 		c.setTransform(t);
 
-		//restore own Doodads Matrix
+		//restore own Layers Matrix
 		M[T00] = s00; M[T01] = s01; M[T02] = s02;
 		M[T10] = s10; M[T11] = s11; M[T12] = s12;
 	}
@@ -322,8 +414,9 @@ public class Layer implements LayerContainer {
 		// Apply to clip and also to GC c
 		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
 		
-		for (Layer r: children)
-			r.render(clip, t, c);
+		for (int I=children.length-1,i=0;I>=i;I--)
+			children[I].render(clip,t,c);
+
 	}
 	
 	// implement this
@@ -438,11 +531,45 @@ public class Layer implements LayerContainer {
 	
 	//ControlListener?
 	//onTransformed!
-	
-	//////////////
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////// HELPER FUNCTIONS //////////////////////////////////////////////////
 	
 	private static float min(float a, float b) { return a<b?a:b; }
 	private static float max(float a, float b) { return a>b?a:b; }
+	
+	private static float floor(float a) { return (float)Math.floor(a); }
+	private static float ceil(float a) { return (float)Math.ceil(a); }
+
+	private static void concatenate(float[] A, float B[], float[] AB) {
+		//read out this matrix
+		final float W00 = B[T00], W01 = B[T01], W02 = B[T02];
+		final float W10 = B[T10], W11 = B[T11], W12 = B[T12];
+		
+		//read the parent's world matrix to M
+		final float w00 = A[T00], w01 = A[T01], w02 = A[T02];
+		final float w10 = A[T10], w11 = A[T11], w12 = A[T12];
+		
+		//compute W = T.(M.I)
+		AB[T00] = W10*w01+W00*w00; AB[T01] = W11*w01+W01*w00; AB[T02] = w02+W12*w01+W02*w00;
+		AB[T10] = W10*w11+W00*w10; AB[T11] = W11*w11+W01*w10; AB[T12] = w12+W12*w11+W02*w10;
+	}
+	
+//	private static void transform(float[] A, float V[]) {
+//		for (int col=0,cols=V.length/3, cell =0;col<cols;col++) {
+//			final int c0=cell++,c1=cell++,c2=cell++;
+//			final float v0=V[cell++], v1=V[cell++], v2=V[cell++];
+//			V[c0] = v0*A[T00]+v1*A[T01]+v2*A[T02];
+//			V[c1] = v0*A[T10]+v1*A[T11]+v2*A[T12];
+//			V[c2] = v0*A[T20]+v1*A[T21]+v2*A[T22];
+//		}
+//	}
+	
+	private static void identity(float[] W) {
+		W[T00] = W[T11] = 1;
+		W[T01] = W[T02] = 0;
+		W[T10] = W[T12] = 0;
+	}
 
 }
 
