@@ -2,6 +2,7 @@ package de.dualuse.swt.experiments;
 
 import static org.eclipse.swt.SWT.H_SCROLL;
 import static org.eclipse.swt.SWT.NONE;
+import static org.eclipse.swt.SWT.ON;
 import static org.eclipse.swt.SWT.Paint;
 import static org.eclipse.swt.SWT.V_SCROLL;
 
@@ -11,6 +12,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
@@ -64,6 +66,8 @@ public class ZoomCanvasTest2 {
 		
 		Layer f = new LayerCanvasTest2.Frame(zc) {
 			protected void render(GC c) {
+				c.setAntialias(ON);
+				c.setLineAttributes(new LineAttributes(1));
 				super.render(c);
 				
 				System.out.println("holymoly");
