@@ -76,13 +76,17 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	final protected void point(Event e) {
 		for (Layer r: children)
 			if (e.doit)
-				r.point(e);
-		
-		if (e.doit)
-			handleMouseEvent(e);
+				if (r.captive()==captive) //either captive == null, or set to a specific layer
+					r.point(e);
 	}
 	
-	protected void handleMouseEvent(Event e) {}
+	Layer captive = null;
+	
+	@Override
+	public void capture(Layer c) {
+		captive = c;
+	}
+	
 
 	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
 	
@@ -109,6 +113,12 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		return layerTransform;
 	}
 	
+	@Override
+	public LayerContainer transform(float[] v) {
+		layerTransform.getElements(backup);
+		Layer.concatenate(backup, v, v);
+		return null;
+	}
 	
 	@Override
 	public void handleEvent(Event event) {
