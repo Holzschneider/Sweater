@@ -77,8 +77,12 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		for (Layer r: children)
 			if (e.doit)
 				r.point(e);
+		
+		if (e.doit)
+			handleMouseEvent(e);
 	}
 	
+	protected void handleMouseEvent(Event e) {}
 
 	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
 	
