@@ -18,7 +18,9 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 
 public class LayerCanvas extends Canvas implements LayerContainer, Listener {
-	
+
+	protected Transform canvasTransform = new Transform(getDisplay());
+
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
 		addListener(Paint, this);
@@ -77,21 +79,13 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			handleMouseEvent(e);
 	}
 	
-	protected void handleMouseEvent(Event e) {}
-
-	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
-	
 	final protected void render(Rectangle clip, Transform t, GC c) {
 		renderBackground(clip, t, c);
 		
 		for (int I=children.length-1,i=0;I>=i;I--)
 			children[I].render(clip,t,c);
-		
 	}
-	
-	protected Transform canvasTransform = new Transform(getDisplay());
-	
-	
+		
 	@Override
 	public void handleEvent(Event event) {
 		switch (event.type) {
@@ -109,6 +103,10 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		}
 	}
 	
-	////////////////////////////////////////////////////////////
+//==[ To be implemented by subclasses ]=============================================================
+
+	protected void handleMouseEvent(Event e) {}
+
+	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
 
 }
