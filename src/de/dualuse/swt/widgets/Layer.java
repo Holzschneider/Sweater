@@ -452,9 +452,9 @@ public class Layer implements LayerContainer, Runnable {
 		
 		float x = i00*e.x+i01*e.y+i02;
 		float y = i10*e.x+i11*e.y+i12;
+		
 		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
-		
 		for (Layer r: children)
 			if (e.doit && (!clipping || clipping && hit)) { //TODO test mouse clipping!
 				if (r==null)
@@ -463,22 +463,20 @@ public class Layer implements LayerContainer, Runnable {
 					r.point(e);
 			}
 
-		if (e.type==MouseUp) 
-			capture(null);
-		
 		if (hit || captive==this) {
 			if (e.doit && !entered) { 
 				e.doit = !onMouseEnter();
 				entered = true;
 			}
 
-			if (e.doit)
+			if (e.doit) {
 				if (onMouseEvent(x,y,e)) {
 					if (e.type==MouseDown)
 						capture(this);
 					
 					e.doit = false;
 				}
+			}
 					
 			
 			if (e.type==MouseDown) {
@@ -493,11 +491,15 @@ public class Layer implements LayerContainer, Runnable {
 					onMouseClick(x,y,e.button,downM);
 			}
 			
-		} else
+		} else {
 			if (entered) {
 				e.doit = !onMouseExit();
 				entered = false;
 			}
+		}
+
+		if (e.type==MouseUp) 
+			capture(null);
 		
 	}
 	

@@ -16,8 +16,8 @@ public interface Annotation {
 		NONE
 	}
 	
-	void added(AnnotatedVideoView canvas);
-	void removed(AnnotatedVideoView canvas);
+	void added(AnnotatedVideoCanvas canvas);
+	void removed(AnnotatedVideoCanvas canvas);
 	
 	void onMouse(float x, float y, Event e);
 	void onKey(Event e);

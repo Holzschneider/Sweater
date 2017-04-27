@@ -24,8 +24,9 @@ import org.eclipse.swt.widgets.Display;
 
 import de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType;
 import de.dualuse.swt.widgets.Layer;
+import de.dualuse.swt.widgets.LayerContainer;
 
-public class AnnotationDoodad extends Layer {
+public class AnnotationLayer extends Layer {
 
 	float xl, yl;
 //	Layer parent;
@@ -50,7 +51,7 @@ public class AnnotationDoodad extends Layer {
 	
 	Cursor cursorCE = dsp.getSystemCursor(SWT.CURSOR_HAND);
 	
-	public AnnotationDoodad(Layer parent, float left, float top, float right, float bottom) {
+	public AnnotationLayer(LayerContainer parent, float left, float top, float right, float bottom) {
 		super(parent);
 //		this.parent = parent; // XXX just for testing purposes now, since I will add them to the canvas directly
 		this.setBounds(left, top, right, bottom);
