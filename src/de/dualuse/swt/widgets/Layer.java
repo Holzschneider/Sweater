@@ -84,7 +84,7 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	public void dispose() {
-		parent.removeLayer(this);
+		getParent().removeLayer(this);
 		setRoot(null);
 		parent = null;
 	}
@@ -121,12 +121,12 @@ public class Layer implements LayerContainer, Runnable {
 			return false;
 		
 		if (parent!=null) 
-			parent.removeLayer(this);
+			getParent().removeLayer(this);
 			
 		parent = r;
 		
 		if (parent!=null)
-			parent.addLayer(this);
+			getParent().addLayer(this);
 		
 		return true;
 	}
