@@ -78,6 +78,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			if (e.doit)
 				if (r.captive()==captive) //either captive == null, or set to a specific layer
 					r.point(e);
+		handleMouseEvent(e);
 	}
 	
 	Layer captive = null;
