@@ -1,11 +1,9 @@
-package de.dualuse.swt.events;
+package de.dualuse.swt.layout;
 
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Layout;
-
-import de.dualuse.swt.layout.Layouter;
 
 public class LayoutDelegate extends Layout {
 
@@ -44,12 +42,7 @@ public class LayoutDelegate extends Layout {
 		size = precomputedSize;
 	}
 	
-	public LayoutDelegate(Layouter layouter) {
-		computeSize(layouter::computeSize);
-		flushCache(layouter::flushCache);
-		layout(layouter::layout);
-	}
-	
+
 //==[ Fluent Interface ]============================================================================
 	
 	public LayoutDelegate computeSize(ComputeSizeFunction sizeFunction) { 

@@ -11,7 +11,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
-import de.dualuse.swt.events.LayoutDelegate;
+import de.dualuse.swt.layout.LayoutDelegate;
 
 public class RedrawTest {
 

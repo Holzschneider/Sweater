@@ -131,12 +131,15 @@ public class BorderLayout extends Layout {
 	@Override protected void layout(Composite composite, boolean flushCache) {
 		System.out.println("layout(" + composite + ", " + flushCache + ")");
 		
+		flushCache = true; // XXX resizing the window doesn't flush the cache (linux/awesomewm)
 		if (flushCache)
 			flushAll();
 		
 		Rectangle bounds = composite.getBounds();
 		Control[] children = composite.getChildren();
 
+		System.out.println("layout: " + bounds + " (" + flushCache + ")");
+		
 //		Control cCenter=null, cNorth=null, cEast=null, cSouth=null, cWest=null;
 //		
 //		for (Control child : children) {

@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy;
+package de.dualuse.swt.experiments.scratchy.experiments;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;

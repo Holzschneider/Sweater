@@ -53,7 +53,7 @@ public class ImageUpdateTest {
 		
 		Application app = new Application();
 		
-		Shell sh = new Shell(app);
+		Shell sh = new Shell(app, SHELL_TRIM|DOUBLE_BUFFERED);
 		sh.setLayout(new FillLayout());
 		
 		byte[] pixels = new byte[W*H*4];
