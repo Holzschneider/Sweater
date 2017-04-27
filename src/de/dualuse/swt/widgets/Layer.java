@@ -1,6 +1,8 @@
 package de.dualuse.swt.widgets;
 
+import static java.lang.Math.ceil;
 import static java.lang.Math.cos;
+import static java.lang.Math.floor;
 import static java.lang.Math.hypot;
 import static java.lang.Math.sin;
 import static org.eclipse.swt.SWT.MouseDoubleClick;
@@ -40,6 +42,11 @@ public class Layer implements LayerContainer {
 	
 	public float getWidth() { return right-left; }
 	public float getHeight() { return bottom-top; }
+	
+	public Rectangle getBounds() {
+		//XXX fix integer truncation to always contain floating point bounds
+		return new Rectangle((int)floor(left), (int)floor(top), (int)ceil(getWidth()), (int)ceil(getHeight()));
+	}
 	
 	public Layer setBounds(double left, double top, double right, double bottom) {
 		this.left = (float) left;
@@ -130,7 +137,7 @@ public class Layer implements LayerContainer {
 
 		int ir = p.indexOf(this);
 		
-		for (int j=ir;j>=1;j--) {
+		for (int j=ir;j>=1 && cs[j]!=r;j--) {
 			Layer t = cs[j];
 			cs[j] = cs[j-1];
 			cs[j-1] = t;
@@ -144,7 +151,7 @@ public class Layer implements LayerContainer {
 
 		int ir = p.indexOf(this);
 		
-		for (int j=ir,J=cs.length;j<J-1;j++) {
+		for (int j=ir,J=cs.length;j<J-1 && cs[j]!=r;j++) {
 			Layer t = cs[j];
 			cs[j] = cs[j+1];
 			cs[j+1] = t;
@@ -179,6 +186,7 @@ public class Layer implements LayerContainer {
 	
 	public Layer rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
 	public Layer translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
+	public Layer scale(double s, double px, double py) { return scale(s,s,px,py); }
 	public Layer scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
 	public Layer scale(double s) { return concatenate(s,0,0,s,0,0); }
 
@@ -322,8 +330,10 @@ public class Layer implements LayerContainer {
 		// Apply to clip and also to GC c
 		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
 		
-		for (Layer r: children)
-			r.render(clip, t, c);
+		
+		for (int I=children.length-1,i=0;I>=i;I--)
+			children[I].render(clip,t,c);
+
 	}
 	
 	// implement this
