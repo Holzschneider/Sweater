@@ -18,10 +18,10 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 
-import de.dualuse.swt.graphics.ResourcePool;
-
 public class LayerCanvas extends Canvas implements LayerContainer, Listener {
-	
+
+	protected Transform canvasTransform = new Transform(getDisplay());
+
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
 		super.addListener(Paint, this);
@@ -78,6 +78,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			if (e.doit)
 				if (r.captive()==captive) //either captive == null, or set to a specific layer
 					r.point(e);
+		handleMouseEvent(e);
 	}
 	
 	Layer captive = null;
@@ -87,16 +88,12 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		captive = c;
 	}
 	
-
-	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
-	
 	final protected void render(Rectangle clip, Transform t, GC c) {
 		renderBackground(clip, t, c);
 		
 		for (int I=children.length-1,i=0;I>=i;I--)
 			children[I].render(clip,t,c);
 	}
-	
 	
 	private void disposer(Event e) {
 		ownTransform.dispose();
@@ -138,6 +135,10 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		}
 	}
 	
-	////////////////////////////////////////////////////////////
-	
+//==[ To be implemented by subclasses ]=============================================================
+
+	protected void handleMouseEvent(Event e) {}
+
+	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
+
 }
