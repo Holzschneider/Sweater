@@ -50,7 +50,7 @@ public class GeomTest {
 //			sy = (float)Math.cos(theta);
 			
 			Transform transform = new Transform(Display.getCurrent());
-			transform.setElements(sx, shx, shy, sy, tx, ty);
+			transform.setElements(sx, shy, shx, sy, tx, ty);
 			// transform.identity();
 			
 //			float[] elements = new float[6];
@@ -60,8 +60,8 @@ public class GeomTest {
 //			float scy = (float)Math.sin(tick = tick+0.01f);
 //			System.out.println(scy);
 			
-//			transform.scale(1, -1.0000001f);
-			transform.scale(1, -1f);
+			transform.scale(1, -1.0000001f);
+//			transform.scale(1, -1f);
 			// transform.scale(1, scy);
 			
 //			transform.getElements(elements);

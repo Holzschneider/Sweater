@@ -24,6 +24,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
+		
 		super.addListener(Paint, this);
 		super.addListener(MouseUp, this);
 		super.addListener(MouseDown, this);
@@ -87,11 +88,11 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		captive = c;
 	}
 	
-	final protected void render(Rectangle clip, Transform t, GC c) {
-		renderBackground(clip, t, c);
+	final protected void paint(Rectangle clip, Transform t, Event c) {
+//		renderBackground(clip, t, c);
 		
 		for (int I=children.length-1,i=0;I>=i;I--)
-			children[I].render(clip,t,c);
+			children[I].paint(clip,t,c);
 	}
 	
 	private void disposer(Event e) {
@@ -109,19 +110,19 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		return layerTransform;
 	}
 	
-	@Override
-	public LayerContainer transform(float[] v) {
-		layerTransform.getElements(backup);
-		Layer.concatenate(backup, v, v);
-		return null;
-	}
+//	@Override
+//	public LayerContainer transform(float[] v) {
+//		layerTransform.getElements(backup);
+//		Layer.concatenate(backup, v, v);
+//		return this;
+//	}
 	
 	@Override
 	public void handleEvent(Event event) {
 		switch (event.type) {
 		case Paint:
 			layerTransform.getElements(backup);
-			render(event.gc.getClipping(), layerTransform, event.gc);
+			paint(event.gc.getClipping(), layerTransform, event);
 			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
 			break;
 		
@@ -134,8 +135,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		}
 	}
 	
-//==[ To be implemented by subclasses ]=============================================================
-
-	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
-
+////==[ To be implemented by subclasses ]=============================================================
+//	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
+	
 }

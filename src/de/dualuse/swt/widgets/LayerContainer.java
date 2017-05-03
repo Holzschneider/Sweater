@@ -7,8 +7,6 @@ public interface LayerContainer {
 	
 	public Layer[] getLayers();
 
-	
 	public void capture(Layer c);
-	public LayerContainer transform(float[] v);
 }
 

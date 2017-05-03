@@ -11,10 +11,14 @@ import static org.eclipse.swt.SWT.MouseWheel;
 
 import java.util.Arrays;
 
-import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
+
+import de.dualuse.swt.events.Listeners;
 
 //missing things
 // paint clipping
@@ -27,7 +31,7 @@ public class Layer implements LayerContainer, Runnable {
 	private Layer children[] = {};
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the world matrix of this Layer, the last time it was rendered
-//	private float B[] = new float[8*3]; // the oriented bounds of this Layer in world coordinates
+	private float B[] = new float[4*2]; // the oriented bounds of this Layer in world coordinates
 	
 	boolean redraw = true; //whether redraws are triggerd upon change 
 	
@@ -237,17 +241,6 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	
-	////////// READOUT
-	
-	//XXX redo transform with loops and accept variable sized m assuming any 3-by-k Matrices or even a 2-by-1 Vector!
-	public Layer transform(float[] m) {
-		concatenate(M, m, m);
-		return this;
-	}
-
-
-
-	
 	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -290,6 +283,9 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	final public void run() {
+//		transform(W, B);
+		
+		/*
 		//TODO check whether the world transformation actually changed
 		LayerContainer r = getParent();
 	
@@ -303,7 +299,7 @@ public class Layer implements LayerContainer, Runnable {
 
 		identity(W);
 		transform(W); /// W = M.I
-
+		
 		final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
 		final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
 
@@ -343,6 +339,8 @@ public class Layer implements LayerContainer, Runnable {
 		final int M = 2; 
 		root.redraw((int)left-M,(int)top-M, (int)right-(int)left+M+M, (int)bottom-(int)top+M+M, dirtyAll);
 		dirty = false;
+		*/
+		
 	};
 	
 	
@@ -351,7 +349,49 @@ public class Layer implements LayerContainer, Runnable {
 	//////////////////////////////////////////// RENDERING /////////////////////////////////////////
 	float renderedLeft, renderedTop, renderedRight, renderedBottom;
 	
-	final public void render(Rectangle clip, Transform t, GC c) {
+	final public void paint(Rectangle clip, Transform t, Event e) {
+		t.getElements(W);
+		concatenate(W, M);
+		
+		final float W00 = W[T00], W01 = W[T01], W02 = W[T02];
+		final float W10 = W[T10], W11 = W[T11], W12 = W[T12];
+		t.setElements(W[T00], W[T10], W[T01], W[T11], W[T02], W[T12]);
+		
+		renderedLeft = B[0] = B[4] = left;
+		renderedTop = B[1] = B[3] = top;
+		renderedRight = B[2] = B[6] = right;
+		renderedBottom = B[5] = B[7] = bottom;
+		transform(W,B);
+		//////
+		
+		e.gc.setTransform(t);
+		
+		//compute enclosing axis aligned bounding box
+		final float left = min(B[0],B[2],B[4],B[6]), top = min(B[1],B[3],B[5],B[7]);
+		final float right = max(B[0],B[2],B[4],B[6]), bottom = max(B[1],B[3],B[5],B[7]);
+		
+		boolean intersects = clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top));
+		
+		//render childnodes 
+		//unless they have to be clipped and this Layer isn't visible
+		if (!clipping || clipping && intersects)
+			paint(clip, t, e, children);
+				
+		//only render this Layer if the GC's screen coordinate-transformed clips intersect that aabb 
+		if (intersects)
+			onPaint(e);
+		
+		//restore c's Transform
+		t.setElements(W00,W10,W01,W11,W02,W12);
+		e.gc.setTransform(t);
+
+		
+//		final float ax = left*W00+top*W01+W02, ay = left*W10+top*W11+W12;
+//		final float bx = right*W00+top*W01+W02, by = right*W10+top*W11+W12;
+//		final float cx = left*W00+bottom*W01+W02, cy = left*W10+bottom*W11+W12;
+//		final float dx = right*W00+bottom*W01+W02, dy = right*W10+bottom*W11+W12;
+
+		/*
 		//read out and store this matrix
 		final float s00 = M[T00], s01 = M[T01], s02 = M[T02];
 		final float s10 = M[T10], s11 = M[T11], s12 = M[T12];
@@ -367,10 +407,9 @@ public class Layer implements LayerContainer, Runnable {
 		concatenate(M, W, W); /// = T.M.I
 		
 		//////////////////////// Render Node and Childnodes
-
+		
 		//XXX CAUTION! the method's parameter description seems to be wrong, it sez: T00, T01, T10, T11, T02, T12
 		t.setElements( 	W[T00], W[T10],  W[T01], W[T11],  W[T02], W[T12]  );
-		
 		c.setTransform(t);
 		
 		//transform this Layers's bounds with M
@@ -412,21 +451,36 @@ public class Layer implements LayerContainer, Runnable {
 		//restore own Layers Matrix
 		M[T00] = s00; M[T01] = s01; M[T02] = s02;
 		M[T10] = s10; M[T11] = s11; M[T12] = s12;
+		*/
+		
 	}
 	
-	protected void render(Rectangle clip, Transform t, GC c, Layer[] children) {
+	protected void paint(Rectangle clip, Transform t, Event e, Layer[] children) {
 //		if (clipping)
 		//TODO implement proper clipping
 		// Apply to clip and also to GC c
 		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
 		
 		for (int I=children.length-1,i=0;I>=i;I--)
-			children[I].render(clip,t,c);
+			children[I].paint(clip,t,e);
 
 	}
 	
 	// implement this
-	protected void render(GC c) {}
+	protected void onPaint(Event e) {
+		if (onPaint!=null)
+			onPaint.handleEvent(e);
+	}
+	
+	public Listener onPaint = null;
+	public void onPaint( Listener pl ) {
+		onPaint = new Listeners(pl, onPaint);
+	}
+	
+	public final void onPaint( PaintListener pl ) {
+		onPaint( (Listener) (e) -> pl.paintControl(new PaintEvent(e)) );
+	}
+
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// EVENT HANDLING //////////////////////////////////////////////////
@@ -542,19 +596,56 @@ public class Layer implements LayerContainer, Runnable {
 	static float floor(float a) { return (float)Math.floor(a); }
 	static float ceil(float a) { return (float)Math.ceil(a); }
 
-	static void concatenate(float[] A, float B[], float[] AB) {
-		//read out this matrix
-		final float W00 = B[T00], W01 = B[T01], W02 = B[T02];
-		final float W10 = B[T10], W11 = B[T11], W12 = B[T12];
-		
+	static void concatenate(float[] A, float W00, float W10, float W01, float W11, float W02, float W12 ) {
 		//read the parent's world matrix to M
 		final float w00 = A[T00], w01 = A[T01], w02 = A[T02];
 		final float w10 = A[T10], w11 = A[T11], w12 = A[T12];
 		
 		//compute W = T.(M.I)
-		AB[T00] = W10*w01+W00*w00; AB[T01] = W11*w01+W01*w00; AB[T02] = w02+W12*w01+W02*w00;
-		AB[T10] = W10*w11+W00*w10; AB[T11] = W11*w11+W01*w10; AB[T12] = w12+W12*w11+W02*w10;
+		A[T00] = W10*w01+W00*w00; A[T01] = W11*w01+W01*w00; A[T02] = w02+W12*w01+W02*w00;
+		A[T10] = W10*w11+W00*w10; A[T11] = W11*w11+W01*w10; A[T12] = w12+W12*w11+W02*w10;
 	}
+	
+	static void concatenate(float[] A, float B[]) {
+//		//read out this matrix
+//		final float W00 = B[T00], W01 = B[T01], W02 = B[T02];
+//		final float W10 = B[T10], W11 = B[T11], W12 = B[T12];
+//		
+//		//read the parent's world matrix to M
+//		final float w00 = A[T00], w01 = A[T01], w02 = A[T02];
+//		final float w10 = A[T10], w11 = A[T11], w12 = A[T12];
+//		
+//		//compute W = T.(M.I)
+//		AB[T00] = W10*w01+W00*w00; AB[T01] = W11*w01+W01*w00; AB[T02] = w02+W12*w01+W02*w00;
+//		AB[T10] = W10*w11+W00*w10; AB[T11] = W11*w11+W01*w10; AB[T12] = w12+W12*w11+W02*w10;
+		
+		concatenate(A, B[T00], B[T10], B[T01], B[T11], B[T02], B[T12]);
+	}
+	
+	
+	static void transform(float[] A, float v[]) {
+		for (int i=0,I=v.length/2;i<I;i++) {
+			final int x = i, y = x+1;
+			final float vx = A[0]*v[x]+A[2]*v[y]+A[4];
+			final float vy = A[1]*v[x]+A[3]*v[y]+A[5];
+			v[x] = vx;
+			v[y] = vy;
+		}
+	}
+	
+	
+	static float min(float a, float b, float c, float d) {
+		final float ab = a<b?a:b;
+		final float cd = c<d?c:d;
+		return ab<cd?ab:cd;
+	}
+	
+	static float max(float a, float b, float c, float d) {
+		final float ab = a>b?a:b;
+		final float cd = c>d?c:d;
+		return ab>cd?ab:cd;
+	}
+	
 	
 //	private static void transform(float[] A, float V[]) {
 //		for (int col=0,cols=V.length/3, cell =0;col<cols;col++) {
