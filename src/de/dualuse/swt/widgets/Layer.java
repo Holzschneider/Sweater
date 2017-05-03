@@ -60,11 +60,15 @@ public class Layer implements LayerContainer, Runnable {
 		this.right = (float) right;
 		this.bottom = (float) bottom;
 		
-		if (redraw && changed)
+		if (redraw && changed) {
+			onResize();
 			redraw();
+		}
 		
 		return this;
 	}
+	
+	public void onResize() {}
 	
 	///
 	private boolean clipping = false;
@@ -83,10 +87,17 @@ public class Layer implements LayerContainer, Runnable {
 		identity();
 	}
 	
+	boolean isDisposed;
+	
 	public void dispose() {
 		getParent().removeLayer(this);
 		setRoot(null);
 		parent = null;
+		isDisposed=true;
+	}
+	
+	public boolean isDisposed() {
+		return isDisposed;
 	}
 
 	
@@ -290,6 +301,8 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	final public void run() {
+		if (isDisposed()) return;
+		
 		//TODO check whether the world transformation actually changed
 		LayerContainer r = getParent();
 	
