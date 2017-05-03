@@ -15,6 +15,8 @@ import static org.eclipse.swt.SWT.BUTTON1;
 import static org.eclipse.swt.SWT.BUTTON2;
 import static org.eclipse.swt.SWT.BUTTON3;
 
+import java.awt.geom.Rectangle2D;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
@@ -30,6 +32,10 @@ import de.dualuse.swt.widgets.LayerContainer;
 public class AnnotationLayer extends Layer {
 
 	AnnotatedVideoCanvas parent;
+	
+	Annotation_<Rectangle2D> annotation;
+	
+	/////
 	
 	private Color foreground;
 	private Color background;
@@ -53,11 +59,15 @@ public class AnnotationLayer extends Layer {
 	
 //==[ Constructor ]=================================================================================
 	
-	public AnnotationLayer(AnnotatedVideoCanvas parent, float left, float top, float right, float bottom) {
+	public AnnotationLayer(AnnotatedVideoCanvas parent, Annotation_<Rectangle2D> annotation, int currentFrame) {
 		super(parent);
 		
 		this.parent = parent;
+		this.annotation = annotation;
 		
+		Rectangle2D bounds = annotation.getValue(currentFrame);
+		double left = bounds.getMinX(), right = bounds.getMaxX();
+		double top = bounds.getMinY(), bottom = bounds.getMaxY();
 		setBounds(left, top, right, bottom);
 
 		background = dsp.getSystemColor(SWT.COLOR_CYAN);
@@ -68,6 +78,10 @@ public class AnnotationLayer extends Layer {
 		
 	}
 
+	public Annotation_<Rectangle2D> getAnnotation() {
+		return annotation;
+	}
+	
 //==[ Rendering ]===================================================================================
 	
 	@Override protected void render(GC gc) {

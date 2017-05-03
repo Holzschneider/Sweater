@@ -70,7 +70,7 @@ public class LayerCanvasTest2 {
 			if (modKeysAndButtons==0)
 				scale( pow(1.0337, tickCount), x,y );
 			else
-				rotate( tickCount/10f, x,y );
+				rotate( tickCount/100f, x,y );
 			
 			redraw();
 			

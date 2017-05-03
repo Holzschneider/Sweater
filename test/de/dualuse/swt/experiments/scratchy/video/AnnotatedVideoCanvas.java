@@ -5,8 +5,12 @@ import static java.lang.Math.min;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.swt.SWT;
@@ -36,8 +40,14 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	
 	///// Annotations
 
-	List<AnnotationLayer> annotations = new ArrayList<AnnotationLayer>();
-	Set<AnnotationLayer> selectedAnnotations = new HashSet<AnnotationLayer>();
+//	List<AnnotationLayer> annotations = new ArrayList<AnnotationLayer>();
+	Set<Annotation_<Rectangle2D>> selectedAnnotations = new HashSet<>();
+	
+	/////
+	
+	Annotations<Rectangle2D> annotations = new Annotations<>();
+	
+	Map<Annotation_<Rectangle2D>,AnnotationLayer> layers = new HashMap<>();
 	
 //==[ Constructor ]=================================================================================
 	
@@ -59,14 +69,19 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	
 //==[ Add/Remove Annotations ]======================================================================
 	
-	public void addAnnotation(AnnotationLayer annotation) {
-		annotations.add(annotation);
-	}
+//	public void addAnnotation(AnnotationLayer annotation) {
+//		annotations.add(annotation);
+//	}
 	
-	public void removeAnnotation(AnnotationLayer annotation) {
-		annotations.remove(annotation);
-		selectedAnnotations.remove(annotation);
-		annotation.dispose();
+	public void removeAnnotation(AnnotationLayer layer) {
+		Annotation_<Rectangle2D> annotation = layer.getAnnotation();
+		annotations.removeAnnotation(annotation);
+		layers.remove(layer);
+		layer.dispose();
+		
+//		annotations.remove(annotation);
+//		selectedAnnotations.remove(annotation);
+//		annotation.dispose();
 	}
 
 //==[ Controls: Keyboard ]==========================================================================
@@ -74,10 +89,24 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	@Override protected void keyPressed(Event e) {
 		super.keyPressed(e);
 		
-		 if (e.keyCode == SWT.DEL) {
-			for (AnnotationLayer a : new ArrayList<>(selectedAnnotations))
-				removeAnnotation(a);
+		if (e.keyCode == SWT.DEL) {
+			
+//			for (AnnotationLayer a : new ArrayList<>(selectedAnnotations))
+//				removeAnnotation(a);
+			
+		} else if (e.keyCode == 'a') {
+			
+			System.out.println("Selected: " + selectedAnnotations.size());
+			
+			for (Annotation_<Rectangle2D> annotation : selectedAnnotations) {
+				
+				annotation.setKey(currentFrame, annotation.getKey(annotation.floorKey(currentFrame)));
+				
+			}
+			
+			updateLayers();
 		}
+		 
 	}
 	
 	@Override protected void keyUp(Event e) {
@@ -150,9 +179,19 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	protected void stopSelection(Event e) {
 		selectionActive = false;
 		if (selectionType==SelectionType.LayerCreation) {
+			
 			Point p1 = componentToCanvas(selectRect.x, selectRect.y);
 			Point p2 = componentToCanvas(selectRect.x + selectRect.width, selectRect.y + selectRect.height);
-			annotations.add(new AnnotationLayer(this, p1.x, p1.y, p2.x, p2.y ));
+			
+//			Rectangle rect = new Rectangle(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y);
+			Rectangle2D rect = new Rectangle2D.Double(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y);
+			Annotation_<Rectangle2D> annotation = new AnnotationBounds(currentFrame, rect);
+			
+			// annotations.add(new AnnotationLayer(this, p1.x, p1.y, p2.x, p2.y ));
+			annotations.addAnnotation(annotation);
+			
+			updateLayers();
+			
 		}
 		redraw();
 	}
@@ -191,7 +230,7 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		clearSelection();
 		
 		// Select AnnotationLayers that intersect selection rectangle
-		for (AnnotationLayer layer : annotations) {
+		for (AnnotationLayer layer : layers.values()) {
 			
 			float left=layer.getLeft(), top=layer.getTop(), right=layer.getRight(), bottom=layer.getBottom();
 			Rectangle2D layerRect = new Rectangle2D.Float(left, top, right-left, bottom-top);
@@ -215,12 +254,12 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	
 	public void select(AnnotationLayer a) {
 		a.setSelected(true);
-		selectedAnnotations.add(a);
+		selectedAnnotations.add(a.getAnnotation());
 	}
 
 	public void deselect(AnnotationLayer a) {
 		a.setSelected(false);
-		selectedAnnotations.remove(a);
+		selectedAnnotations.remove(a.getAnnotation());
 	}
 	
 	public void selectExclusive(AnnotationLayer a) {
@@ -236,14 +275,22 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	}
 	
 	public void clearSelection() {
-		for (AnnotationLayer a : selectedAnnotations)
-			a.setSelected(false);
+//		for (AnnotationLayer a : selectedAnnotations)
+//			a.setSelected(false);
 		selectedAnnotations.clear();
 	}
 	
 //==[ Paint Canvas ]================================================================================
 
+	int lastCurrentFrame;
+	Set<Annotation_<Rectangle2D>> collector = new HashSet<>();
+	
 	@Override protected void renderBackground(Rectangle clip, Transform t, GC gc) {
+		if (lastCurrentFrame != currentFrame) {
+			lastCurrentFrame = currentFrame;
+			updateLayers();
+		}
+		
 		super.renderBackground(clip,  t, gc);
 		paintSelection(gc);
 	}
@@ -265,6 +312,52 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		}
 	}
 
+	private void updateLayers() {
+		
+		collector.clear();
+		annotations.fetchAnnotations(currentFrame, collector);
+		
+		for (Annotation_<Rectangle2D> annotation : collector) {
+			
+			Rectangle2D bounds = annotation.getValue(currentFrame);
+			double left = bounds.getMinX();
+			double right = bounds.getMaxX();
+			double top = bounds.getMinY();
+			double bottom = bounds.getMaxY();
+			
+			AnnotationLayer layer = layers.get(annotation);
+			if (layer==null) {
+				AnnotationLayer newLayer = new AnnotationLayer(this, annotation, currentFrame) {
+					@Override public void onResize() {
+						Rectangle2D rectangle = new Rectangle2D.Double(getLeft(), getTop(), getRight()-getLeft(), getBottom()-getTop());
+						annotation.setKey(currentFrame, rectangle);
+					}
+				};
+				
+				layers.put(annotation, newLayer);
+			} else {
+				layer.setBounds(left, top, right, bottom);
+			}
+		}
+		
+		// if associated annotation is not in 'annotations', dispose and remove layer
+		for (Iterator<Entry<Annotation_<Rectangle2D>,AnnotationLayer>> it = layers.entrySet().iterator(); it.hasNext();) {
+			
+			Entry<Annotation_<Rectangle2D>,AnnotationLayer> entry = it.next();
+			AnnotationLayer layer = entry.getValue();
+			Annotation_<Rectangle2D> annotation = layer.getAnnotation();
+			
+			if (!collector.contains(annotation)) {
+				
+				layer.dispose();
+				selectedAnnotations.remove(layer);
+				
+				it.remove();
+			}
+		}
+		
+	}
+	
 //==[ Redraw Canvas Space ]=========================================================================
 
 	float[] rect = new float[4];

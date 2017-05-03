@@ -6,7 +6,6 @@ import static org.eclipse.swt.SWT.*;
 import java.util.Map.Entry;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.widgets.*;
 
@@ -54,6 +53,8 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	protected int videoWidth, videoHeight;
 	
 	ResourceManager<Image> manager;
+
+	protected int currentFrame;
 	
 //	Animator animator; // XXX same animation code just refactored into its own class somehow slow/laggy?
 	
@@ -110,7 +111,6 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 
 //==[ Frame Listener ]==============================================================================
 
-	int currentFrame;
 	boolean scratching = false;
 	
 	@Override public void scratchedTo(int from, int to) {
