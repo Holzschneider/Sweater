@@ -2,10 +2,11 @@ package de.dualuse.swt.widgets;
 
 import static java.lang.Math.*;
 
+
 import org.eclipse.swt.graphics.Rectangle;
 
 class Bounds {
-	protected float left = -1f/0f, top = -1f/0f, right = 1f/0f, bottom = 1f/0f;
+	protected float left = 1f/0f, top = 1f/0f, right = -1f/0f, bottom = -1f/0f;
 	
 	public Bounds() { }
 	public Bounds(float left, float top, float right, float bottom) { set(left,top,right,bottom); }
@@ -37,6 +38,15 @@ class Bounds {
 		return this.set(left<x?left:x, top<y?top:y, right>x?right:x, bottom>y?bottom:y);
 	}
 	
+	public Bounds extend(float left, float top, float right, float bottom) {
+		return this.set(
+				this.left<left?this.left:left, 
+				this.top<top?this.top:top, 
+				this.right>right?this.right:right, 
+				this.bottom>bottom?this.bottom:bottom
+			);
+	}
+	
 	public Bounds extend(Bounds that) {
 		return this.set(
 				this.left<that.left?this.left:that.left,
@@ -53,6 +63,9 @@ class Bounds {
 		return Float.isFinite(left) && Float.isFinite(right) && Float.isFinite(top) && Float.isFinite(bottom);
 	}
 
+	public boolean isEmpty() { 
+		return right<left||bottom<top; 
+	}
 	
 	///////////
 	
@@ -71,5 +84,19 @@ class Bounds {
 	public String toString() {
 		return "Bounds("+left+","+top+","+right+","+bottom+")";
 	}
+
 	
+	public static void main(String[] args) {
+		
+		
+		Bounds b = new Bounds();
+		
+		b.extend(100, 100, 200, 200);
+		
+		System.out.println(b);
+		System.out.println(b.isEmpty());
+		
+		
+		
+	}
 }

@@ -3,6 +3,7 @@ package de.dualuse.swt.widgets;
 import static java.lang.Math.*;
 import static org.eclipse.swt.SWT.*;
 
+import java.awt.geom.Point2D;
 import java.util.Arrays;
 
 import org.eclipse.swt.events.PaintEvent;
@@ -24,12 +25,12 @@ public class Layer implements LayerContainer, Runnable {
 	private LayerCanvas root;
 	private Layer children[] = {};
 	
-	boolean invalid = false;
+	boolean invalidTransform = false;
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the world matrix where this layer is anchored to (the parents' transformations)
 	private float B[] = new float[4*2]; // the oriented bounds of this Layer in world coordinates
 	
-	boolean redraw = true; //whether redraws are triggerd upon change 
+	private boolean redraw = true; //whether redraws are triggerd upon change 
 	
 	///
 	private float left = -1f/0f, top= -1f/0f;
@@ -47,6 +48,9 @@ public class Layer implements LayerContainer, Runnable {
 		//XXX fix integer truncation to always contain floating point bounds
 		return new Rectangle((int)floor(left), (int)floor(top), (int)ceil(getWidth()), (int)ceil(getHeight()));
 	}
+	
+	//XXX add bounds changing listener with own Listener type with event supplying the changes in bounds!
+	
 	
 	public boolean isFinite() {
 		return Float.isFinite(left) && Float.isFinite(right) && Float.isFinite(top) && Float.isFinite(bottom);
@@ -246,12 +250,15 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	
-	public static interface Location<T> { public T set(float x, float y); }
-	public<T> T locate(int x, int y, Location<T> c) { //Project?
+	//XXX also layer-to-layer transformation is needed 
+	
+	//XXX better name for transform from canvas to layer
+	public static interface TransformedPoint<T> { public T define(float x, float y); }
+	public<T> T transform(int x, int y, TransformedPoint<T> c) { //Project?
 		float x_ = x;
 		float y_ = y;
 		
-		return c.set(x_, y_);
+		return c.define(x_, y_);
 	}
 
 	
@@ -263,10 +270,12 @@ public class Layer implements LayerContainer, Runnable {
 		c.set(x_, y_);
 	}
 	
-//	{
-//		Layer l = null;
+	{
+		Layer l = null;
 //		l.locate(100, 100, (Coordinate) (x,y) -> System.out.println("huhu") );
-//	}
+//		l.onMouseMove = (e) -> System.out.println(l.canvasX(e.x)+", "+l.canvasY(e.y));
+		Point2D  p = l.transform(100, 100, (x,y) -> new Point2D.Double(x,y) );
+	}
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -274,21 +283,23 @@ public class Layer implements LayerContainer, Runnable {
 	
 	// implement this
 	// XXX maybe hand over delta transform?????????????
-	public Runnable onTransformed = null;
+	public Runnable onTransformed = null; //XXX maybe define own listener type with delta transformation in event
 	public final void onTransformed( Runnable pl ) { onTransformed = new Runnables(pl, onTransformed); }
 	protected void onTransformed() { if (onTransformed!=null) onTransformed.run(); }
 	
 	
+	
 	private void invalidateTransform() {
-		invalid = true;
+		invalidTransform = true;
 		for (Layer child: children)
-			child.invalidateTransform();
+			if (!child.invalidTransform)
+				child.invalidateTransform();
 		
 		onTransformed();
 	}
 	
 	private boolean validateTransform() {
-		if (!invalid)
+		if (!invalidTransform)
 			return false;
 		
 		if (parent==null)
@@ -297,7 +308,7 @@ public class Layer implements LayerContainer, Runnable {
 			if (parent.validateTransform())
 				concatenate(parent.W,parent.M,W);
 	
-		invalid = false;
+		invalidTransform = false;
 		return true;
 	}
 	
@@ -309,7 +320,10 @@ public class Layer implements LayerContainer, Runnable {
 		if (isFinite()) {
 			redraw(left, top, right-left, bottom-top, true);
 		} else
-			root.redraw();
+			if (!dirty) {
+				root.redraw();
+				dirty = true;
+			}
 	}
 	
 	private boolean dirty = false, dirtyAll = false;
@@ -336,7 +350,7 @@ public class Layer implements LayerContainer, Runnable {
 	
 	Bounds global = new Bounds();
 	
-	private void computeBounds(Bounds b, boolean recursive) {
+	private void computeDirtyBounds(Bounds b, boolean recursive) {
 		B[0] = B[4] = dirtyLeft;
 		B[1] = B[3] = dirtyTop;
 		B[2] = B[6] = dirtyRight;
@@ -353,8 +367,10 @@ public class Layer implements LayerContainer, Runnable {
 		
 		if (recursive)
 			for (Layer child: children) {
-				concatenate(W,M,child.W);
-				child.computeBounds(b, recursive);
+//				child.validateTransform();
+				child.invalidTransform = false;
+				concatenate(W, M, child.W);
+				child.computeDirtyBounds(b, recursive);
 			}
 	}
 	
@@ -362,83 +378,103 @@ public class Layer implements LayerContainer, Runnable {
 		final float globalLeft = global.left, globalTop = global.top;
 		final float globalRight = global.right, globalBottom = global.bottom;
 		
-		computeBounds(global.clear(), dirtyAll&&!clipping);
+		computeDirtyBounds(global.clear(), dirtyAll&&!clipping);
 		global.extend(globalLeft, globalTop).extend(globalRight, globalBottom);
 
 		final int M = 1;
+//		int x = (int) floor(global.left)-M, y = (int) floor(global.top)-M;
+//		int w = (int) ceil(global.right)-x+M+M;
+//		int h = (int) ceil(global.bottom)-y+M+M;
 		
-		int x = (int) floor(global.left)-M, y = (int) floor(global.top)-M;
-		int w = (int) ceil(global.right)-x+M+M;
-		int h = (int) ceil(global.bottom)-y+M+M;
-		root.redraw(x, y, w, h, dirtyAll);
+		// XXX if this redraw has been triggered by transforms only and global bounds havenot been changed 
+		// -> dont trigger redraw 
+		
+		root.redraw( // root / canvas coordinates are never negative, so integer truncation effects do not matter
+				(int)global.left, (int) global.top, 
+				(int) global.right-(int)global.left, 
+				(int)global.bottom-(int)global.top, 
+				dirtyAll);
+		
 		dirty = false;
 		
-		computeBounds(global.clear(), false);
-	};
+		computeDirtyBounds(global.clear(), false); //necessary?
+	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////// RENDERING /////////////////////////////////////////
 	
 	final public void paint(Rectangle clip, Transform t, Event e) {
-		t.getElements(W);
+		// update Transform
+		invalidTransform = false;
+		t.getElements(W); 
+
+		//re-compute enclosing axis aligned bounding box
+		//dirty.setBounds(this)
+		dirtyLeft = left;
+		dirtyRight = right;
+		dirtyTop = top;
+		dirtyBottom = bottom;
+		dirty = false;
+		computeDirtyBounds(global, false);
+
+		boolean intersects = clip.intersects(
+				(int)global.left, (int)global.top, 
+				(int)global.getWidth(), (int)global.getHeight());
+		
+		
+		/////////// XXX DIRTY, repurpose W for setting W = W.M in t.setElements //////
 		final float W00 = W[T00], W01 = W[T01], W02 = W[T02];
 		final float W10 = W[T10], W11 = W[T11], W12 = W[T12];
 		
 		concatenate(W, M, W);
 		t.setElements(W[T00], W[T10], W[T01], W[T11], W[T02], W[T12]);
 		
-		B[0] = B[4] = left;
-		B[1] = B[3] = top;
-		B[2] = B[6] = right;
-		B[5] = B[7] = bottom;
-		transform(W, B);
-		//////
+		W[T00]=W00; W[T01]=W01; W[T02]=W02;
+		W[T10]=W10; W[T11]=W11; W[T12]=W12;
+		///////////////////////////////////////////////////////////////////////////////
 		
-		e.gc.setTransform(t);
 		
-		//re-compute enclosing axis aligned bounding box
-		global.clear()
-		.extend(B[0], B[1])
-		.extend(B[2], B[3])
-		.extend(B[4], B[5])
-		.extend(B[6], B[7]);
-		
-		boolean intersects = clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top));
-		
-		Region r = null, g = null;
 		if (clipping) {
-			r = new Region(e.display);
-			e.gc.getClipping(r);
-
-			
-			int x = (int) floor(left), y = (int) floor(top);
-			int w = (int) ceil(right)-x, h = (int) ceil(bottom)-y;
-			
-			g = new Region(e.display);
-			g.add(r);
-			g.intersect(x,y,w,h);
-			
-			e.gc.setClipping(g);
-		}
-		
-		//render childnodes 
-		//unless they have to be clipped and this Layer isn't visible
-		if (!clipping || clipping && intersects)
-			paint(clip, t, e, children);
+			if (intersects) {
+				Region parentClipRegion = new Region(e.display);
+				Region layerClipRegion = new Region(e.display);
+	
+				e.gc.getClipping(parentClipRegion); //store parent's clip region in parent's coordinate system
 				
-		//only render this Layer if the GC's screen coordinate-transformed clips intersect that aabb 
-		if (intersects)
-			onPaint(e);
+				e.gc.setTransform(t); // apply layer's Transform;
+				e.gc.getClipping(layerClipRegion); //read parent's clip region in layer's coordinates (int truncation!)
+				int x = (int) floor(left), y = (int) floor(top);
+				int w = (int) ceil(right)-x, h = (int) ceil(bottom)-y;
+				layerClipRegion.intersect(x,y,w,h); //intersect with layer's bounds
+				
+				e.gc.setClipping(layerClipRegion); //set clipping
+				
+				//// PAINT ////
+				paint(clip, t, e, children);
+				onPaint(e);
+				//// PAINT ////
+				
+				t.setElements(W00,W10,W01,W11,W02,W12);
+				e.gc.setTransform(t);
+				e.gc.setClipping(parentClipRegion);
+	
+				parentClipRegion.dispose();
+				layerClipRegion.dispose();
+			}
+		} else {
+			e.gc.setTransform(t);
 
-		if (clipping) {
-			e.gc.setClipping(r);
-			r.dispose();
-			g.dispose();
+			//
+			paint(clip, t, e, children);
+					
+			//only render this Layer if the GC's screen coordinate-transformed clips intersect that aabb 
+			if (intersects)
+				onPaint(e);
+			
+			t.setElements(W00,W10,W01,W11,W02,W12);
+			e.gc.setTransform(t);
 		}
 		
-		//restore c's Transform
-		t.setElements(W[T00]=W00,W[T10]=W10,W[T01]=W01,W[T11]=W11,W[T02]=W02,W[T12]=W12);
-		e.gc.setTransform(t);
 	}
 	
 	protected void paint(Rectangle clip, Transform t, Event e, Layer[] children) {
@@ -450,9 +486,11 @@ public class Layer implements LayerContainer, Runnable {
 		for (int I=children.length-1,i=0;I>=i;I--) {
 			int x = clip.x, y = clip.y, w = clip.width, h = clip.height;
 
-			if (clipping)
-				global.get(clip);			
-			
+			if (clipping) { 
+				//if clipping is enabled, then tighten clipping rectangle by this layer's bounds
+				global.get(clip);
+				clip.intersects(x, y, w, h);
+			}
 			
 			children[I].paint(clip,t,e);
 			
@@ -463,19 +501,19 @@ public class Layer implements LayerContainer, Runnable {
 		}
 		
 		//extend bounds afterwards
-		for (Layer child: children)
-			global.extend(child.global);
+		if (!clipping)
+			for (Layer child: children)
+				global.extend(child.global);
 	}
+	
+	
+	public Listener onPaint = null;
+	public void onPaint( Listener pl ) { onPaint = new Listeners(pl, onPaint); }
 	
 	// implement this
 	protected void onPaint(Event e) {
 		if (onPaint!=null)
 			onPaint.handleEvent(e);
-	}
-	
-	public Listener onPaint = null;
-	public void onPaint( Listener pl ) {
-		onPaint = new Listeners(pl, onPaint);
 	}
 	
 	public final void onPaint( PaintListener pl ) {
