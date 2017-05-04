@@ -33,8 +33,7 @@ public class Listeners implements Listener {
 		if (this.listener==l)
 			return others;
 
-		this.others = this.others.exclude(l);
-		return this;
+		return new Listeners(this.listener, this.others.exclude(l));
 	}
 	
 	@Override
@@ -42,7 +41,8 @@ public class Listeners implements Listener {
 		if (others!=null)
 			others.handleEvent(event); 
 			
-		listener.handleEvent(event);
+		if (listener!=null)
+			listener.handleEvent(event);
 	}
 	
 	

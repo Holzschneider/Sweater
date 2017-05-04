@@ -7,7 +7,6 @@ import java.util.Arrays;
 
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
-import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
 import org.eclipse.swt.graphics.Transform;
@@ -15,9 +14,8 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 
 import de.dualuse.swt.events.Listeners;
+import de.dualuse.swt.events.Runnables;
 
-//missing things
-// paint clipping
 public class Layer implements LayerContainer, Runnable {
 	final static private int T00=0, T01=1, T10=2, T11=3, T02=4, T12=5; //, T20=3, T21=4, T22=5;
 
@@ -26,7 +24,7 @@ public class Layer implements LayerContainer, Runnable {
 	private LayerCanvas root;
 	private Layer children[] = {};
 	
-	boolean changed = false;
+	boolean invalid = false;
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the world matrix where this layer is anchored to (the parents' transformations)
 	private float B[] = new float[4*2]; // the oriented bounds of this Layer in world coordinates
@@ -91,7 +89,6 @@ public class Layer implements LayerContainer, Runnable {
 		parent = null;
 	}
 
-	
 	public Layer addLayer(Layer r) {
 		if (r.setParent(this))
 			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
@@ -238,8 +235,10 @@ public class Layer implements LayerContainer, Runnable {
 
 		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
 		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
+	
+		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
+			invalidateTransform();
 		
-//		notifyChange();
 		if (redraw)
 			redraw();
 		
@@ -247,30 +246,60 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	
+	public static interface Location<T> { public T set(float x, float y); }
+	public<T> T locate(int x, int y, Location<T> c) { //Project?
+		float x_ = x;
+		float y_ = y;
+		
+		return c.set(x_, y_);
+	}
+
 	
+	public static interface Coordinate { public void set(float x, float y); }
+	public void locate(int x, int y, Coordinate c) { //Project?
+		float x_ = x;
+		float y_ = y;
+		
+		c.set(x_, y_);
+	}
 	
+//	{
+//		Layer l = null;
+//		l.locate(100, 100, (Coordinate) (x,y) -> System.out.println("huhu") );
+//	}
+
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
 	
-//	private void notifyChange() {
-//		changed = true;
-//		for (Layer child: children)
-//			notifyChange();
-//	}
-//	
-//	private boolean updateW() {
-//		if (!changed)
-//			return false;
-//		
-//		if (parent==null)
-//			root.canvasTransform.getElements(W);
-//		else 
-//			if (parent.updateW())
-//				concatenate(parent.W,parent.M,W);
-//		
-//		return true;
-//	}
+	// implement this
+	// XXX maybe hand over delta transform?????????????
+	public Runnable onTransformed = null;
+	public final void onTransformed( Runnable pl ) { onTransformed = new Runnables(pl, onTransformed); }
+	protected void onTransformed() { if (onTransformed!=null) onTransformed.run(); }
+	
+	
+	private void invalidateTransform() {
+		invalid = true;
+		for (Layer child: children)
+			child.invalidateTransform();
+		
+		onTransformed();
+	}
+	
+	private boolean validateTransform() {
+		if (!invalid)
+			return false;
+		
+		if (parent==null)
+			root.canvasTransform.getElements(W);
+		else 
+			if (parent.validateTransform())
+				concatenate(parent.W,parent.M,W);
+	
+		invalid = false;
+		return true;
+	}
 	
 	public void setRedraw(boolean redraw) {
 		this.redraw = redraw;
@@ -282,7 +311,6 @@ public class Layer implements LayerContainer, Runnable {
 		} else
 			root.redraw();
 	}
-	
 	
 	private boolean dirty = false, dirtyAll = false;
 	private float dirtyLeft, dirtyTop, dirtyRight, dirtyBottom;
@@ -314,6 +342,7 @@ public class Layer implements LayerContainer, Runnable {
 		B[2] = B[6] = dirtyRight;
 		B[5] = B[7] = dirtyBottom;
 		
+		validateTransform();
 		transform(M, B);
 		transform(W, B);
 		
@@ -378,14 +407,14 @@ public class Layer implements LayerContainer, Runnable {
 		
 		Region r = null, g = null;
 		if (clipping) {
-			r = new Region();
+			r = new Region(e.display);
 			e.gc.getClipping(r);
 
 			
 			int x = (int) floor(left), y = (int) floor(top);
 			int w = (int) ceil(right)-x, h = (int) ceil(bottom)-y;
 			
-			g = new Region();
+			g = new Region(e.display);
 			g.add(r);
 			g.intersect(x,y,w,h);
 			
@@ -401,8 +430,11 @@ public class Layer implements LayerContainer, Runnable {
 		if (intersects)
 			onPaint(e);
 
-		if (clipping) 
+		if (clipping) {
 			e.gc.setClipping(r);
+			r.dispose();
+			g.dispose();
+		}
 		
 		//restore c's Transform
 		t.setElements(W[T00]=W00,W[T10]=W10,W[T01]=W01,W[T11]=W11,W[T02]=W02,W[T12]=W12);
@@ -470,6 +502,7 @@ public class Layer implements LayerContainer, Runnable {
 	}
 	
 	final public void point(Event e) {
+		validateTransform();
 		final float m00 = W[T00], m01 = W[T01], m02 = W[T02];
 		final float m10 = W[T10], m11 = W[T11], m12 = W[T12];
 		
