@@ -1,17 +1,11 @@
 package de.dualuse.swt.widgets;
 
-import static org.eclipse.swt.SWT.Dispose;
-import static org.eclipse.swt.SWT.MouseDoubleClick;
-import static org.eclipse.swt.SWT.MouseDown;
-import static org.eclipse.swt.SWT.MouseMove;
-import static org.eclipse.swt.SWT.MouseUp;
-import static org.eclipse.swt.SWT.MouseWheel;
-import static org.eclipse.swt.SWT.Paint;
+import static org.eclipse.swt.SWT.*;
 
 import java.util.Arrays;
 
-import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.graphics.Region;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
@@ -109,13 +103,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	public Transform getLayerTransform() {
 		return layerTransform;
 	}
-	
-//	@Override
-//	public LayerContainer transform(float[] v) {
-//		layerTransform.getElements(backup);
-//		Layer.concatenate(backup, v, v);
-//		return this;
-//	}
+
 	
 	@Override
 	public void handleEvent(Event event) {
