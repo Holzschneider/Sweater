@@ -102,11 +102,12 @@ public class Layer implements LayerContainer, Runnable {
 
 	
 	public Layer addLayer(Layer r) {
-		if (r.setParent(this))
+		if (r.setParent(this)) {
 			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
 
-		if (redraw)
-			redraw();
+			if (redraw)
+				redraw();
+		}
 
 		return this;
 	}
@@ -131,10 +132,12 @@ public class Layer implements LayerContainer, Runnable {
 		if (parent==r)
 			return false;
 		
-		if (parent!=null) 
+		if (parent!=null) {
+			parent = r;
 			getParent().removeLayer(this);
-			
-		parent = r;
+		} else {
+			parent = r;
+		}
 		
 		if (parent!=null)
 			getParent().addLayer(this);
@@ -407,7 +410,7 @@ public class Layer implements LayerContainer, Runnable {
 		final float right = max(max(ax,bx),max(cx,dx));
 		final float bottom = max(max(ay,by),max(cy,dy));
 		
-		boolean intersects = clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top));
+		boolean intersects = !isFinite() || clip.intersects((int)left, (int)top, (int)(right-left), (int)(bottom-top));
 		
 		//render childnodes 
 		//unless they have to be clipped and this Layer isn't visible
