@@ -1,9 +1,14 @@
 package de.dualuse.swt.widgets;
 
-import static java.lang.Math.*;
-import static org.eclipse.swt.SWT.*;
+import static java.lang.Math.cos;
+import static java.lang.Math.hypot;
+import static java.lang.Math.sin;
+import static org.eclipse.swt.SWT.MouseDoubleClick;
+import static org.eclipse.swt.SWT.MouseDown;
+import static org.eclipse.swt.SWT.MouseMove;
+import static org.eclipse.swt.SWT.MouseUp;
+import static org.eclipse.swt.SWT.MouseWheel;
 
-import java.awt.geom.Point2D;
 import java.util.Arrays;
 
 import org.eclipse.swt.events.PaintEvent;
@@ -253,28 +258,39 @@ public class Layer implements LayerContainer, Runnable {
 	//XXX also layer-to-layer transformation is needed 
 	
 	//XXX better name for transform from canvas to layer
-	public static interface TransformedPoint<T> { public T define(float x, float y); }
-	public<T> T transform(int x, int y, TransformedPoint<T> c) { //Project?
-		float x_ = x;
-		float y_ = y;
-		
-		return c.define(x_, y_);
-	}
-
-	
-	public static interface Coordinate { public void set(float x, float y); }
-	public void locate(int x, int y, Coordinate c) { //Project?
-		float x_ = x;
-		float y_ = y;
-		
-		c.set(x_, y_);
-	}
+//	public static interface TransformedPoint<T> { public T define(float x, float y); }
+//	public<T> T transform(int x, int y, TransformedPoint<T> c) { //Project?
+//		float x_ = x;
+//		float y_ = y;
+//		
+//		return c.define(x_, y_);
+//	}
+//	
+//	public static interface Coordinate { public void set(float x, float y); }
+//	public void locate(int x, int y, Coordinate c) { //Project?
+//		float x_ = x;
+//		float y_ = y;
+//		
+//		c.set(x_, y_);
+//	}
+//	
+//	
+//	public void locate(LayerContainer l, int x, int y, Coordinate c) { //Project?
+//		float x_ = x;
+//		float y_ = y;
+//		
+//		c.set(x_, y_);
+//	}
 	
 	{
-		Layer l = null;
-//		l.locate(100, 100, (Coordinate) (x,y) -> System.out.println("huhu") );
-//		l.onMouseMove = (e) -> System.out.println(l.canvasX(e.x)+", "+l.canvasY(e.y));
-		Point2D  p = l.transform(100, 100, (x,y) -> new Point2D.Double(x,y) );
+//		Layer l = null;
+//		l.locate(100,100, l.getRoot(), (x,y)-> System.out.println());
+//		getRoot().locate(e.x,e.y).on(l, (x,y)->System.out.println()).on(l.getParent(),(u,v)-> System.out.println("ah"));
+		
+//		Layer l = null;
+////		l.locate(100, 100, (Coordinate) (x,y) -> System.out.println("huhu") );
+////		l.onMouseMove = (e) -> System.out.println(l.canvasX(e.x)+", "+l.canvasY(e.y));
+//		Point2D  p = l.transform(100, 100, (x,y) -> new Point2D.Double(x,y) );
 	}
 
 
@@ -282,11 +298,34 @@ public class Layer implements LayerContainer, Runnable {
 	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
 	
 	// implement this
-	// XXX maybe hand over delta transform?????????????
 	public Runnable onTransformed = null; //XXX maybe define own listener type with delta transformation in event
 	public final void onTransformed( Runnable pl ) { onTransformed = new Runnables(pl, onTransformed); }
-	protected void onTransformed() { if (onTransformed!=null) onTransformed.run(); }
+	protected void onTransformed() { 
+		if (onTransformed!=null) 
+			onTransformed.run(); 
+	}
 	
+	public static interface LayerTransform {
+		void set(double scalex, double shearY, double shearX, double scaleY, double translationX, double translationY);
+	}
+	
+	public void getLayerTransform(LayerTransform lt) {
+		lt.set(M[T00], M[T10], M[T01], M[T11], M[T02], M[T12]);		
+	}
+	
+	public void getCanvasTransform(LayerTransform lt) {
+		final float W00 = W[T00], W01 = W[T01], W02 = W[T02];
+		final float W10 = W[T10], W11 = W[T11], W12 = W[T12];
+
+		final float M00 = M[T00], M01 = M[T01], M02 = M[T02];
+		final float M10 = M[T10], M11 = M[T11], M12 = M[T12];
+		
+		lt.set(
+			W10*M01+W00*M00, W10*M11+W00*M10, 
+			W11*M01+W01*M00, W11*M11+W01*M10, 
+			M02+W12*M01+W02*M00, M12+W12*M11+W02*M10 
+		);
+	}
 	
 	
 	private void invalidateTransform() {
@@ -381,17 +420,12 @@ public class Layer implements LayerContainer, Runnable {
 		computeDirtyBounds(global.clear(), dirtyAll&&!clipping);
 		global.extend(globalLeft, globalTop).extend(globalRight, globalBottom);
 
-		final int M = 1;
-//		int x = (int) floor(global.left)-M, y = (int) floor(global.top)-M;
-//		int w = (int) ceil(global.right)-x+M+M;
-//		int h = (int) ceil(global.bottom)-y+M+M;
-		
 		// XXX if this redraw has been triggered by transforms only and global bounds havenot been changed 
 		// -> dont trigger redraw 
 		
 		root.redraw( // root / canvas coordinates are never negative, so integer truncation effects do not matter
 				(int)global.left, (int) global.top, 
-				(int) global.right-(int)global.left, 
+				(int)global.right -(int)global.left, 
 				(int)global.bottom-(int)global.top, 
 				dirtyAll);
 		
