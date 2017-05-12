@@ -455,7 +455,8 @@ public class Layer implements LayerContainer, Runnable {
 	
 	public void capture(Layer c) {
 		captive = c;
-		getParent().capture(c);
+		if (getParent()!=null)
+			getParent().capture(c);
 	}
 	
 	public Layer captive() {

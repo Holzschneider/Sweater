@@ -53,10 +53,14 @@ public class LayerKnob extends Layer {
 	
 	public LayerKnob(LayerContainer parent, float x, float y) {
 		super(parent);
-		setBounds(x-DEFAULT_SIZE/2, y-DEFAULT_SIZE/2, x+DEFAULT_SIZE/2, y+DEFAULT_SIZE/2);
+		setLocation(x,y);
 	}
 
-//==[ Additional Getter ]===========================================================================
+//==[ Additional Setter/Getter ]===========================================================================
+	
+	public void setLocation(float x, float y) {
+		setBounds(x-DEFAULT_SIZE/2, y-DEFAULT_SIZE/2, x+DEFAULT_SIZE/2, y+DEFAULT_SIZE/2);
+	}
 	
 	public float getCenterX() {
 		return (float)(shape.getX() + shape.getWidth()/2);

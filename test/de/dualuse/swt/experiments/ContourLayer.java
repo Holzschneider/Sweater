@@ -38,6 +38,7 @@ public class ContourLayer extends Layer {
 	
 	static class VertexKnob extends LayerKnob {
 		Vertex vertex;
+		
 		public VertexKnob(Layer parent, Vertex vertex) {
 			
 			super(parent, (float)vertex.x, (float)vertex.y);
@@ -49,6 +50,10 @@ public class ContourLayer extends Layer {
 				parent.redraw();
 			});
 			
+		}
+		
+		public Vertex getVertex() {
+			return vertex;
 		}
 	};
 	

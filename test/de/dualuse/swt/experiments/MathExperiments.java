@@ -1,16 +1,43 @@
-/*
+
 package de.dualuse.swt.experiments;
 
 import java.util.Arrays;
 
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-import org.apache.commons.math3.linear.LUDecomposition;
-import org.apache.commons.math3.linear.MatrixUtils;
-import org.apache.commons.math3.linear.RealMatrix;
-import org.apache.commons.math3.linear.RealVector;
-import org.apache.commons.math3.linear.SingularValueDecomposition;
+import org.ejml.simple.SimpleMatrix;
+
+//import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+//import org.apache.commons.math3.linear.LUDecomposition;
+//import org.apache.commons.math3.linear.MatrixUtils;
+//import org.apache.commons.math3.linear.RealMatrix;
+//import org.apache.commons.math3.linear.RealVector;
+//import org.apache.commons.math3.linear.SingularValueDecomposition;
+
+
 
 public class MathExperiments {
+
+	public static void main(String[] args) {
+	
+		double[][] elements = new double[][] {
+			{ 90, 60, 90 },
+			{ 90, 90, 30 },
+			{ 60, 60, 60 }
+		};
+		
+		SimpleMatrix m = new SimpleMatrix(elements);
+		System.out.println(m);
+		
+		SimpleMatrix minverse = m.invert();
+		System.out.println(minverse);
+		
+		SimpleMatrix b = new SimpleMatrix(new double[][] { {1}, {2}, {3} });
+		
+		SimpleMatrix solution = m.solve(b);
+		System.out.println(solution);
+		
+	}
+	
+/*
 	public static void main(String[] args) {
 		// RealMatrix matrix = new RealMatrix();
 		
@@ -80,6 +107,5 @@ public class MathExperiments {
 		RealMatrix M = U.multiply(S).multiply(V);
 		System.out.println("M: " + M);
 	}
+	*/
 }
-
-*/
