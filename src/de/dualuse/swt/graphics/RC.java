@@ -5,124 +5,25 @@ import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-import java.awt.Rectangle;
+import java.awt.BasicStroke;
 import java.awt.Shape;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.FlatteningPathIterator;
-import java.awt.geom.PathIterator;
-import java.awt.geom.Point2D;
+import java.awt.Stroke;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Transform;
 
-class TransformedPathIterator implements PathIterator {
-
-	final PathIterator w;
-	final AffineTransform at;
-	final float[][] m;
-	final float[] floatCoords = { 0,0,0,0,0,0};
-	
-	public TransformedPathIterator(PathIterator w, AffineTransform at, float[][] m) {
-		this.w=w;
-		this.at=at;
-		this.m=m;
-	}
-	
-	public int getWindingRule() { return w.getWindingRule(); }
-	public boolean isDone() { return w.isDone(); }
-	public void next() { w.next(); }
-
-	public int currentSegment(float[] coords) {
-		int type = w.currentSegment(coords);
-		
-		int size = 0;
-		switch (type) {
-		case SEG_CLOSE: size=0; break;
-		case SEG_LINETO: 
-		case SEG_MOVETO: size=1; break;
-		case SEG_QUADTO: size=2; break;
-		case SEG_CUBICTO: size=3; break;
-		}
-		
-		for (int i=0,l=size*2;i<l;i+=2) {
-			float vecx = coords[i+0];
-			float vecy = coords[i+1];
-			float vecz = 0;
-			float vecw = 1;
-	
-			float x = m[0][0] * vecx + m[0][1] * vecy + m[0][2] * vecz + m[0][3] * vecw;
-			float y = m[1][0] * vecx + m[1][1] * vecy + m[1][2] * vecz + m[1][3] * vecw;
-//			float z = m[2][0] * vecx + m[2][1] * vecy + m[2][2] * vecz + m[2][3] * vecw;
-			float w = m[3][0] * vecx + m[3][1] * vecy + m[3][2] * vecz + m[3][3] * vecw;
-
-			final float ooW = 1f/w;
-			x *= ooW;
-			y *= ooW;
-//			z *= ooW;
-//			v.w *= ooW;
-			
-			coords[i+0] = x;
-			coords[i+1] = y;
-		}
-		
-		if (at!=null)
-			at.transform(coords, 0, coords, 0, size);
-		
-		return type;
-	}
-	
-	public int currentSegment(double [] coords) {
-		for (int i=0;i<6;i++)
-			floatCoords[i] = (float) coords[i];
-		
-		int type = currentSegment(floatCoords);
-		
-		for (int i=0;i<6;i++)
-			coords[i] = floatCoords[i];
-		
-		return type;
-	}
-}
-
-class TransformedShape implements Shape {
-	final Shape s;
-	final float[][] m;
-
-	public TransformedShape(float[][] t, Shape s) {
-		this.s = s;
-		this.m = t;
-	}
-
-	public Rectangle getBounds() { return getBounds2D().getBounds(); }
-	public Rectangle2D getBounds2D() { throw new RuntimeException("Unsupported"); }
-
-	public boolean contains(double x, double y) { return true; }
-	public boolean contains(Point2D p) { return true; }
-	public boolean intersects(double x, double y, double w, double h) { return true; }
-	public boolean intersects(Rectangle2D r) { return true; }
-	public boolean contains(double x, double y, double w, double h) { return true; }
-	public boolean contains(Rectangle2D r) { return true; }
-	
-	public PathIterator getPathIterator(AffineTransform at) {
-		return new FlatteningPathIterator(new TransformedPathIterator(s.getPathIterator(null), at, m),.2,14);
-	}
-
-	public PathIterator getPathIterator(final AffineTransform at, final double flatness) {
-		return new TransformedPathIterator(s.getPathIterator(null, flatness), at, m);
-	}
-}
-
-
 public class RC {
 	public final GC gc;
 	public final Device device;
 	private Transform s,t;
+	
+	
 	
 	public RC(GC gc) {
 		this.gc = gc;
@@ -374,21 +275,29 @@ public class RC {
 	
 	
 	public void draw(Shape s) {
+		applyState();
 		PathShape ps = new PathShape(device, new TransformedShape(modelViewProjection, s));
 		gc.drawPath(ps);
 		ps.dispose();
+		restoreState();
 	}
 	
 	public void fill(Shape s) {
+		applyState();
 		PathShape ps = new PathShape(device, new TransformedShape(modelViewProjection, s));
-		gc.fillPath(ps);
-		ps.dispose();
 		
+		int fillRule = gc.getFillRule();
+		gc.fillPath(ps);
+		gc.setFillRule(fillRule);
+		
+		ps.dispose();
+		restoreState();
 	}
 	
 
 	final static float EPSILON = 0.005f; 
-	public boolean drawImage(Image im, int x, int y) {
+	boolean drawImage(Image im, int x, int y) {
+		applyState();
 		ImageData id = im.getImageData();
 		int W = id.width, H = id.height;
 
@@ -398,7 +307,7 @@ public class RC {
 		t.getElements(bt);
 		
 		drawImageTiled(im, modelViewProjection, at, bt, 0, 0, W, H);
-		
+		restoreState();
 		return false;
 	}
 
@@ -491,19 +400,18 @@ public class RC {
 		}
  
 		
-		if (error<MAX_PERSPECTIVE_ERROR) {
+		if (true || error<MAX_PERSPECTIVE_ERROR) {
 			s.setElements(at[0],at[1],at[2],at[3],at[4],at[5]);
 
 			gc.getTransform(t);
 			t.multiply(s);
 			gc.setTransform(t);
 			
-			gc.drawImage(im, (int)x1, (int)y1, (int)x2, (int)y2, 0, 0, (int)(x2-x1), (int)(y2-y1)); 
+//			gc.drawImage(im, (int)x1, (int)y1, (int)x2, (int)y2, 0, 0, (int)(x2-x1), (int)(y2-y1)); 
 
 //			Stroke s = g.getStroke();
 //			g.setStroke(new BasicStroke(0.1f));
-//			g.draw(new Rectangle2D.Double(0,0,(int)(x2-x1), (int)(y2-y1)));
-//			g.setStroke(s);
+			draw(new Rectangle2D.Double(0,0,(int)(x2-x1), (int)(y2-y1)));
 			
 			t.setElements(bt[0],bt[1],bt[2],bt[3],bt[4],bt[5]);
 			gc.setTransform(t);
@@ -520,19 +428,93 @@ public class RC {
 	}
 	
 	
-	public void drawString(String str, int x, int y) {
+	public void drawString(String str, int x, int y, boolean transparent) {
 		gc.getTransform(t);
 		t.multiply(approximateTransform(x, y, s));
 
 		gc.getTransform(s);
 		gc.setTransform(t);
 		
-		gc.drawString(str, x, y);
+		gc.drawString(str, x, y, transparent);
 		
 		gc.setTransform(s);
 	}
 	
+	public void drawString(String str, int x, int y) {
+		this.drawString(str, x, y, false);
+	}	
 	
+	
+
+	public static final int LINES = PrimitivePathIterator.LINES;
+	public static final int TRIANGLES = PrimitivePathIterator.TRIANGLES;
+	public static final int QUADS = PrimitivePathIterator.QUADS;
+	public static final int LINE_STRIP = PrimitivePathIterator.LINE_STRIP;
+	public static final int LINE_LOOP = PrimitivePathIterator.LINE_LOOP;
+	public static final int POLYGON = -PrimitivePathIterator.LINE_LOOP;
+	
+	public static final int FRONT = 1;
+	public static final int BACK = 2;
+	public static final int FRONT_AND_BACK = FRONT | BACK;
+	
+	public static final int POINT = 1;
+	public static final int LINE = 2;
+	public static final int FILL = 3;	
+	
+
+	private Primitive cached = new Primitive();
+	private Primitive p = null;
+	
+	@SuppressWarnings("unused")
+	private int backPolygonMode = LINE;
+	private int frontPolygonMode = LINE;
+	
+	public void polygonMode(int mode) { polygonMode(FRONT_AND_BACK, mode); }
+	private void polygonMode(int face, int mode) {
+		if ((face&FRONT)!=0)
+			frontPolygonMode = mode;
+		
+		if ((face&BACK)!=0)
+			backPolygonMode = mode;
+	}
+	
+	public void begin(int type) {
+		p = cached.reset(modelViewProjection, type);
+	}
+
+	public void vertex(int x, int y) { p.addVertex(x, y, 0f);}
+	public void vertex(float x, float y) { p.addVertex(x, y, 0f);}
+	public void vertex(double x, double y) { p.addVertex((float)x, (float)y, 0f); }
+	
+	public void vertex(int x, int y, int z) { p.addVertex(x, y, z); }
+	public void vertex(float x, float y, float z) { p.addVertex(x, y, z); }
+	public void vertex(double x, double y, double z) { p.addVertex((float)x, (float)y, (float)z); }
+	
+	public void end() {
+		switch (p.getType()) {
+		case LINES:
+		case LINE_STRIP:
+		case LINE_LOOP:
+			draw(p.clone());
+			break;
+			
+		case POLYGON:
+		case TRIANGLES:
+		case QUADS:
+			if (frontPolygonMode==LINE) {
+				//XXX not working yet
+				PathShape ps = new PathShape(device, p.clone());
+				gc.drawPath( ps );
+				ps.dispose();
+			} else
+				fill( p.clone() );
+			break;
+		}
+		
+		p = null;
+	}
+	
+
 	
 	
 	
@@ -566,18 +548,18 @@ public class RC {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	private static void set(float[] m, float ... v) {
+	static void set(float[] m, float ... v) {
 		for (int i=0,I=v.length;i<I;i++)
 			m[i]=v[i];
 	}
 	
-	private static void copy(float[][] m, float[][] n) {
+	static void copy(float[][] m, float[][] n) {
 		for (int row=0;row<m.length;row++)
 			for (int col=0;col<m[row].length;col++)
 				n[row][col] = m[row][col];
 	}
 	
-	private static void transform( float[][] m, float[] v ) {
+	static void transform( float[][] m, float[] v ) {
 		float x = v[0], y = v[1], z = v[2], w = v[3]; //v.length>3?v[3]:1;
 
 		final float m00 = m[0][0], m01 = m[0][1], m02 = m[0][2], m03 = m[0][3];
@@ -591,23 +573,23 @@ public class RC {
 		v[3] = m30*x+m31*y+m32*z+m33*w;
 	}
 
-	private static void project( float[][] m, float[] v ) {
+	static void project( float[][] m, float[] v ) {
 		transform(m,v);
 		scale(v,1/v[3]);
 	}
 	
-	private static void scale( float[] v, double s ) {
+	static void scale( float[] v, double s ) {
 		for (int i=0,I=v.length;i<I;i++)
 			v[i] *= s;
 	}
 	
-	private static void identity( float[][] m ) {
+	static void identity( float[][] m ) {
 		for (int r=0,R=m.length;r<R;r++)
 			for (int c=0,C=m[r].length;c<C;c++)
 				m[r][c] = r==c?1:0;
 	}
 	
-	private static void concat( float[][] m, float[][] n) {
+	static void concat( float[][] m, float[][] n) {
 		final float n00 = n[0][0], n01 = n[0][1], n02 = n[0][2], n03 = n[0][3];
 		final float n10 = n[1][0], n11 = n[1][1], n12 = n[1][2], n13 = n[1][3];
 		final float n20 = n[2][0], n21 = n[2][1], n22 = n[2][2], n23 = n[2][3];
@@ -615,7 +597,7 @@ public class RC {
 		concat(m, n00, n01, n02, n03, n10, n11, n12, n13, n20, n21, n22, n23, n30, n31, n32, n33);
 	}
 	
-	private static void concat( float[][] m, 
+	static void concat( float[][] m, 
 			float n00, float n01, float n02, float n03,
 			float n10, float n11, float n12, float n13,
 			float n20, float n21, float n22, float n23,
@@ -646,5 +628,96 @@ public class RC {
 		m[3][1] = m30*n01+m31*n11+m32*n21+m33*n31;
 		m[3][2] = m30*n02+m31*n12+m32*n22+m33*n32;
 		m[3][3] = m30*n03+m31*n13+m32*n23+m33*n33;
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+	////////////////////////////////// Shadow State
+	
+	Integer fillRule, fillRuleSaved;
+	Color foreground, foregroundSaved;
+	Color background, backgroundSaved;
+	
+	public void setFillRule(int fillRule) {
+		this.fillRule = fillRule;
+	}
+	
+	public int getFillRule() {
+		return fillRule!=null?fillRule:gc.getFillRule();
+	}
+	
+	
+	public void setForeground(Color foreground) {
+		this.foreground = foreground;
+	}
+	
+	public Color getForeground() {
+		return foreground!=null?foreground:gc.getForeground();
+	}
+	
+	
+	
+	public void setBackground(Color background) {
+		this.background = background;
+	}
+	
+	public Color getBackground() {
+		return background!=null?background:gc.getBackground();
+	}
+	
+	///////////////
+	private void applyState() {
+		
+		if (fillRule!=null) {
+			fillRuleSaved = gc.getFillRule();
+			if (fillRuleSaved!=fillRule)
+				gc.setFillRule(fillRule);
+			else
+				fillRuleSaved = null;
+		}
+		
+		if (foreground!=null) {
+			foregroundSaved = gc.getForeground();
+			if (!foregroundSaved.equals(foreground))
+				gc.setForeground(foreground);
+			else
+				foregroundSaved = null;
+		}
+		
+		
+		if (background!=null) {
+			backgroundSaved = gc.getForeground();
+			if (!backgroundSaved.equals(background))
+				gc.setBackground(background);
+			else
+				backgroundSaved = null;
+		}
+		
+	}
+	
+	
+	private void restoreState() {
+		if (fillRuleSaved!=null) {
+			gc.setFillRule(fillRuleSaved);
+			fillRuleSaved=null;
+		}
+		
+		if (foregroundSaved!=null) {
+			gc.setBackground(foregroundSaved);
+			foregroundSaved = null;
+		}
+		if (backgroundSaved!=null) {
+			gc.setBackground(backgroundSaved);
+			backgroundSaved = null;
+		}
 	}
 }
