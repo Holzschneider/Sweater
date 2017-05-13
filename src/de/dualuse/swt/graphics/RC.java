@@ -301,7 +301,7 @@ public class RC {
 	
 
 	final static float EPSILON = 0.005f; 
-	boolean drawImage(Image im, int x, int y) {
+	public boolean drawImage(Image im, int x, int y) {
 		applyState();
 		ImageData id = im.getImageData();
 		int W = id.width, H = id.height;
@@ -310,8 +310,13 @@ public class RC {
 		
 		gc.getTransform(t);
 		t.getElements(bt);
+		t.getElements(at);
 		
-		drawImageTiled(im, modelViewProjection, at, bt, 0, 0, W, H);
+		drawImageTiled(im, W,H, modelViewProjection, at, bt, 0, 0, W, H);
+		
+		t.setElements(bt[0], bt[1], bt[2], bt[3], bt[4], bt[5]);
+		gc.setTransform(t);
+		
 		restoreState();
 		return false;
 	}
@@ -347,8 +352,8 @@ public class RC {
 	int counter = 0;
 	
 	int recursions = 0;
-	float PERSPECTIVE_RIM = 0, MAX_PERSPECTIVE_DEVIATION = 2, MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
-	private void drawImageTiled(Image im, float[][] m, float[] at, float[] bt, int x1, int y1, int x2, int y2) {
+	float PERSPECTIVE_RIM = 0, MAX_PERSPECTIVE_DEVIATION = 10f, MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
+	private void drawImageTiled(Image im, int width, int height, float[][] m, float[] at, float[] bt, int x1, int y1, int x2, int y2) {
 		
 		if (x1==x2 || y1==y2)
 			return;
@@ -370,12 +375,14 @@ public class RC {
 		float doow = 1f/(m[3][0]* dx+ m[3][1]*dy + m[3][2] * 0 + m[3][3] *1 );
 		float dx_ = (m[0][0]*dx+ m[0][1]*dy+m[0][2]*0+m[0][3]*1)*doow;
 		float dy_ = (m[1][0]*dx+ m[1][1]*dy+m[1][2]*0+m[1][3]*1)*doow;
-		float tileW = x2-x1, tileH = y2-y1, error = 0;
-
+		
+		float tileW = (x2-x1), tileH = (y2-y1), error = 0;
+		
 		float ax__ = dx_+bx_-cx_, ay__ = dy_+by_-cy_;
 		float bx__ = ax_+cx_-dx_, by__ = ay_+cy_-dy_;
 		float cx__ = bx_+dx_-ax_, cy__ = by_+dy_-ay_;
 		float dx__ = ax_+cx_-bx_, dy__ = ay_+cy_-by_;
+		
 		
 		if (triangleContains(cx_, cy_, dx_, dy_, bx_, by_, cx__, cy__)) { //paDAB > all (A ist Anker)
 			float deltaX = cx__-cx_, deltaY = cy__-cy_;
@@ -402,31 +409,47 @@ public class RC {
 			set(at, (bx__-ax_)/tileW, (by__-ay_)/tileW,    (dx_-ax_)/tileH, (dy_-ay_)/tileH,    ax_, ay_);
 		}
  
+		final int T00 = 0, T10 = 1, T01 = 2, T11 = 3, T02 = 4, T12 = 5;
+		MAX_PERSPECTIVE_DEVIATION = 2.5f;
+		MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
 		
-		if (true || error<MAX_PERSPECTIVE_ERROR) {
-			s.setElements(at[0],at[1],at[2],at[3],at[4],at[5]);
-
-			gc.getTransform(t);
-			t.multiply(s);
+		if (error<MAX_PERSPECTIVE_ERROR) {
+			
+			float n00 = bt[T00]*at[T00]+bt[T01]*at[T10];
+			float n01 = bt[T00]*at[T01]+bt[T01]*at[T11];
+			float n02 = bt[T00]*at[T02]+bt[T01]*at[T12]+bt[T02];
+			
+			float n10 = bt[T10]*at[T00]+bt[T11]*at[T10];
+			float n11 = bt[T10]*at[T01]+bt[T11]*at[T11];
+			float n12 = bt[T10]*at[T02]+bt[T11]*at[T12]+bt[T12];
+			t.setElements(n00, n10, n01, n11, n02, n12);
+		
 			gc.setTransform(t);
 			
-//			gc.drawImage(im, (int)x1, (int)y1, (int)x2, (int)y2, 0, 0, (int)(x2-x1), (int)(y2-y1)); 
-
-//			Stroke s = g.getStroke();
-//			g.setStroke(new BasicStroke(0.1f));
-			draw(new Rectangle2D.Double(0,0,(int)(x2-x1), (int)(y2-y1)));
+			int M = 1;
+//			int left = max(0,x1-1), right = min(width,(x2+1));
+//			int top = max(0,y1-1), bottom = min(height,(y2+1));
+			int left = max(0,x1-M), right = min(width,x2+M);
+			int top = max(0,y1-M), bottom = min(height,y2+M);
+			gc.setLineAttributes(new LineAttributes(1));
 			
-			t.setElements(bt[0],bt[1],bt[2],bt[3],bt[4],bt[5]);
-			gc.setTransform(t);
+			gc.drawImage(im, left, top, right-left, bottom-top, left-x1, top-y1,right-left,bottom-top); 
+//			gc.drawRectangle(left-x1, top-y1,right-left,bottom-top);
+			
+			
+//			gc.drawRectangle(left-x1, right-y1, right-left, bottom-top);
+			
+//			gc.fillRectangle(0,0,(int)(x2-x1),1+(int)(y2-y1));
 		} else {
 			recursions++;
 			int mx = (int)((x1+x2)/2), my = (int)((y1+y2)/2);
-			drawImageTiled(im, m, at, bt, x1, y1, mx, my );
-			drawImageTiled(im, m, at, bt, mx, y1, x2, my);
-			drawImageTiled(im, m, at, bt, mx, my, x2, y2 );
-			drawImageTiled(im, m, at, bt, x1, my, mx, y2 );
+			drawImageTiled(im, width, height, m, at, bt, x1, y1, mx, my );
+			drawImageTiled(im, width, height, m, at, bt, mx, y1, x2, my);
+			drawImageTiled(im, width, height, m, at, bt, mx, my, x2, y2 );
+			drawImageTiled(im, width, height, m, at, bt, x1, my, mx, y2 );
 			recursions--;
 		}
+		
 	}
 	
 	
@@ -713,10 +736,6 @@ public class RC {
 	
 	
 	
-	
-	
-	
-	
 
 	////////////////////////////////// Shadow State
 	
@@ -867,7 +886,7 @@ public class RC {
 		}
 		
 		if (background!=null) { 
-			backgroundSaved = gc.getForeground();
+			backgroundSaved = gc.getBackground();
 			if (!backgroundSaved.equals(background))
 				gc.setBackground(background);
 			else
