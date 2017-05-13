@@ -29,8 +29,8 @@ public class RCTest {
 		BasicStroke bs = new BasicStroke(20f,BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1, new float[] { 50f}, 0);
 		BasicStroke cs = new BasicStroke(10f,BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1, new float[] { 20f}, 0);
 		
-//		Image im = new Image(app, RCTest.class.getResourceAsStream("vorfahrt.png"));
-		Image im = new Image(app, RCTest.class.getResourceAsStream("generic-cat.jpeg"));
+		Image im = new Image(app, RCTest.class.getResourceAsStream("vorfahrt.png"));
+//		Image im = new Image(app, RCTest.class.getResourceAsStream("generic-cat.jpeg"));
 		ImageData id = im.getImageData();
 		
 		long start = System.nanoTime();
@@ -46,12 +46,12 @@ public class RCTest {
 			Point size = c.getSize();
 			rc.viewport(0, 0, size.x, size.y);
 			
-			double s = 2.0;
+			double s = 2;
 			
 			double r = size.y*1.0/size.x;
-			rc.frustum(-1/s, 1/s, r/s, -r/s, 1/s, 10/s);
+			rc.frustum(-1/s, 1/s, r/s, -r/s, 2/s, 10/s);
 			rc.scale(1*s, 1*s, 1*s);
-			rc.translate(0, 0, -2);
+			rc.translate(0, 0, -5);
 			
 			
 			double t = (System.nanoTime()-start)/1e9;
@@ -63,20 +63,20 @@ public class RCTest {
 			
 
 			rc.setStroke(cs);
-//			
-//			rc.begin(RC.QUADS);
-//			
-//			rc.vertex(-1, -1, -1);
-//			rc.vertex(-1, +1, -1);
-//			rc.vertex(-1, +1, +1);
-//			rc.vertex(-1, -1, +1);
-//			
-//			rc.vertex(+1, -1, -1);
-//			rc.vertex(+1, +1, -1);
-//			rc.vertex(+1, +1, +1);
-//			rc.vertex(+1, -1, +1);
-//			
-//			rc.end();
+			
+			rc.begin(RC.QUADS);
+			
+			rc.vertex(-1, -1, -1);
+			rc.vertex(-1, +1, -1);
+			rc.vertex(-1, +1, +1);
+			rc.vertex(-1, -1, +1);
+			
+			rc.vertex(+1, -1, -1);
+			rc.vertex(+1, +1, -1);
+			rc.vertex(+1, +1, +1);
+			rc.vertex(+1, -1, +1);
+			
+			rc.end();
 
 			
 			rc.setStroke(bs);
@@ -90,27 +90,29 @@ public class RCTest {
 //			rc.draw(new RoundRectangle2D.Double(-1,-1,2,2, .3,.3));
 //			rc.gc.setBackground( new Color(e.display, new RGB(100,100,0)));
 					
-//			rc.fill(as.createStrokedShape(new RoundRectangle2D.Double(-1,-1,2,2, .3,.3)));
+			rc.fill(as.createStrokedShape(new RoundRectangle2D.Double(-1,-1,2,2, .3,.3)));
 			
 			rc.setStroke(null);
 			rc.translate(0, 0, 2);
-//			rc.draw(new RoundRectangle2D.Double(-1,-1,2,2, .3,.3));
+			rc.draw(new RoundRectangle2D.Double(-1,-1,2,2, .3,.3));
 
 			rc.setForeground(new RGB(0, 0, 0));
 
 			
 			rc.translate(0,0,-1);
 			rc.scale(0.05,0.05);
-			
 			rc.pushTransform();
 			rc.scale(0.05,0.05);
 			
 //			rc.setBackground(app.getSystemColor(COLOR_GREEN));
 			rc.translate(-id.width/2, -id.height/2);
 //			rc.fill(new Rectangle2D.Double(0,0,id.width,id.height));
-			
+
+			rc.setAlpha(100);
+
 			rc.drawImage(im, 0, 0);
 			rc.popTransform();
+			
 			
 			
 			

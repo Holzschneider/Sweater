@@ -6,9 +6,9 @@ import static org.eclipse.swt.SWT.*;
 
 import java.awt.BasicStroke;
 import java.awt.Shape;
-import java.awt.Stroke;
-import java.awt.geom.Rectangle2D;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.eclipse.swt.graphics.*;
 
@@ -312,7 +312,20 @@ public class RC {
 		t.getElements(bt);
 		t.getElements(at);
 		
-		drawImageTiled(im, W,H, modelViewProjection, at, bt, 0, 0, W, H);
+		tiles.clear();
+		drawImageTiled(im, W,H, modelViewProjection, at, bt, 0, 0, W, H, tiles);
+
+		if (tiles.size()>0)
+			quicksort(tiles);
+	
+		gc.setLineAttributes(new LineAttributes(1));
+		for (ImageTile s: tiles) {
+			t.setElements(s.n00, s.n10, s.n01, s.n11, s.n02, s.n12);
+			gc.setTransform(t);
+			gc.drawImage(im, s.sourceX, s.sourceY, s.width, s.height, s.destX, s.destY, s.width, s.height);
+//			gc.fillRectangle(s.destX, s.destY, s.width, s.height);
+//			gc.drawRectangle(s.destX, s.destY, s.width, s.height);
+		}
 		
 		t.setElements(bt[0], bt[1], bt[2], bt[3], bt[4], bt[5]);
 		gc.setTransform(t);
@@ -321,7 +334,27 @@ public class RC {
 		return false;
 	}
 
+	private ArrayList<ImageTile> tiles = new ArrayList<ImageTile>();
 	
+	
+	public static <T extends Comparable<? super T>> void quicksort(List<T> elements) { quicksort(elements, 0, elements.size()-1); }
+	public static <T extends Comparable<? super T>> void quicksort(List<T> elements, int low, int high) {
+		int i = low, j = high;
+		T pivot = elements.get((low + high) / 2);
+
+		while (i <= j) {
+			while (elements.get(i).compareTo(pivot)<0)  i++;
+			while (elements.get(j).compareTo(pivot)>0)  j--;
+			if (!(i <= j)) continue;
+			T t = elements.get(i); 
+			elements.set(i, elements.get(j)); 
+			elements.set(j, t); 
+			i++; j--;
+		}
+		if (low < j) quicksort(elements,low,j);
+		if (i < high) quicksort(elements,i,high);
+	}
+
 	public float triangleArea(float ax, float ay, float bx, float by, float cx, float cy) {
 		float ux = bx-ax, uy = by-ay;
 		float vx = cx-ax, vy = cy-ay;
@@ -349,32 +382,55 @@ public class RC {
 	}
 
 
+	static class ImageTile implements Comparable<ImageTile> {
+		float n00, n01, n02;
+		float n10, n11, n12;
+		int sourceX,sourceY;
+		int destX,destY;
+		
+		int width, height;
+		
+		float z = 0;
+
+		@Override
+		public int compareTo(ImageTile that) {
+			return Float.compare(this.z, that.z);
+		}
+	}
+	
 	int counter = 0;
 	
 	int recursions = 0;
-	float PERSPECTIVE_RIM = 0, MAX_PERSPECTIVE_DEVIATION = 10f, MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
-	private void drawImageTiled(Image im, int width, int height, float[][] m, float[] at, float[] bt, int x1, int y1, int x2, int y2) {
-		
+	float SKIRT = 1, MAX_PERSPECTIVE_DEVIATION = 1.337f, MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
+	private void drawImageTiled(Image im, int width, int height, float[][] m, float[] at, float[] bt, int x1, int y1, int x2, int y2, ArrayList<ImageTile> tiles) {
 		if (x1==x2 || y1==y2)
 			return;
+
+		int M = (int)SKIRT;
+		int ml = M, mr = M, mt = M, mb = M;
 		
 		float ax = x1, ay = y1, bx = x2, by = y1, cx = x2, cy = y2, dx = x1, dy = y2;
 		
 		float aoow = 1f/(m[3][0]* ax+ m[3][1]*ay + m[3][2] * 0 + m[3][3] *1 );
 		float ax_ = (m[0][0]*ax+ m[0][1]*ay+m[0][2]*0+m[0][3]*1)*aoow;
 		float ay_ = (m[1][0]*ax+ m[1][1]*ay+m[1][2]*0+m[1][3]*1)*aoow;
+		float az_ = (m[2][0]*ax+ m[2][1]*ay+m[2][2]*0+m[2][3]*1)*aoow;
 		
 		float boow = 1f/(m[3][0]* bx+ m[3][1]*by + m[3][2] * 0 + m[3][3] *1 );
 		float bx_ = (m[0][0]*bx+ m[0][1]*by+m[0][2]*0+m[0][3]*1)*boow;
 		float by_ = (m[1][0]*bx+ m[1][1]*by+m[1][2]*0+m[1][3]*1)*boow;
+		float bz_ = (m[2][0]*bx+ m[2][1]*by+m[2][2]*0+m[2][3]*1)*aoow;
 		
 		float coow = 1f/(m[3][0]* cx+ m[3][1]*cy + m[3][2] * 0 + m[3][3] *1 );
 		float cx_ = (m[0][0]*cx+ m[0][1]*cy+m[0][2]*0+m[0][3]*1)*coow;
 		float cy_ = (m[1][0]*cx+ m[1][1]*cy+m[1][2]*0+m[1][3]*1)*coow;
+		float cz_ = (m[2][0]*cx+ m[2][1]*cy+m[2][2]*0+m[2][3]*1)*aoow;
 		
 		float doow = 1f/(m[3][0]* dx+ m[3][1]*dy + m[3][2] * 0 + m[3][3] *1 );
 		float dx_ = (m[0][0]*dx+ m[0][1]*dy+m[0][2]*0+m[0][3]*1)*doow;
 		float dy_ = (m[1][0]*dx+ m[1][1]*dy+m[1][2]*0+m[1][3]*1)*doow;
+		float dz_ = (m[2][0]*dx+ m[2][1]*dy+m[2][2]*0+m[2][3]*1)*aoow;
+		
 		
 		float tileW = (x2-x1), tileH = (y2-y1), error = 0;
 		
@@ -383,71 +439,69 @@ public class RC {
 		float cx__ = bx_+dx_-ax_, cy__ = by_+dy_-ay_;
 		float dx__ = ax_+cx_-bx_, dy__ = ay_+cy_-by_;
 		
-		
 		if (triangleContains(cx_, cy_, dx_, dy_, bx_, by_, cx__, cy__)) { //paDAB > all (A ist Anker)
 			float deltaX = cx__-cx_, deltaY = cy__-cy_;
 			error = deltaX*deltaX + deltaY*deltaY;
 			
 			set(at, (bx_-ax_)/tileW, (by_-ay_)/tileW,   (dx_-ax_)/tileH, (dy_-ay_)/tileH,    ax_, ay_);
 			
+			ml = 0; mt = 0;
 		} else
 		if (triangleContains(dx_,dy_, ax_,ay_, cx_,cy_, dx__,dy__)) { //paABC > all (B ist Anker)
 			float deltaX = dx__-dx_, deltaY = dy__-dy_;
 			error = deltaX*deltaX + deltaY*deltaY;
 	
 			set(at, (bx_-ax_)/tileW, (by_-ay_)/tileW,    (dx__-ax_)/tileH, (dy__-ay_)/tileH,    ax_, ay_);
+			
+			mr = 0; mt = 0;
 		} else
 		if (triangleContains(ax_,ay_, dx_,dy_,bx_,by_,ax__,ay__)) { //paBCD > all (C ist Anker)
 			float deltaX = ax__-ax_, deltaY = ay__-ay_;
 			error = deltaX*deltaX + deltaY*deltaY;
 			
 			set(at, (bx_-ax__)/tileW, (by_-ay__)/tileW,    (dx_-ax__)/tileH, (dy_-ay__)/tileH,    ax__, ay__);
+			
+			mr = 0; mb = 0;
 		} else { //paCDA > all (D ist Anker)
 			float deltaX = bx__-bx_, deltaY = by__-by_;
 			error = deltaX*deltaX + deltaY*deltaY;
 	
 			set(at, (bx__-ax_)/tileW, (by__-ay_)/tileW,    (dx_-ax_)/tileH, (dy_-ay_)/tileH,    ax_, ay_);
+			ml = 0; mb = 0;
 		}
  
 		final int T00 = 0, T10 = 1, T01 = 2, T11 = 3, T02 = 4, T12 = 5;
-		MAX_PERSPECTIVE_DEVIATION = 2.5f;
-		MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
 		
 		if (error<MAX_PERSPECTIVE_ERROR) {
+			ImageTile tile = new ImageTile();
 			
-			float n00 = bt[T00]*at[T00]+bt[T01]*at[T10];
-			float n01 = bt[T00]*at[T01]+bt[T01]*at[T11];
-			float n02 = bt[T00]*at[T02]+bt[T01]*at[T12]+bt[T02];
+			tile.n00 = bt[T00]*at[T00]+bt[T01]*at[T10];
+			tile.n01 = bt[T00]*at[T01]+bt[T01]*at[T11];
+			tile.n02 = bt[T00]*at[T02]+bt[T01]*at[T12]+bt[T02];
 			
-			float n10 = bt[T10]*at[T00]+bt[T11]*at[T10];
-			float n11 = bt[T10]*at[T01]+bt[T11]*at[T11];
-			float n12 = bt[T10]*at[T02]+bt[T11]*at[T12]+bt[T12];
-			t.setElements(n00, n10, n01, n11, n02, n12);
-		
-			gc.setTransform(t);
+			tile.n10 = bt[T10]*at[T00]+bt[T11]*at[T10];
+			tile.n11 = bt[T10]*at[T01]+bt[T11]*at[T11];
+			tile.n12 = bt[T10]*at[T02]+bt[T11]*at[T12]+bt[T12];
 			
-			int M = 1;
-//			int left = max(0,x1-1), right = min(width,(x2+1));
-//			int top = max(0,y1-1), bottom = min(height,(y2+1));
-			int left = max(0,x1-M), right = min(width,x2+M);
-			int top = max(0,y1-M), bottom = min(height,y2+M);
-			gc.setLineAttributes(new LineAttributes(1));
+			int left = max(0,x1-ml), right = min(width,x2+mr);
+			int top = max(0,y1-mt), bottom = min(height,y2+mb);
 			
-			gc.drawImage(im, left, top, right-left, bottom-top, left-x1, top-y1,right-left,bottom-top); 
-//			gc.drawRectangle(left-x1, top-y1,right-left,bottom-top);
+			tile.sourceX = left; tile.sourceY = top;
+			tile.destX = left-x1; tile.destY = top-y1;
+			tile.width = right-left; tile.height = bottom-top;
 			
-			
-//			gc.drawRectangle(left-x1, right-y1, right-left, bottom-top);
-			
-//			gc.fillRectangle(0,0,(int)(x2-x1),1+(int)(y2-y1));
+			tile.z = max(max(az_,bz_),max(cz_,dz_));
+			tiles.add(tile);
 		} else {
-			recursions++;
-			int mx = (int)((x1+x2)/2), my = (int)((y1+y2)/2);
-			drawImageTiled(im, width, height, m, at, bt, x1, y1, mx, my );
-			drawImageTiled(im, width, height, m, at, bt, mx, y1, x2, my);
-			drawImageTiled(im, width, height, m, at, bt, mx, my, x2, y2 );
-			drawImageTiled(im, width, height, m, at, bt, x1, my, mx, y2 );
-			recursions--;
+			if (recursions<6) { //Hacky safety measure
+				recursions++;
+				int mx = (int)((x1+x2)/2), my = (int)((y1+y2)/2);
+				drawImageTiled(im, width, height, m, at, bt, x1, y1, mx, my, tiles );
+				drawImageTiled(im, width, height, m, at, bt, mx, y1, x2, my, tiles);
+				drawImageTiled(im, width, height, m, at, bt, mx, my, x2, y2, tiles );
+				drawImageTiled(im, width, height, m, at, bt, x1, my, mx, y2, tiles );
+				recursions--;
+			}
 		}
 		
 	}
