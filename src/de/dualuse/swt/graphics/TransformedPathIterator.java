@@ -32,6 +32,7 @@ class TransformedPathIterator implements PathIterator {
 		case SEG_CUBICTO: size=3; break;
 		}
 		
+		
 		for (int i=0,l=size*2;i<l;i+=2) {
 			float vecx = coords[i+0];
 			float vecy = coords[i+1];

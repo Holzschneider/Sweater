@@ -1,9 +1,8 @@
 package de.dualuse.swt.graphics;
 
 
-import static java.lang.Math.cos;
-import static java.lang.Math.sin;
-import static java.lang.Math.sqrt;
+import static java.lang.Math.*;
+import static org.eclipse.swt.SWT.*;
 
 import java.awt.BasicStroke;
 import java.awt.Shape;
@@ -11,26 +10,20 @@ import java.awt.Stroke;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayDeque;
 
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Device;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.Transform;
+import org.eclipse.swt.graphics.*;
 
 public class RC {
 	public final GC gc;
 	public final Device device;
 	private Transform s,t;
 	
-	
-	
 	public RC(GC gc) {
 		this.gc = gc;
 		this.device = gc.getDevice();
 		this.t = new Transform(device);
 		this.s = new Transform(device);
-		
+
+		initState();
 		identity(modelViewProjection);
 	}
 	
@@ -38,6 +31,17 @@ public class RC {
 	public void dispose() {
 		t.dispose();
 		s.dispose();
+		
+		if (foregroundCreated!=null) {
+			foregroundCreated.dispose();
+			foregroundCreated = null;
+		}
+		
+		if (backgroundCreated!=null) {
+			backgroundCreated.dispose();
+			backgroundCreated = null;
+		}
+		
 	}
 	
 	private float[][] modelViewProjection = new float[4][4];
@@ -275,11 +279,12 @@ public class RC {
 	
 	
 	public void draw(Shape s) {
-		applyState();
-		PathShape ps = new PathShape(device, new TransformedShape(modelViewProjection, s));
-		gc.drawPath(ps);
-		ps.dispose();
-		restoreState();
+		Shape ts = new TransformedShape(modelViewProjection, s);
+		
+		if (stroke!=NULL_STROKE) 
+			drawStroked(ts);
+		else
+			drawPlain(ts);
 	}
 	
 	public void fill(Shape s) {
@@ -339,8 +344,6 @@ public class RC {
 	}
 
 
-	
-	
 	int counter = 0;
 	
 	int recursions = 0;
@@ -424,8 +427,45 @@ public class RC {
 			drawImageTiled(im, m, at, bt, x1, my, mx, y2 );
 			recursions--;
 		}
-		
 	}
+	
+	
+	
+	///////// Text Drawing
+	
+	public void drawText(String str, int x, int y) {
+		this.drawText(str, x, y, false);
+	}	
+	
+	public void drawText(String str, int x, int y, boolean transparent) {
+		drawText(str, x, y, DRAW_DELIMITER|DRAW_TAB|DRAW_TRANSPARENT);
+	}
+	
+	public void drawText(String str, int x, int y, int flags) {
+		gc.getTransform(t);
+		t.multiply(approximateTransform(x, y, s));
+
+		gc.getTransform(s);
+		gc.setTransform(t);
+		
+		gc.drawText(str, x, y, flags);
+		
+		gc.setTransform(s);
+	}
+	
+	
+	public Point stringExtent(String s) {
+		return gc.stringExtent(s);
+	}
+	
+	public int getCharWidth(char ch) {
+		return gc.getCharWidth(ch);
+	}
+	
+	public int getAdvanceWidth(char ch) {
+		return gc.getAdvanceWidth(ch);
+	}
+	
 	
 	
 	public void drawString(String str, int x, int y, boolean transparent) {
@@ -445,7 +485,7 @@ public class RC {
 	}	
 	
 	
-
+	
 	public static final int LINES = PrimitivePathIterator.LINES;
 	public static final int TRIANGLES = PrimitivePathIterator.TRIANGLES;
 	public static final int QUADS = PrimitivePathIterator.QUADS;
@@ -491,29 +531,66 @@ public class RC {
 	public void vertex(double x, double y, double z) { p.addVertex((float)x, (float)y, (float)z); }
 	
 	public void end() {
+		boolean strokeSet = stroke!=NULL_STROKE;
+		
 		switch (p.getType()) {
 		case LINES:
 		case LINE_STRIP:
 		case LINE_LOOP:
-			draw(p.clone());
+			if (strokeSet) 
+				drawStroked(p);
+			else 
+				drawPlain(p);
+			
 			break;
 			
 		case POLYGON:
 		case TRIANGLES:
 		case QUADS:
-			if (frontPolygonMode==LINE) {
-				//XXX not working yet
-				PathShape ps = new PathShape(device, p.clone());
-				gc.drawPath( ps );
-				ps.dispose();
-			} else
-				fill( p.clone() );
+			if (frontPolygonMode==FILL)
+				drawFilled(p);
+			else 
+				if (strokeSet) 
+					drawStroked(p);
+				else 
+					drawPlain(p);
+				
 			break;
 		}
-		
 		p = null;
 	}
 	
+	private void drawFilled(Primitive p) {
+		applyState();
+		PathShape ps = new PathShape(device, p);
+		gc.fillPath( ps );
+		ps.dispose();
+		restoreState();
+	}
+	
+	private void drawPlain(Shape p) {
+		applyState();
+		PathShape ps = new PathShape(device, p);
+		gc.drawPath( ps );
+		ps.dispose();
+		restoreState();
+	}
+	
+	private void drawStroked(Shape p) {
+		PathShape ps = new PathShape(device, stroke.createStrokedShape(p));
+		applyState();
+		
+		int fillRule = gc.getFillRule();
+		gc.setFillRule(FILL_WINDING);
+		Color background = gc.getBackground();
+		gc.setBackground( gc.getForeground() );
+		gc.fillPath( ps );
+		gc.setBackground( background );
+		gc.setFillRule(fillRule);
+		
+		restoreState();
+		ps.dispose();					
+	}
 
 	
 	
@@ -643,43 +720,139 @@ public class RC {
 
 	////////////////////////////////// Shadow State
 	
+	private void initState() {
+//		alpha = gc.getAlpha();
+//		fillRule = gc.getFillRule();
+//		foreground = gc.getForeground();
+//		background = gc.getBackground();
+//		
+//		font = gc.getFont();
+//		
+//		lineAttributes = gc.getLineAttributes();
+	}
+	
+	
+	Font font, fontSaved;
+	Integer alpha, alphaSaved;
 	Integer fillRule, fillRuleSaved;
-	Color foreground, foregroundSaved;
-	Color background, backgroundSaved;
+	Color foreground, foregroundSaved, foregroundCreated;
+	Color background, backgroundSaved, backgroundCreated;
+
+	final static private BasicStroke NULL_STROKE = new BasicStroke(1);
+	BasicStroke stroke = NULL_STROKE;
+	
+	public void setStroke(BasicStroke stroke) {
+		if (stroke!=null)
+			this.stroke = stroke;
+		else
+			this.stroke = NULL_STROKE;
+	}
+	
+	public BasicStroke getStroke() {
+		return stroke;
+	}
+	
+	LineAttributes lineAttributes, lineAttributesSaved;
+	public void setLineAttributes(LineAttributes lineAttributes) {
+		this.stroke = NULL_STROKE;
+		this.lineAttributes = lineAttributes;
+	}
+	
+	public LineAttributes getLineAttributes() {
+		return lineAttributes;
+	}
+	
+	
+	public void setFont(Font font) {
+		this.font = font;
+	}
+	
+	public Font getFont() {
+		return font;
+	}
 	
 	public void setFillRule(int fillRule) {
 		this.fillRule = fillRule;
 	}
 	
 	public int getFillRule() {
-		return fillRule!=null?fillRule:gc.getFillRule();
+		return fillRule;
 	}
 	
 	
+	public void setAlpha(int alpha) {
+		this.alpha = alpha;
+	}
+	
+	public int getAlpha() {
+		return alpha;
+	}
+	
+	public void setForeground(RGB color) {
+		if (foregroundCreated!=null)
+			foregroundCreated.dispose();
+		
+		foregroundCreated = new Color(device,color);
+		setForeground(foregroundCreated);
+	}
+	
 	public void setForeground(Color foreground) {
+		if (foregroundCreated!=foreground) {
+			foregroundCreated.dispose();
+			foregroundCreated = null;
+		}
+		
 		this.foreground = foreground;
 	}
 	
 	public Color getForeground() {
-		return foreground!=null?foreground:gc.getForeground();
+		return foreground;
 	}
 	
-	
+
+	public void setBackground(RGB color) {
+		if (backgroundCreated!=null)
+			backgroundCreated.dispose();
+		
+		backgroundCreated = new Color(device,color);
+		setBackground(backgroundCreated);
+	}
+
 	
 	public void setBackground(Color background) {
+		if (backgroundCreated!=background) {
+			backgroundCreated.dispose();
+			backgroundCreated = null;
+		}
+		
 		this.background = background;
 	}
 	
 	public Color getBackground() {
-		return background!=null?background:gc.getBackground();
+		return background;
 	}
 	
 	///////////////
 	private void applyState() {
+		if (font!=null) {
+			fontSaved = gc.getFont();
+			if (!fontSaved.equals(font))
+				gc.setFont(font);
+			else
+				fontSaved = null;
+		}
+		
+		if (alpha!=null) {
+			alphaSaved = gc.getAlpha();
+			if (!alphaSaved.equals(alpha)) 
+				gc.setAlpha(alpha);
+			else
+				alphaSaved = null;
+		}
 		
 		if (fillRule!=null) {
 			fillRuleSaved = gc.getFillRule();
-			if (fillRuleSaved!=fillRule)
+			if (!fillRuleSaved.equals(fillRule))
 				gc.setFillRule(fillRule);
 			else
 				fillRuleSaved = null;
@@ -693,8 +866,7 @@ public class RC {
 				foregroundSaved = null;
 		}
 		
-		
-		if (background!=null) {
+		if (background!=null) { 
 			backgroundSaved = gc.getForeground();
 			if (!backgroundSaved.equals(background))
 				gc.setBackground(background);
@@ -702,10 +874,29 @@ public class RC {
 				backgroundSaved = null;
 		}
 		
+		if (stroke==NULL_STROKE) {
+			if (lineAttributes!=null) {
+				lineAttributesSaved = gc.getLineAttributes();
+				if (!lineAttributesSaved.equals(lineAttributes))
+					gc.setLineAttributes(lineAttributes);
+				else
+					lineAttributesSaved = null;
+			}
+		}
 	}
 	
 	
 	private void restoreState() {
+		if (fontSaved!=null) {
+			gc.setFont(fontSaved);
+			fontSaved = null;
+		}
+
+		if (alphaSaved!=null) {
+			gc.setAlpha(alphaSaved);
+			alphaSaved = null;
+		}
+		
 		if (fillRuleSaved!=null) {
 			gc.setFillRule(fillRuleSaved);
 			fillRuleSaved=null;
@@ -719,5 +910,13 @@ public class RC {
 			gc.setBackground(backgroundSaved);
 			backgroundSaved = null;
 		}
+		
+		if (stroke!=NULL_STROKE) {
+			if (lineAttributesSaved!=null) {
+				gc.setLineAttributes(lineAttributesSaved);
+				lineAttributesSaved = null;
+			}
+ 		}
+			
 	}
 }

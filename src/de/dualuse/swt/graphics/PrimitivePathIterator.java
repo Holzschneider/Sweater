@@ -36,7 +36,6 @@ class PrimitivePathIterator implements PathIterator {
 	public boolean isDone() { return i>=n; }
 	public void next() { i++; }
 
-	boolean clipped = false;
 	private float lx = 0, ly=0, lz=0, lw = 0;
 	public int currentSegment(float[] coords) {
 		int mode = i%(this.type+(type>2?1:0));
@@ -70,8 +69,7 @@ class PrimitivePathIterator implements PathIterator {
 			w = lw+dw*t;
 			
 			i--;
-		} 
-		
+		}
 		
 		
 		final float ooW = 1f/w;
@@ -100,7 +98,7 @@ class PrimitivePathIterator implements PathIterator {
 	public int currentSegment(double[] coords) {
 		int type = this.currentSegment(floatcoords);
 		
-		for (int i=0;i<2;i++)
+		for (int i=0;i<6;i++)
 			coords[i] = floatcoords[i];
 		
 		return type;
@@ -117,163 +115,6 @@ class PrimitivePathIterator implements PathIterator {
 		
 		return t;
 	}
-	
 
-//	public static void main(String[] args) {
-//		JFrame f = new JFrame();
-//		
-//		f.setContentPane(new JComponent() {
-//			private static final long serialVersionUID = 1L;
-//
-//			@SuppressWarnings("unused")
-//			final double vertices[][] = new double[][] {
-//					{ -1, -1, -1 },
-//					{ -1, -1, +1 },
-//					{ -1, +1, +1 },
-//					{ -1, +1, -1 },
-//					
-//					{ +1, -1, -1 },
-//					{ +1, -1, +1 },
-//					{ +1, +1, +1 },
-//					{ +1, +1, -1 },
-//					
-//					{ -1, -1, +1 },
-//					{ -1, +1, +1 },
-//					{ +1, +1, +1 },
-//					{ +1, -1, +1 },
-//					
-//					{ -1, -1, -1 },
-//					{ -1, +1, -1 },
-//					{ +1, +1, -1 },
-//					{ +1, -1, -1 },
-//					
-//					{ -1, +1, -1 },
-//					{ -1, +1, +1 },
-//					{ +1, +1, +1 },
-//					{ +1, +1, -1 },
-//					
-//					{ -1, -1, -1 },
-//					{ -1, -1, +1 },
-//					{ +1, -1, +1 },
-//					{ +1, -1, -1 },
-//			};
-//					
-//			EulerCameraMouseAdapter ecma = new EulerCameraMouseAdapter(new Point2D.Double(), new Point2D.Double(), new Point2D.Double()) {
-//				{
-//					addMouseMotionListener(this);
-//					addMouseListener(this);
-//				}
-//			};
-//			
-//			
-//			
-//			@Override
-//			protected void paintComponent(Graphics g) {
-//				super.paintComponent(g);
-//				
-//				Graphics3D g3 = new Graphics3D(g);
-//				g3.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-//				g3.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-//				int W = getWidth(), H = getHeight(), NEAR = 2;
-//				g3.viewport(0, 0, W, H);
-//				double ar = H*1./W, lw = 1;
-//				g3.frustum(-lw, lw, -lw*ar, lw*ar, NEAR, 15);
-//				g3.translate(0, 0, -6);
-//				
-////				g3.rotate(.7, 0, 1, 0);
-////				g3.rotate(.7, 1, 0, 0);
-//				ecma.apply(g3);
-//
-//
-//				int L = 5, S = 2, Y = -1;;
-//				g3.begin(Graphics3D.LINES);
-//				for (int i=-L;i<=L;i++) {
-//					g3.vertex(-S, Y, i*S*1./(L));
-//					g3.vertex(+S, Y, i*S*1./(L));
-//
-//					g3.vertex(i*S*1./(L), Y, -S);
-//					g3.vertex(i*S*1./(L), Y, +S);
-//				}
-//				g3.end();
-//				
-//				
-////				g3.begin(Graphics3D.QUADS);
-////				
-////				for (int i=0;i<vertices.length;i++)
-////					g3.vertex(vertices[i][0],vertices[i][1],vertices[i][2]);
-////				
-////				g3.end();
-//				
-//			}
-//			
-//		});
-//
-//		f.setBounds(300, 200, 800, 800);
-//		f.setVisible(true);
-//		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//	}
-	
-	
 }
 
-
-
-
-
-
-//class EulerCameraMouseAdapter extends MouseAdapter {
-//	
-//	Point2D euler, shift, dist; 
-//	
-//	public EulerCameraMouseAdapter(Point2D euler, Point2D shift, Point2D dist) {
-//		this.euler = euler;
-//		this.shift = shift;
-//		this.dist = dist;
-//	}
-//	
-//	public void apply(Graphics3D g3) {
-//		g3.rotate(dist.getX(),0,0,1);
-//		g3.translate(0, 0, dist.getY());
-//		
-//		g3.rotate(euler.getY(),1,0,0);
-//		g3.rotate(euler.getX(),0,1,0);
-//		g3.translate(shift.getX(),0,shift.getY());
-//	}
-//	
-//	
-//	MouseEvent last = null;
-//	public void mouseMoved(MouseEvent e) { last = e; }
-//	public void mouseDragged(MouseEvent e) {
-//		if (last==null) return;
-//		
-//		double Z = 3./((Component)e.getSource()).getWidth();
-//		
-//		if ((e.getModifiers()&MouseEvent.BUTTON1_MASK)==0)
-//			if ((e.getModifiers()&MouseEvent.BUTTON3_MASK)==0) 
-//				dist.setLocation(dist.getX(),dist.getY()+(e.getY()-last.getY())*0.04);
-//			else
-//				shift.setLocation(shift.getX()+(e.getX()-last.getX())*Z, shift.getY()+(e.getY()-last.getY())*Z);
-//		else 
-//			euler.setLocation(euler.getX()+(e.getX()-last.getX())*Z, euler.getY()+(e.getY()-last.getY())*Z );
-//			
-//		last = e;
-//
-//		((Component)e.getSource()).repaint();
-//	}
-//	
-//	public void reset() {
-//		this.euler.setLocation(0,0);
-//		this.shift.setLocation(0,0);
-//		this.dist.setLocation(0,0);
-//	}
-//	
-//	public void mouseWheelMoved(MouseWheelEvent e) {
-//		if (e.getModifiers()==1)
-//			dist.setLocation(dist.getX()+e.getWheelRotation()*0.04, dist.getY());
-//		else
-//			dist.setLocation(dist.getX(),dist.getY()+e.getWheelRotation()*0.04);
-//
-//		((Component)e.getSource()).repaint();
-//	}
-//
-//}
