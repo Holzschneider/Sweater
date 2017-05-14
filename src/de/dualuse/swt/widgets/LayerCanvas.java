@@ -15,7 +15,8 @@ import org.eclipse.swt.widgets.Listener;
 public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 
 	protected Transform canvasTransform = new Transform(getDisplay());
-
+	protected int transformCount = 0, rootCount = 0;
+	
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
 		
