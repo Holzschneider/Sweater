@@ -6,11 +6,11 @@ import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
 import static org.eclipse.swt.SWT.MouseUp;
 import static org.eclipse.swt.SWT.MouseWheel;
+import static org.eclipse.swt.SWT.NONE;
 import static org.eclipse.swt.SWT.Paint;
 
 import java.util.Arrays;
 
-import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
@@ -23,6 +23,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 
 	protected Transform canvasTransform = new Transform(getDisplay());
 	protected int transformCount = 0, globalCount = 0;
+	
+	public LayerCanvas(Composite parent) { this(parent,NONE); }
 	
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);

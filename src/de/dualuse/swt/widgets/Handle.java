@@ -8,7 +8,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.widgets.Event;
 
-public class Handle extends Gizmo<Handle> implements LayerContainer.LayerTransform {
+public class Handle extends Gizmo<Handle> {
 	public double centerX, centerY;
 	
 	/////////////////////
@@ -55,13 +55,13 @@ public class Handle extends Gizmo<Handle> implements LayerContainer.LayerTransfo
 	};
 	
 	protected boolean validateTransform() {
-		getCanvasTransform(this);
+		getCanvasTransform( this::normalizeCanvasTransform );
+			
 		return super.validateTransform();
 	};
-	
+
 	private float dx = 0, dy = 0;
 
-	
 	@Override
 	protected boolean isMouseHandler() {
 		return true;
@@ -79,14 +79,36 @@ public class Handle extends Gizmo<Handle> implements LayerContainer.LayerTransfo
 			translate(x-dx, y-dy);
 			
 			getParent().redraw();
+			for (LayerContainer lc: consumers)
+				lc.redraw();
 		}
 	}
 	
+	
 	@Override
-	final public void concatenate(float scx, float shy, float shx, float scy, float tx, float ty) {
-		scale(1/scx);
-		centerX = tx;
-		centerY = ty;
+	public Layer concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+		super.concatenate(scX, shY, shX, scY, tx, ty);
+		getLayerTranslation(this::onLayerPositionChanges);
+		return this;
 	}
 	
+	
+	public void center( LayerTranslation l ) {
+		getLayerTranslation(l);
+	}
+	
+	
+	
+	protected void onLayerPositionChanges(float x, float y) {
+		centerX = x;
+		centerY = y;
+	}
+	
+	private void normalizeCanvasTransform(float scx, float shy, float shx, float scy, float tx, float ty) {
+		scale(1/scx);
+	}
+	
+
 }
+
+

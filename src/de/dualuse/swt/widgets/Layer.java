@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.MouseWheelListener;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
@@ -155,6 +156,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 
 		if (redraw)
 			redraw();
+		
+		this.mouseListeners+=r.mouseListeners;
 
 		return this;
 	}
@@ -171,6 +174,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 		if (redraw)
 			redraw();
+
+		this.mouseListeners-=r.mouseListeners;
 				
 		return this;
 	}
@@ -264,39 +269,39 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		return this.concatenate(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
 	}
 	
-//	public Layer postRotate(double theta) { return postConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
-//	public Layer postTranslate(double tx, double ty) { return postConcat(1,0,0,1,tx,ty); }
-//	public Layer postScale(double s, double px, double py) { return postScale(s,s,px,py); }
-//	public Layer postScale(double sx, double sy) { return postConcat(sx,0,0,sy,0,0); }
-//	public Layer postScale(double s) { return postConcat(s,0,0,s,0,0); }
-//
-//	public Layer postScale(double sx, double sy, double x, double y) 
-//	{ return this.postConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
-//	
-//	public Layer postRotate(double theta, double x, double y) {
-//		final double cos = cos(theta), sin = sin(theta);
-//		return this.postConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
-//	}
+	public Layer postRotate(double theta) { return postConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+	public Layer postTranslate(double tx, double ty) { return postConcat(1,0,0,1,tx,ty); }
+	public Layer postScale(double s, double px, double py) { return postScale(s,s,px,py); }
+	public Layer postScale(double sx, double sy) { return postConcat(sx,0,0,sy,0,0); }
+	public Layer postScale(double s) { return postConcat(s,0,0,s,0,0); }
+
+	public Layer postScale(double sx, double sy, double x, double y) 
+	{ return this.postConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
+	
+	public Layer postRotate(double theta, double x, double y) {
+		final double cos = cos(theta), sin = sin(theta);
+		return this.postConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
+	}
 	
 
-//	public Layer postConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
-//		final float M00 = (float) scX, M01 = (float) shX, M02 = (float) tx;
-//		final float M10 = (float) shY, M11 = (float) scY, M12 = (float) ty;
-//		
-//		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
-//		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
-//
-//		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
-//		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
-//	
-//		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
-//			invalidateTransform();
-//		
-//		if (redraw && !isValidatingTransform())
-//			redraw();
-//		
-//		return this;
-//	}
+	public Layer postConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
+		final float M00 = (float) scX, M01 = (float) shX, M02 = (float) tx;
+		final float M10 = (float) shY, M11 = (float) scY, M12 = (float) ty;
+		
+		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
+		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
+
+		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
+		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
+	
+		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
+			invalidateTransform();
+		
+		if (redraw && !isValidatingTransform())
+			redraw();
+		
+		return this;
+	}
 	
 	
 	public Layer concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
@@ -800,6 +805,10 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	public final Layer onMouseWheel(Listener l) { return addListener(MouseWheel,l); }
 	public final Layer onMouseEnter(Listener l) { return addListener(MouseEnter,l); }
 	public final Layer onMouseExit(Listener l) { return addListener(MouseExit,l); }
+	
+	public final Layer addMouseWheelListener( MouseWheelListener pl ) { return addListener(MouseWheel,new WrappedListener(pl)); };
+	public final Layer removeMouseWheelListener( MouseWheelListener pl ) { return removeListener(MouseWheel,new WrappedListener(pl)); }
+	
 	
 	public void onMouseClick(float x, float y, Event e) { defaultHandleEvent(onMouseClick, e); }
 	public void onMouseDoubleClick(float x, float y, Event e) { defaultHandleEvent(onDoubleClick, e); }
