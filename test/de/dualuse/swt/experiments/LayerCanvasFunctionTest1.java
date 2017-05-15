@@ -1,6 +1,8 @@
 package de.dualuse.swt.experiments;
 
+import static org.eclipse.swt.SWT.ALT;
 import static org.eclipse.swt.SWT.BUTTON1;
+import static org.eclipse.swt.SWT.BUTTON2;
 import static org.eclipse.swt.SWT.BUTTON3;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
@@ -30,9 +32,9 @@ public class LayerCanvasFunctionTest1 {
 		LayerCanvas lc = new LayerCanvas(sh, NONE);
 		
 		Layer a = new Layer(lc)
-				.setLimits(0, 0, 200, 200)
+				.setExtents(0, 0, 200, 200)
 				.translate(300, 300)
-				.rotate(.3)
+//				.rotate(.3)
 //				.setClipping(true);
 				;
 		
@@ -50,7 +52,7 @@ public class LayerCanvasFunctionTest1 {
 		
 		Layer b = new Layer(a)
 //				.setClipping(true)
-				.setLimits(-50, -50, 50, 50)
+				.setExtents(-50, -50, 50, 50)
 				.translate(100, 100);
 		
 		b.debug = 2;
@@ -71,7 +73,7 @@ public class LayerCanvasFunctionTest1 {
 			if (e.stateMask==SWT.BUTTON2)
 				b.rotate(2);
 			
-			if (e.stateMask==(SWT.BUTTON2|SWT.ALT))
+			if (e.stateMask==(BUTTON2|ALT))
 				a.rotate(1);
 		});
 		
@@ -79,18 +81,16 @@ public class LayerCanvasFunctionTest1 {
 			if (e.stateMask==BUTTON1)
 				b.rotate( (e.x-last.x)*0.01 );
 			
-			if (e.stateMask==SWT.BUTTON3)
-//				a.translate((e.x-last.x),(e.y-last.y));
-//				System.out.println("drei");
+			if (e.stateMask==BUTTON3)
 				a.rotate( (e.x-last.x)*0.01 );
+
+			if (e.stateMask==(BUTTON3|ALT)) {
+				lc.getCanvasTransform();
+			}
 			
 			last.x = e.x;
 			last.y = e.y;
 		});
-		
-		
-		
-		
 		
 		
 		

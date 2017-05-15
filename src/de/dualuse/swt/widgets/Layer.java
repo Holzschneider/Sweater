@@ -28,15 +28,13 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 
 	private int validationCount = 0;
 	private int transformCount = 0;
-	private int parentCount = 0;
+	private int parentTransformCount = 0;
 	private int globalCount = 0;
 	
 	///XXX need M Model Matrix, W World Matrix, P Parent Matrix -> no inversion ever
 	
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the local transformation Matrix
-//	private float P[] = new float[6]; // the world matrix where this layer is anchored to (the parents' transformations)
-//	private float I[] = new float[6]; // the inverse world matrix
 	
 	private boolean redraw = true; //whether redraws are triggerd upon change 
 	
@@ -52,13 +50,13 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	}
 	
 	@Override
-	public Layer setLimits(float left, float top, float right, float bottom) {
+	public Layer setExtents(float left, float top, float right, float bottom) {
 		boolean changed = this.left!=left || this.top!=top || this.right!=right || this.bottom!=bottom;
 		
 		if (redraw && changed)
 			redraw();
 		
-		super.setLimits(left, top, right, bottom);
+		super.setExtents(left, top, right, bottom);
 		
 		return this;
 	}
@@ -80,7 +78,7 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	public Layer(LayerContainer parent) {
 		parent.addLayer(this);
 		
-		setLimits(-1/0f, -1f/0f, +1f/0f, +1f/0f);
+		setExtents(-1/0f, -1f/0f, +1f/0f, +1f/0f);
 		identity();
 	}
 	
@@ -320,34 +318,33 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 		if (root.globalCount==globalCount)
 			return false;
 		
-		if (parent==null) 
-			if (root.transformCount!=parentCount) 
-				return revalidate();
-			else 
+		if (parent==null)
+			if (root.transformCount!=parentTransformCount || transformCount!=validationCount) {
+				root.canvasTransform.getElements(W);
+				concatenate(W,M,W);
+				validationCount = transformCount;
+				parentTransformCount = root.transformCount;
+				return true;
+			} else
 				return false;
-		else 
-			if (parent.validateTransform() || transformCount!=validationCount)
-				return revalidate();
-			else
-				return false;
-	}
-	
-	protected boolean revalidate() {
-		if (parent==null) 
-			root.canvasTransform.getElements(W);
 		else
-			copy(parent.W, W);
-			
-		concatenate(W, M, W);
+			if (parent.validateTransform() || //the parent had to be revalidated, due to it's parent or own change 
+				parent.transformCount!=parentTransformCount || //the parent had an change before  
+				transformCount!=validationCount)  //this Layer had been changed
+			{
+				concatenate(parent.W, M, W);
+				validationCount = transformCount;
+				parentTransformCount = parent.transformCount;
+				return true;
+			} else
+				return false;
 		
-		validationCount = this.transformCount;
-		parentCount = parent.transformCount;
-		globalCount = root.globalCount;
-		return true;
 	}
 	
-	public void setRedraw(boolean redraw) {
+
+	public Layer setRedraw(boolean redraw) {
 		this.redraw = redraw;
+		return this;
 	}
 	
 	public void redraw() {
@@ -368,7 +365,7 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 			root.getDisplay().asyncExec(this);
 			
 			dirty = true;
-			local.setLimits(x, y, x+width, y+height);
+			local.setExtents(x, y, x+width, y+height);
 //			dirtyLeft = x;
 //			dirtyTop = y;
 //			dirtyRight = x+width;
@@ -412,7 +409,7 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 			for (Layer child: children) {
 //				child.validateTransform();
 				child.globalCount = globalCount;
-				child.parentCount = transformCount;
+				child.parentTransformCount = transformCount;
 				concatenate(W, child.M, child.W);
 				child.computeDirtyBounds(b, recursive);
 			}
@@ -423,16 +420,10 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	final public void run() {
 		final float globalLeft = global.left, globalTop = global.top;
 		final float globalRight = global.right, globalBottom = global.bottom;
-
-		if (debug==2)
-			System.out.println("RUN COMPUTED:   "+global);
 		
 		global.clear();
 		computeDirtyBounds(global, dirtyAll&&!clipping);
 		global.extend(globalLeft, globalTop).extend(globalRight, globalBottom);
-
-		// XXX if this redraw has been triggered by transforms only and global bounds havenot been changed 
-		// -> dont trigger redraw 
 		
 		int M = 1; // due to antialiasing
 		if (root!=null && !root.isDisposed())
@@ -443,9 +434,6 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 					dirtyAll);
 			
 		dirty = false;
-		
-		if (debug==2)
-			System.out.println(global);
 		
 		computeDirtyBounds(global.clear(), false); //necessary?
 	}
@@ -465,7 +453,7 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 		t.setElements(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
 
 		//force validate transform
-		parentCount = parent==null?root.transformCount:parent.transformCount;
+		parentTransformCount = parent==null?root.transformCount:parent.transformCount;
 		globalCount = root.globalCount;
 		
 		//re-compute enclosing axis aligned bounding box
@@ -473,6 +461,8 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 		local.setBounds(this);
 		dirty = false;
 		computeDirtyBounds(global, false);
+		if (debug==1)
+			System.out.println("PAINT COMPUTED:   "+global);
 		
 		boolean intersects = clip.intersects(
 				(int)global.left, (int)global.top, 

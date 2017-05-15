@@ -105,7 +105,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		this.layerTransform = layerTransform;
 	}
 	
-	public Transform getLayerTransform() {
+	public Transform getCanvasTransform() {
 		return layerTransform;
 	}
 

@@ -9,7 +9,7 @@ class Bounds {
 	protected float left = 1f/0f, top = 1f/0f, right = -1f/0f, bottom = -1f/0f;
 	
 	public Bounds() { }
-	public Bounds(float left, float top, float right, float bottom) { setLimits(left,top,right,bottom); }
+	public Bounds(float left, float top, float right, float bottom) { setExtents(left,top,right,bottom); }
 	
 	public Bounds clear() {
 		top = left = 1f/0f;
@@ -50,7 +50,7 @@ class Bounds {
 		return this;
 	}
 	
-	public Bounds setLimits(float left, float top, float right, float bottom) {
+	public Bounds setExtents(float left, float top, float right, float bottom) {
 		this.left = left;
 		this.top = top;
 		this.right = right;
@@ -59,11 +59,11 @@ class Bounds {
 	}
 	
 	final public Bounds extend(float x, float y) {
-		return this.setLimits(left<x?left:x, top<y?top:y, right>x?right:x, bottom>y?bottom:y);
+		return this.setExtents(left<x?left:x, top<y?top:y, right>x?right:x, bottom>y?bottom:y);
 	}
 	
 	final public Bounds extend(float left, float top, float right, float bottom) {
-		return this.setLimits(
+		return this.setExtents(
 				this.left<left?this.left:left, 
 				this.top<top?this.top:top, 
 				this.right>right?this.right:right, 
@@ -72,7 +72,7 @@ class Bounds {
 	}
 	
 	final public Bounds extend(Bounds that) {
-		return this.setLimits(
+		return this.setExtents(
 				this.left<that.left?this.left:that.left,
 				this.top<that.top?this.top:that.top,
 				this.right>that.right?this.right:that.right,
