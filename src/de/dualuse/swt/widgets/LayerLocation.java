@@ -1,5 +1,5 @@
 package de.dualuse.swt.widgets;
 
-public interface LayerLocation<T> {
-	T define(double x, double y);
+public interface LayerLocation {
+	public void set(float x, float y);
 }

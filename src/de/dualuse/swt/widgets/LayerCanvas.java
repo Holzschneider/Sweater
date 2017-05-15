@@ -37,6 +37,26 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	////////////////////////////////////////////////////////////
+//	float cursorX, cursorY;
+//	public LayerLocator locate(float x, float y) {
+//		return new LayerLocator() {
+//			public <T> T on(LayerCanvas lc, LayerLocation<T> l) {
+//				if (lc!=LayerCanvas.this)
+//					throw new IllegalArgumentException();
+//				return l.define(x, y);
+//			}
+//			
+//			@Override
+//			public <T> T on(Layer lc, LayerLocation<T> l) {
+//				if (lc.getRoot()!=LayerCanvas.this)
+//					throw new IllegalArgumentException();
+//				
+//				lc.validateTransform();
+//				
+//				return ;
+//			}
+//		};
+//	}
 	
 	private Layer children[] = {};
 	
@@ -116,7 +136,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		case Paint:
 			layerTransform.getElements(backup);
 			
-//			event.gc.setLineAttributes(new LineAttributes(1));
+			event.gc.setLineAttributes(new LineAttributes(1));
 			paint(event.gc.getClipping(), layerTransform, event);
 			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
 			break;

@@ -1,23 +1,38 @@
 package de.dualuse.swt.widgets;
 
-import static java.lang.Math.*;
-import static org.eclipse.swt.SWT.*;
+import static java.lang.Math.cos;
+import static java.lang.Math.hypot;
+import static java.lang.Math.sin;
+import static org.eclipse.swt.SWT.MouseDoubleClick;
+import static org.eclipse.swt.SWT.MouseDown;
+import static org.eclipse.swt.SWT.MouseEnter;
+import static org.eclipse.swt.SWT.MouseExit;
+import static org.eclipse.swt.SWT.MouseMove;
+import static org.eclipse.swt.SWT.MouseUp;
+import static org.eclipse.swt.SWT.MouseWheel;
+import static org.eclipse.swt.SWT.Move;
+import static org.eclipse.swt.SWT.Paint;
+import static org.eclipse.swt.SWT.Resize;
 
 import java.util.Arrays;
+import java.util.Collection;
 
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.TypedListener;
 
 import de.dualuse.swt.events.Listeners;
 import de.dualuse.swt.events.Runnables;
+import de.dualuse.swt.events.WrappedListener;
 
-public class Layer extends Bounds implements LayerLocator, LayerContainer, Runnable {
+public class Layer extends Bounds implements LayerContainer, Runnable {
+	final static private int MouseClick = 123456789;
+	
 //	final static private int T00=0, T01=1, T10=2, T11=3, T02=4, T12=5; //, T20=3, T21=4, T22=5;
 	final static private int T00=0, T10=1, T01=2, T11=3, T02=4, T12=5; //, T20=3, T21=4, T22=5;
 
@@ -31,17 +46,11 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	private int parentTransformCount = 0;
 	private int globalCount = 0;
 	
-	///XXX need M Model Matrix, W World Matrix, P Parent Matrix -> no inversion ever
-	
 	private float M[] = new float[6]; // the local transformation Matrix
 	private float W[] = new float[6]; // the local transformation Matrix
 	
 	private boolean redraw = true; //whether redraws are triggerd upon change 
 	
-	///
-//	private float left = -1f/0f, top= -1f/0f;
-//	private float right = +1f/0f, bottom = +1f/0f;
-
 	
 	@Override
 	public Bounds setBounds(Rectangle r) {
@@ -52,14 +61,64 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	@Override
 	public Layer setExtents(float left, float top, float right, float bottom) {
 		boolean changed = this.left!=left || this.top!=top || this.right!=right || this.bottom!=bottom;
+
+		float deltaX = left-this.left, deltaY = top-this.top;
+		float deltaW = (right-left)-(this.right-this.left);
+		float deltaH = (bottom-top)-(this.bottom-this.top);
+
+		boolean move = deltaX != 0 || deltaY !=0;
+		boolean resize = deltaW!=0 || deltaH!=0;
 		
+		super.setExtents(left, top, right, bottom);
+
 		if (redraw && changed)
 			redraw();
 		
-		super.setExtents(left, top, right, bottom);
+		if (move)
+			onMove(deltaX, deltaY);
+		
+		if (resize)
+			onResize(deltaW, deltaH);
 		
 		return this;
 	}
+	
+	private Listener onMove = null, onResize = null;
+	public Layer onMove( Listener l ) { return addListener(Move, l); }
+	public Layer onResize( Listener l ) { return addListener(Resize, l); }
+	
+	public Layer addControlListener( ControlListener cl ) {
+		TypedListener tl = new WrappedListener(cl);
+		addListener(Resize, tl);
+		addListener(Move, tl);
+		return this;
+	}
+	
+	public Layer removeControlListener( ControlListener cl ) {
+		TypedListener tl = new WrappedListener(cl); //has working equals in place, so remove actually works
+		removeListener(Resize, tl);
+		removeListener(Move, tl);
+		return this;
+	}
+	
+	protected void onMove(float deltax, float deltay) 
+	{ if (onMove!=null)  onMove.handleEvent(controlEvent(Move, deltax, deltay)); }
+	protected void onResize(float deltaWidth, float deltaHeight) 
+	{ if (onResize!=null)  onResize.handleEvent(controlEvent(Resize, deltaWidth, deltaHeight)); }
+	
+	private Event controlEvent(int type, float xd, float yd) { 
+		Event e = new Event();
+		e.type = type;
+		e.widget = root;
+		e.x = (int) left;
+		e.y = (int) top;
+		e.width = (int) (right-left);
+		e.height = (int) (bottom-top);
+		e.xDirection = (int) xd;
+		e.yDirection = (int) yd;
+		return e;
+	}
+	
 	
 	///
 	private boolean clipping = false;
@@ -250,38 +309,52 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	}
 	
 	
+//	private float cursorX=0, cursorY=0;
+//	public LayerLocator locate(final double x, final double y) {
+//		this.cursorX = (float) x;
+//		this.cursorY = (float) y;
+//		return this;
+//	}
+//	
+//	@Override
+//	public <T> T on(Layer lay, LayerPoint<T> loc) {
+//		validateTransform();
+//		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
+//		
+//		lay.validateTransform();
+//		float det = W[T00] * W[T11] - W[T01] * W[T10];
+//		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
+//		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
+//		
+//		return loc.define(i00*X+i01*Y+i02, i10*X+i11*Y+i12);
+//	}			
+//	
+//	@Override
+//	public <T> T on(LayerCanvas lc, LayerPoint<T> l) {
+//		if (lc != root)
+//			throw new IllegalArgumentException("Layer can only be located on the LayerCanvas, it has been added to.");
+//		
+//		validateTransform();
+//		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
+//		
+//		return l.define(X, Y);
+//	}
 	
-	private float cursorX=0, cursorY=0;
-	public LayerLocator locate(final double x, final double y) {
-		this.cursorX = (float) x;
-		this.cursorY = (float) y;
-		return this;
-	}
-	
-	@Override
-	public <T> T on(Layer lay, LayerLocation<T> loc) {
-		validateTransform();
-		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
-		
-		lay.validateTransform();
+	public <T> T intersect(float x, float y, LayerIntersection<T> loc) {
 		float det = W[T00] * W[T11] - W[T01] * W[T10];
 		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
 		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
 		
-		return loc.define(i00*X+i01*Y+i02, i10*X+i11*Y+i12);
-	}			
-	
-	@Override
-	public <T> T on(LayerCanvas lc, LayerLocation<T> l) {
-		if (lc != root)
-			throw new IllegalArgumentException("Layer can only be located on the LayerCanvas, it has been added to.");
-		
-		validateTransform();
-		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
-		
-		return l.define(X, Y);
+		return loc.define(i00*x+i01*y+i02, i10*x+i11*y+i12);
 	}
 	
+	public void locate(float x, float y, LayerLocation lp) {
+		float det = W[T00] * W[T11] - W[T01] * W[T10];
+		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
+		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
+		
+		lp.set(i00*x+i01*y+i02, i10*x+i11*y+i12);
+	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
@@ -543,9 +616,9 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	
 	
 	private Listener onPaint = null;
-	public void onPaint( Listener pl ) { onPaint = new Listeners(pl, onPaint); }
-	public final void onPaint( PaintListener pl ) { onPaint( (Listener) (e) -> pl.paintControl(new PaintEvent(e)) ); }
-	public final void addPaintListener( PaintListener pl ) { onPaint(pl); };
+	public Layer onPaint( Listener pl ) { return addListener(Paint, pl); }
+	public final Layer addPaintListener( PaintListener pl ) { return addListener(Paint,new WrappedListener(pl)); };
+	public final Layer removePaintListener( PaintListener pl ) { return removeListener(Paint,new WrappedListener(pl)); }
 	
 	// implement this
 	protected void onPaint(Event e) {
@@ -574,6 +647,9 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 	}
 	
 	final public void point(Event e) {
+		if (mouseListeners==0)
+			return ;
+		
 		validateTransform();
 		final float w00 = W[T00], w01 = W[T01], w02 = W[T02];
 		final float w10 = W[T10], w11 = W[T11], w12 = W[T12];
@@ -588,7 +664,7 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
 		for (Layer r: children)
-			if (r.mouseListenerCount>0) //only if there are mouse listeners anyways
+			if (r.mouseListeners>0) //only if there are mouse listeners anyways
 				if (e.doit) //only if it shall happen
 					if (!clipping || clipping && hit) // if clipping hits or there s no clipping at all
 					if (r.captive()==captive) //either captive == null, or set to a specific layer
@@ -645,32 +721,10 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 		return true;
 	}
 	
-
-	private Listeners joinListeners(Listener a, Listener b) {
-		addMouseListeners(+1);
-
-		return new Listeners(a,b); 
-	} 
-	
-	private Listener excludeListeners(Listener group, Listener leaver) {
-		if (group==leaver)
-			return null;
-
-		addMouseListeners(-1);
-		return ((Listeners)group).exclude(leaver); 
-	}
-	
-	private int mouseListenerCount = hasMouseHandler()?1:0;
-	private void addMouseListeners(int count) {
-		if (parent!=null)
-			parent.addMouseListeners(count);
-		
-		mouseListenerCount+=count;
-	}
-	
 	
 	//XXX maybe replace this by just using the mouse event functions and probe whether they have been overwritten just once (one mousevent passthru does not hurt, does it?)
 	private static Class<?>[] parameterTypes = new Class<?>[] { float.class,float.class,Event.class };
+	public Collection<String> names = Arrays.asList(methodNames); 
 	private static String[] methodNames = { 
 			"onMouseDown", 
 			"onMouseUp", 
@@ -681,80 +735,101 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 			"onMouseExit",
 			"onMouseWheel",
 		};
+
+	private int mouseListeners = hasMouseHandler()?1:0;
 	
 	protected boolean hasMouseHandler() {
-//		Class<?> c = this.getClass();
-//		
-//		if (c.equals(Layer.class)) 
-//			return false;
-//		
-//		try {
-//			for (String methodName: methodNames)
-//				if (!c.getMethod(methodName,parameterTypes).getDeclaringClass().equals(Layer.class))
-//					return true;
-//		} catch (Exception ex) {
-//			throw new Error(ex);
-//		};
-//		
+		Class<?> c = this.getClass();
+		
+		if (c.equals(Layer.class)) 
+			return false;
+		
+		try {
+			for (String methodName: methodNames)
+				if (!c.getMethod(methodName,parameterTypes).getDeclaringClass().equals(Layer.class))
+					return true;
+		} catch (Exception ex) {
+			throw new Error(ex);
+		};
+		
 		return false;	
 	}
 	
-	
-	private Listener onMouseClick = null, onMouseDoubleClick = null, onMouseDown = null, onMouseUp = null;
-	private Listener onMouseMove = null, onMouseWheel = null, onMouseEnter = null, onMouseExit = null;
-	protected Layer onMouseClick(Listener l) { onMouseClick = joinListeners(l,onMouseClick); return this; }
-	protected Layer onMouseDoubleClick(Listener l) { onMouseDoubleClick = joinListeners(l,onMouseDoubleClick); return this; }
-	protected Layer onMouseDown(Listener l) { onMouseDown = joinListeners(l,onMouseDown); return this; }
-	protected Layer onMouseUp(Listener l) { onMouseUp = joinListeners(l,onMouseUp); return this;  }
-	protected Layer onMouseMove(Listener l) { onMouseMove = joinListeners(l,onMouseMove); return this; }
-	protected Layer onMouseWheel(Listener l) { onMouseWheel = joinListeners(l,onMouseWheel); return this; }
-	protected Layer onMouseEnter(Listener l) { onMouseEnter = joinListeners(l,onMouseEnter); return this; }
-	protected Layer onMouseExit(Listener l) { onMouseExit = joinListeners(l,onMouseExit); return this; }
-
-	protected void onMouseClick(float x, float y, Event e) { defaultHandleMouseEvent(onMouseClick, e); }
-	protected void onMouseDoubleClick(float x, float y, Event e) { defaultHandleMouseEvent(onMouseDoubleClick, e); }
-	protected void onMouseDown(float x, float y, Event e) { defaultHandleMouseEvent(onMouseDown, e); }
-	protected void onMouseUp(float x, float y, Event e) { defaultHandleMouseEvent(onMouseUp, e); }
-	protected void onMouseMove(float x, float y, Event e) { defaultHandleMouseEvent(onMouseMove, e); }
-	protected void onMouseWheel(float x, float y, Event e) { defaultHandleMouseEvent(onMouseWheel, e); }
-	protected void onMouseEnter(float x, float y, Event e) { defaultHandleMouseEvent(onMouseEnter, e); }
-	protected void onMouseExit(float x, float y, Event e) { defaultHandleMouseEvent(onMouseExit, e); }
-
-	private void defaultHandleMouseEvent(Listener l,Event e) { if (l!=null) l.handleEvent(e); }
-	
-
-	public void addListener(int eventType, Listener l) {
-		switch (eventType) {
-		case SWT.Paint: onPaint = joinListeners(l,onPaint); break;
+	private void countMouseListeners(int num) { 
+		if (parent!=null)
+			parent.countMouseListeners(num);
 		
-		case SWT.MouseDoubleClick: onMouseDoubleClick = joinListeners(l,onMouseDoubleClick); break;
-		case SWT.MouseDown: onMouseDown = joinListeners(l,onMouseDown); break;
-		case SWT.MouseUp: onMouseUp = joinListeners(l, onMouseUp); break;
-		case SWT.MouseMove: onMouseMove = joinListeners(l, onMouseMove); break;
-		case SWT.MouseWheel: onMouseWheel = joinListeners(l, onMouseWheel); break;
-		case SWT.MouseEnter: onMouseEnter = joinListeners(l, onMouseEnter); break;
-		case SWT.MouseExit: onMouseExit = joinListeners(l, onMouseExit); break;
-		
-		default:
-			throw new IllegalArgumentException("Event Type not supported by Layer");
-		}
+		mouseListeners+=num;
 	}
 	
-	public void removeListener(int eventType, Listener l) {
-		switch (eventType) {
-		case SWT.Paint: onPaint = excludeListeners(l,onPaint); break;
-		
-		case SWT.MouseDoubleClick: onMouseDoubleClick = excludeListeners(l,onMouseDoubleClick); break;
-		case SWT.MouseDown: onMouseDown = excludeListeners(l,onMouseDown); break;
-		case SWT.MouseUp: onMouseUp = excludeListeners(l, onMouseUp); break;
-		case SWT.MouseMove: onMouseMove = excludeListeners(l, onMouseMove); break;
-		case SWT.MouseWheel: onMouseWheel = excludeListeners(l, onMouseWheel); break;
-		case SWT.MouseEnter: onMouseEnter = excludeListeners(l, onMouseEnter); break;
-		case SWT.MouseExit: onMouseExit = excludeListeners(l, onMouseExit); break;
+	private Listener onMouseClick = null, onDoubleClick = null, onMouseDown = null, onMouseUp = null;
+	private Listener onMouseMove = null, onMouseWheel = null, onMouseEnter = null, onMouseExit = null;
+	
+	public Layer onMouseClick(Listener l) { return addListener(MouseClick,l); }
+	public Layer onMouseDoubleClick(Listener l) { return addListener(MouseDoubleClick,l); }
+	public Layer onMouseDown(Listener l) { return addListener(MouseDown,l); }
+	public Layer onMouseUp(Listener l) { return addListener(MouseUp,l); }
+	public Layer onMouseMove(Listener l) { return addListener(MouseMove,l); }
+	public Layer onMouseWheel(Listener l) { return addListener(MouseWheel,l); }
+	public Layer onMouseEnter(Listener l) { return addListener(MouseEnter,l); }
+	public Layer onMouseExit(Listener l) { return addListener(MouseExit,l); }
+	
+	public void onMouseClick(float x, float y, Event e) { defaultHandleEvent(onMouseClick, e); }
+	public void onMouseDoubleClick(float x, float y, Event e) { defaultHandleEvent(onDoubleClick, e); }
+	public void onMouseDown(float x, float y, Event e) { defaultHandleEvent(onMouseDown, e); }
+	public void onMouseUp(float x, float y, Event e) { defaultHandleEvent(onMouseUp, e); }
+	public void onMouseMove(float x, float y, Event e) { defaultHandleEvent(onMouseMove, e); }
+	public void onMouseWheel(float x, float y, Event e) { defaultHandleEvent(onMouseWheel, e); }
+	public void onMouseEnter(float x, float y, Event e) { defaultHandleEvent(onMouseEnter, e); }
+	public void onMouseExit(float x, float y, Event e) { defaultHandleEvent(onMouseExit, e); }
 
+	private void defaultHandleEvent(Listener l,Event e) { if (l!=null) l.handleEvent(e); }
+	
+
+	public Layer addListener(int eventType, Listener l) {
+		switch (eventType) {
+		case Move: onMove = Listeners.join(onMove, l); break;
+		case Resize: onResize = Listeners.join(onResize,l); break;
+		
+		case Paint: onPaint = Listeners.join(onPaint, l); break;
+		
+		case MouseClick: onMouseClick = Listeners.join(onMouseClick,l); countMouseListeners(+1); break;
+		case MouseDoubleClick: onDoubleClick = Listeners.join(onDoubleClick,l); countMouseListeners(+1); break;
+		case MouseDown: onMouseDown = Listeners.join(onMouseDown,l); countMouseListeners(+1); break;
+		case MouseUp: onMouseUp = Listeners.join(onMouseUp,l); countMouseListeners(+1); break;
+		case MouseMove: onMouseMove = Listeners.join(onMouseMove,l); countMouseListeners(+1); break;
+		case MouseWheel: onMouseWheel = Listeners.join(onMouseWheel,l); countMouseListeners(+1); break;
+		case MouseEnter: onMouseEnter = Listeners.join(onMouseEnter,l); countMouseListeners(+1); break;
+		case MouseExit: onMouseExit = Listeners.join(onMouseExit,l); countMouseListeners(+1); break;
+		
 		default:
 			throw new IllegalArgumentException("Event Type not supported by Layer");
 		}
+		
+		return this;
+	}
+	
+	public Layer removeListener(int eventType, Listener l) {
+		switch (eventType) {
+		case Move: onMove = Listeners.exclude(onMove, l); break;
+		case Resize: onResize = Listeners.exclude(onResize, l); break;
+		
+		case Paint: onPaint = Listeners.exclude(onPaint, l); break;
+		
+		case MouseClick: onMouseClick = Listeners.exclude(onMouseClick,l); countMouseListeners(+1); break;
+		case MouseDoubleClick: onDoubleClick = Listeners.exclude(onDoubleClick,l); countMouseListeners(-1); break;
+		case MouseDown: onMouseDown = Listeners.exclude(onMouseDown,l); countMouseListeners(-1); break;
+		case MouseUp: onMouseUp = Listeners.exclude(onMouseUp,l); countMouseListeners(-1); break;
+		case MouseMove: onMouseMove = Listeners.exclude(onMouseMove,l); countMouseListeners(-1); break;
+		case MouseWheel: onMouseWheel = Listeners.exclude(onMouseWheel,l); countMouseListeners(-1); break;
+		case MouseEnter: onMouseEnter = Listeners.exclude(onMouseEnter,l); countMouseListeners(-1); break;
+		case MouseExit: onMouseExit = Listeners.exclude(onMouseExit,l); countMouseListeners(-1); break;
+		
+		default:
+			throw new IllegalArgumentException("Event Type not supported by Layer");
+		}
+		
+		return this;
 	}
 	
 	

@@ -30,7 +30,7 @@ public class Listeners implements Listener {
 	}
 	
 	public Listeners exclude(Listener l) {
-		if (this.listener==l)
+		if (this.listener.equals(l))
 			return others;
 
 		return new Listeners(this.listener, this.others.exclude(l));
@@ -45,8 +45,19 @@ public class Listeners implements Listener {
 			listener.handleEvent(event);
 	}
 	
+	public static Listener join(Listener a, Listener b) {
+		if (a==null) return b;
+		if (b==null) return a;
+		return new Listeners(a,b);
+	}
 	
-	public static Listeners join(Listener... listeners) {
+	public static Listener exclude(Listener chain, Listener excludee) {
+		if (chain.equals(excludee)) return null;
+		Listeners l = ((Listeners)chain).exclude(excludee);
+		return l.others!=null?l:l.listener;
+	}
+	
+	public static Listener join(Listener... listeners) {
 		Listeners l = new Listeners(listeners[0]);
 		for (int i=1,I=listeners.length;i<I;i++)
 			l = l.join(l);
