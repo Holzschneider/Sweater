@@ -1,4 +1,4 @@
-package de.dualuse.swt.experiments.scratchy.video;
+package de.dualuse.swt.experiments.scratchy.video.annotation;
 
 import static java.lang.Math.min;
 
@@ -24,7 +24,25 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
+import de.dualuse.swt.experiments.scratchy.video.VideoController;
 import de.dualuse.swt.experiments.scratchy.view.VideoCanvas;
+import de.dualuse.vecmath.Matrix3d;
+
+/**
+ * Modes:
+ * 
+ * 		- add/edit polyline annotation
+ * 
+ * 		- add/edit rectangle annotation
+ * 		- add/edit lasso annotation
+ * 		
+ * 		( results internally mapped to the same data structures, but different ui interaction )
+ *
+ *		- edit homography (pins)
+ *
+ *		( can be the same for all three )
+ *
+ */
 
 public class AnnotatedVideoCanvas extends VideoCanvas {
 
@@ -41,18 +59,22 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	///// Annotations
 
 //	List<AnnotationLayer> annotations = new ArrayList<AnnotationLayer>();
-	Set<Annotation_<Rectangle2D>> selectedAnnotations = new HashSet<>();
+	Set<Annotation<Rectangle2D>> selectedAnnotations = new HashSet<>();
 	
 	/////
 	
 	Annotations<Rectangle2D> annotations = new Annotations<>();
 	
-	Map<Annotation_<Rectangle2D>,AnnotationLayer> layers = new HashMap<>();
+	Map<Annotation<Rectangle2D>,AnnotationLayer> layers = new HashMap<>();
+	
+	/////
+	
+	int[] savedPositions = new int[10];
 	
 //==[ Constructor ]=================================================================================
 	
-	public AnnotatedVideoCanvas(Composite parent, int style, VideoEditor editor) {
-		super(parent, style, editor);
+	public AnnotatedVideoCanvas(Composite parent, int style, VideoController video) {
+		super(parent, style, video);
 		
 		this.canvasWidth = parent.getSize().x;
 		this.canvasHeight = parent.getSize().y;
@@ -74,7 +96,7 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 //	}
 	
 	public void removeAnnotation(AnnotationLayer layer) {
-		Annotation_<Rectangle2D> annotation = layer.getAnnotation();
+		Annotation<Rectangle2D> annotation = layer.getAnnotation();
 		annotations.removeAnnotation(annotation);
 		layers.remove(layer);
 		layer.dispose();
@@ -89,6 +111,8 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	@Override protected void keyPressed(Event e) {
 		super.keyPressed(e);
 		
+		boolean ctrlPressed = (e.stateMask & SWT.CTRL)!=0;
+		
 		if (e.keyCode == SWT.DEL) {
 			
 //			for (AnnotationLayer a : new ArrayList<>(selectedAnnotations))
@@ -98,13 +122,36 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 			
 			System.out.println("Selected: " + selectedAnnotations.size());
 			
-			for (Annotation_<Rectangle2D> annotation : selectedAnnotations) {
+			for (Annotation<Rectangle2D> annotation : selectedAnnotations) {
 				
 				annotation.setKey(currentFrame, annotation.getKey(annotation.floorKey(currentFrame)));
 				
 			}
 			
 			updateLayers();
+			
+		} else if (e.keyCode == 'n') {
+			
+			Integer nextFrame = annotations.getNextKeyFrame(currentFrame);
+			if (nextFrame != null)
+				video.moveTo(nextFrame);
+			
+		} else if (e.keyCode == 'p') {
+			
+			Integer prevFrame = annotations.getPrevKeyFrame(currentFrame);
+			if (prevFrame != null)
+				video.moveTo(prevFrame);
+			
+		} else if (ctrlPressed && e.keyCode >= '0' && e.keyCode <= '9') {
+			
+			int index = e.keyCode - '0';
+			savedPositions[index] = currentFrame;
+			
+		} else if (e.keyCode >= '0' && e.keyCode <= '9') {
+			
+			int index = e.keyCode - '0';
+			video.moveTo(savedPositions[index]);
+			
 		}
 		 
 	}
@@ -115,14 +162,27 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 	}
 	
 //==[ Controls: Mouse ]=============================================================================
-
+	
+	PolylineAnnotationLayer annotationLayer; 
+			
 	@Override protected void down(Event e) {
 		super.down(e);
 		if (!e.doit) return;
 		
 		boolean shiftPressed = (e.stateMask&SWT.SHIFT)!=0;
 		
-		if (e.button == 1) {
+		if (e.button == 1 && e.count==2) {
+			
+			clearSelection();
+			// add new annotation
+			
+			AnnotationContour annotation = new AnnotationContour(currentFrame, new Matrix3d());
+			annotation.getContour().add(e.x, e.y);
+			
+			if (annotationLayer==null)
+				annotationLayer = new PolylineAnnotationLayer(this, annotation, currentFrame);
+			
+		} else if (e.button == 1 && e.count==2) {
 			
 			if (!shiftPressed) clearSelection();
 			startSelection(e);
@@ -185,7 +245,7 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 			
 //			Rectangle rect = new Rectangle(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y);
 			Rectangle2D rect = new Rectangle2D.Double(p1.x, p1.y, p2.x-p1.x, p2.y-p1.y);
-			Annotation_<Rectangle2D> annotation = new AnnotationBounds(currentFrame, rect);
+			Annotation<Rectangle2D> annotation = new AnnotationBounds(currentFrame, rect);
 			
 			// annotations.add(new AnnotationLayer(this, p1.x, p1.y, p2.x, p2.y ));
 			annotations.addAnnotation(annotation);
@@ -283,12 +343,14 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 //==[ Paint Canvas ]================================================================================
 
 	int lastCurrentFrame;
-	Set<Annotation_<Rectangle2D>> collector = new HashSet<>();
+	Set<Annotation<Rectangle2D>> collector = new HashSet<>();
 	
 	@Override protected void renderBackground(Rectangle clip, Transform t, GC gc) {
 		if (lastCurrentFrame != currentFrame) {
 			lastCurrentFrame = currentFrame;
 			updateLayers();
+			if (annotationLayer!=null)
+				annotationLayer.setFrame(currentFrame);
 		}
 		
 		super.renderBackground(clip,  t, gc);
@@ -317,7 +379,7 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		collector.clear();
 		annotations.fetchAnnotations(currentFrame, collector);
 		
-		for (Annotation_<Rectangle2D> annotation : collector) {
+		for (Annotation<Rectangle2D> annotation : collector) {
 			
 			Rectangle2D bounds = annotation.getValue(currentFrame);
 			double left = bounds.getMinX();
@@ -341,11 +403,11 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 		}
 		
 		// if associated annotation is not in 'annotations', dispose and remove layer
-		for (Iterator<Entry<Annotation_<Rectangle2D>,AnnotationLayer>> it = layers.entrySet().iterator(); it.hasNext();) {
+		for (Iterator<Entry<Annotation<Rectangle2D>,AnnotationLayer>> it = layers.entrySet().iterator(); it.hasNext();) {
 			
-			Entry<Annotation_<Rectangle2D>,AnnotationLayer> entry = it.next();
+			Entry<Annotation<Rectangle2D>,AnnotationLayer> entry = it.next();
 			AnnotationLayer layer = entry.getValue();
-			Annotation_<Rectangle2D> annotation = layer.getAnnotation();
+			Annotation<Rectangle2D> annotation = layer.getAnnotation();
 			
 			if (!collector.contains(annotation)) {
 				
@@ -362,11 +424,11 @@ public class AnnotatedVideoCanvas extends VideoCanvas {
 
 	float[] rect = new float[4];
 	
-	public void redraw(Annotation annotation) {
-		Path shape = annotation.getShape();
-		shape.getBounds(rect);
-		redrawCanvas(rect[0], rect[1], rect[2]+lineWidth, rect[3]+lineWidth);
-	}
+//	public void redraw(AnnotationI annotation) {
+//		Path shape = annotation.getShape();
+//		shape.getBounds(rect);
+//		redrawCanvas(rect[0], rect[1], rect[2]+lineWidth, rect[3]+lineWidth);
+//	}
 
 	protected void redrawCanvas(float x, float y, float w, float h) {
 		rect[0] = x; rect[1] = y; rect[2] = x+w; rect[3] = y+h;

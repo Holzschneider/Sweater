@@ -1,8 +1,8 @@
-package de.dualuse.swt.experiments.scratchy.video;
+package de.dualuse.swt.experiments.scratchy.video.annotation;
 
 import java.awt.geom.Rectangle2D;
 
-public class AnnotationBounds extends Annotation_<Rectangle2D> {
+public class AnnotationBounds extends Annotation<Rectangle2D> {
 
 	public AnnotationBounds(int frame, Rectangle2D rect) {
 		super(frame, rect);

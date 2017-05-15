@@ -1,5 +1,6 @@
-package de.dualuse.swt.experiments.scratchy.video;
+package de.dualuse.swt.experiments.scratchy.video.annotation;
 
+/*
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
@@ -9,7 +10,7 @@ import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
-public class AnnotationPoint implements Annotation {
+public class AnnotationPoint implements AnnotationI {
 
 	int x, y;
 	int annotationSize = 21;
@@ -163,3 +164,4 @@ public class AnnotationPoint implements Annotation {
 	}
 
 }
+*/

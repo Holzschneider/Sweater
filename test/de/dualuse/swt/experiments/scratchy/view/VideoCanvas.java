@@ -11,8 +11,8 @@ import org.eclipse.swt.widgets.*;
 
 import de.dualuse.swt.experiments.scratchy.ResourceManager;
 import de.dualuse.swt.experiments.scratchy.cache.ImageCache;
-import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
-import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
+import de.dualuse.swt.experiments.scratchy.video.VideoController;
+import de.dualuse.swt.experiments.scratchy.video.VideoController.EditorListener;
 import de.dualuse.swt.widgets.LayerCanvas;
 
 
@@ -45,7 +45,7 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	
 	Display dsp;
 	
-	VideoEditor editor;
+	protected VideoController video;
 	
 	ImageCache cache;
 	ImageCache cacheSD;
@@ -60,11 +60,11 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	
 //==[ Constructor ]=================================================================================
 	
-	public VideoCanvas(Composite parent, int style, VideoEditor editor) {
+	public VideoCanvas(Composite parent, int style, VideoController video) {
 		super(parent, style | SWT.DOUBLE_BUFFERED); // | NO_BACKGROUND); // | SWT.DOUBLE_BUFFERED);
 		
 		this.dsp = getDisplay();
-		this.editor = editor;
+		this.video = video;
 		
 		// addPaintListener(this::paintView);
 
@@ -78,19 +78,19 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 		addListener(Dispose, this::onDispose);
 		
 		manager = new ResourceManager<Image>(dsp);
-		cache = new ImageCache(dsp, editor.getVideo(), manager, 64);
-		cacheSD = new ImageCache(dsp, editor.getVideoSD(), manager);
+		cache = new ImageCache(dsp, video.getVideo(), manager, 64);
+		cacheSD = new ImageCache(dsp, video.getVideoSD(), manager);
 		
-		numFrames = editor.getVideo().numFrames();
-		fps = editor.getVideo().fps();
-		videoWidth  = editor.getVideo().resolution()[0];
-		videoHeight = editor.getVideo().resolution()[1];
+		numFrames = video.getVideo().numFrames();
+		fps = video.getVideo().fps();
+		videoWidth  = video.getVideo().resolution()[0];
+		videoHeight = video.getVideo().resolution()[1];
 		
 		System.out.println("#frames: " + numFrames);
 		System.out.println("fps: " + fps);
 		System.out.println("res: " + videoWidth + " x " + videoHeight);
 		
-		editor.addEditorListener(this);
+		video.addEditorListener(this);
 		
 		setBackground(dsp.getSystemColor(SWT.COLOR_DARK_GRAY));
 		
@@ -150,7 +150,7 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 		System.out.println("Starting.");
 		
 		startTime = System.nanoTime();
-		startFrame = editor.getPosition();
+		startFrame = video.getPosition();
 		
 		fpsIter = paintedFrames;
 		fpsStart = System.nanoTime();
@@ -168,7 +168,7 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 		
 		playing = false;
 		
-		editor.moveTo(editor.getPosition());
+		video.moveTo(video.getPosition());
 		
 		long now = System.nanoTime();
 		double elapsed = (now-startTime)/1e9;
@@ -194,7 +194,7 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 			//     requestNearest too far off? jumping to another position should trigger moveTo? 
 		}
 		
-		editor.scratchTo(nextFrame);
+		video.scratchTo(nextFrame);
 	}
 
 	void animTick() {
@@ -253,9 +253,9 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 			}
 			
 			if (keyRepeat)
-				editor.scratchRelative(movement);
+				video.scratchRelative(movement);
 			else
-				editor.moveRelative(movement);
+				video.moveRelative(movement);
 			
 			return;
 		}
@@ -284,7 +284,7 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	
 	protected void keyUp(Event e) {
 		if (keyRepeat)
-			editor.moveTo(editor.getPosition());
+			video.moveTo(video.getPosition());
 		
 		keyPressed = keyRepeat = false;
 	}
@@ -321,11 +321,11 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	
 	private void stopScratch(Event e) {
 		scratchActive = false;
-		editor.moveTo(editor.getPosition());
+		video.moveTo(video.getPosition());
 	}
 	
 	private void updateScratch(Event e) {
-		editor.scratchRelative(e.x - l.x);
+		video.scratchRelative(e.x - l.x);
 	}
 	
 //==[ Paint Code ]==================================================================================
@@ -349,7 +349,7 @@ public class VideoCanvas extends LayerCanvas implements EditorListener {
 	protected void paintView(GC gc) {
 		try {
 			
-			int currentFrame = editor.getPosition();
+			int currentFrame = video.getPosition();
 			
 			// Init Graphics settings
 			gc.setAntialias(OFF);

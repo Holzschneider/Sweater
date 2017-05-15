@@ -49,6 +49,25 @@ public class Contour {
 			updateLines();
 		}
 		
+		public void getElements(double[] elements) {
+			if (elements.length!=2) throw new IllegalArgumentException("Expects double[2]");
+			elements[0] = x;
+			elements[1] = y;
+		}
+		
+		public Vertex setElements(double[] elements) {
+			if (elements.length!=2) throw new IllegalArgumentException("Expects double[2]");
+			x = elements[0];
+			y = elements[1];
+			return this;
+		}
+		
+		public Vertex setElements(double x, double y) {
+			this.x = x;
+			this.y = y;
+			return this;
+		}
+		
 		@Override public void setLocation(Point2D p) {
 			super.setLocation(p);
 			updateLines();
@@ -218,7 +237,7 @@ public class Contour {
 	public int numVertices() {
 		return vertices.size();
 	}
-
+	
 //==[ Edges ]=======================================================================================
 	
 	public Edge getEdge(int index) {
@@ -249,7 +268,9 @@ public class Contour {
 	}
 
 	public void toPath(Path path) {
-
+		if (vertices.isEmpty())
+			return;
+		
 		Point2D start = vertices.get(0);
 		path.moveTo((float)start.getX(), (float)start.getY());
 		
@@ -258,6 +279,8 @@ public class Contour {
 			path.lineTo((float)p.getX(), (float)p.getY());
 		}
 		
+		if (closed)
+			path.close();
 	}
 	
 	public void close() {

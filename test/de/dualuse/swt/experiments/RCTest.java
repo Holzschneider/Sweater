@@ -5,6 +5,7 @@ import static org.eclipse.swt.SWT.*;
 import java.awt.BasicStroke;
 import java.awt.geom.RoundRectangle2D;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
@@ -21,7 +22,8 @@ public class RCTest {
 		Shell sh = new Shell(app);
 		sh.setLayout(new FillLayout());
 		
-		sh.setBounds(-1200,200,800,600);
+		// sh.setBounds(-1200,200,800,600);
+		sh.setBounds(0,200,800,600);
 		
 		Canvas c = new Canvas(sh, NONE);
 		
@@ -32,6 +34,11 @@ public class RCTest {
 		Image im = new Image(app, RCTest.class.getResourceAsStream("vorfahrt.png"));
 //		Image im = new Image(app, RCTest.class.getResourceAsStream("generic-cat.jpeg"));
 		ImageData id = im.getImageData();
+		
+		c.addListener(SWT.KeyDown, (e) -> {
+			if (e.keyCode == SWT.ESC)
+				sh.dispose();
+		});
 		
 		long start = System.nanoTime();
 		c.addPaintListener((e) -> {
@@ -65,17 +72,15 @@ public class RCTest {
 			rc.setStroke(cs);
 			
 			rc.begin(RC.QUADS);
-			
-			rc.vertex(-1, -1, -1);
-			rc.vertex(-1, +1, -1);
-			rc.vertex(-1, +1, +1);
-			rc.vertex(-1, -1, +1);
-			
-			rc.vertex(+1, -1, -1);
-			rc.vertex(+1, +1, -1);
-			rc.vertex(+1, +1, +1);
-			rc.vertex(+1, -1, +1);
-			
+				rc.vertex(-1, -1, -1);
+				rc.vertex(-1, +1, -1);
+				rc.vertex(-1, +1, +1);
+				rc.vertex(-1, -1, +1);
+				
+				rc.vertex(+1, -1, -1);
+				rc.vertex(+1, +1, -1);
+				rc.vertex(+1, +1, +1);
+				rc.vertex(+1, -1, +1);
 			rc.end();
 
 			

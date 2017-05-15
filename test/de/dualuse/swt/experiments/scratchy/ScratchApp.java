@@ -12,10 +12,10 @@ import org.eclipse.swt.graphics.DeviceData;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
-import de.dualuse.swt.experiments.scratchy.video.AnnotatedVideoCanvas;
 import de.dualuse.swt.experiments.scratchy.video.Video;
 import de.dualuse.swt.experiments.scratchy.video.VideoDir;
-import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
+import de.dualuse.swt.experiments.scratchy.video.annotation.AnnotatedVideoCanvas;
+import de.dualuse.swt.experiments.scratchy.video.VideoController;
 import de.dualuse.swt.experiments.scratchy.view.Timeline;
 import de.dualuse.swt.experiments.scratchy.view.VideoCanvas;
 import de.dualuse.swt.layout.BorderLayout;
@@ -63,7 +63,7 @@ public class ScratchApp {
 		Video video = new VideoDir(root);
 		Video videoSD = new VideoDir(rootSD);
 		
-		VideoEditor editor = new VideoEditor(video, videoSD);
+		VideoController editor = new VideoController(video, videoSD);
 	
 		///// Setup UI
 

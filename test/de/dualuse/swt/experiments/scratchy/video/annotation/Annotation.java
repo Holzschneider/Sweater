@@ -1,16 +1,16 @@
-package de.dualuse.swt.experiments.scratchy.video;
+package de.dualuse.swt.experiments.scratchy.video.annotation;
 
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-public abstract class Annotation_<E> {
+public abstract class Annotation<E> {
 	
 	TreeMap<Integer,E> keys = new TreeMap<Integer,E>();
 	
 //==[ Constructor ]=================================================================================
 	
-	public Annotation_(int frame, E data) {
+	public Annotation(int frame, E data) {
 		keys.put(frame, data);
 	}
 	
@@ -48,6 +48,12 @@ public abstract class Annotation_<E> {
 	
 	public Integer higherKey(int frame) { return keys.higherKey(frame); }
 	public Integer lowerKey(int frame) { return keys.lowerKey(frame); }
+	
+	public Integer nearest(int frame) {
+		Integer floor = floorKey(frame);
+		Integer ceiling = ceilingKey(frame);
+		return Math.abs(floor-frame) < Math.abs(ceiling-frame) ? floor : ceiling; 
+	}
 	
 //==[ Values ]======================================================================================
 

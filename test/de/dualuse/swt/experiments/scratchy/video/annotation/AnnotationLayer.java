@@ -1,15 +1,5 @@
-package de.dualuse.swt.experiments.scratchy.video;
+package de.dualuse.swt.experiments.scratchy.video.annotation;
 
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.C;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.E;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.N;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.NE;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.NONE;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.NW;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.S;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.SE;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.SW;
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.W;
 import static java.lang.Math.pow;
 import static org.eclipse.swt.SWT.BUTTON1;
 import static org.eclipse.swt.SWT.BUTTON2;
@@ -25,15 +15,33 @@ import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 
-import de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType;
 import de.dualuse.swt.widgets.Layer;
-import de.dualuse.swt.widgets.LayerContainer;
 
 public class AnnotationLayer extends Layer {
 
 	AnnotatedVideoCanvas parent;
 	
-	Annotation_<Rectangle2D> annotation;
+	Annotation<Rectangle2D> annotation;
+	
+	/////
+	
+	public enum HoverType {
+		NW, N, NE,
+		W, C, E,
+		SW, S, SE,
+		NONE
+	}
+	
+	HoverType NW = HoverType.NW;
+	HoverType N = HoverType.N;
+	HoverType NE = HoverType.NE;
+	HoverType W = HoverType.W;
+	HoverType C = HoverType.C;
+	HoverType E = HoverType.E;
+	HoverType SW = HoverType.SW;
+	HoverType S = HoverType.S;
+	HoverType SE = HoverType.SE;
+	HoverType NONE = HoverType.NONE;
 	
 	/////
 	
@@ -59,7 +67,7 @@ public class AnnotationLayer extends Layer {
 	
 //==[ Constructor ]=================================================================================
 	
-	public AnnotationLayer(AnnotatedVideoCanvas parent, Annotation_<Rectangle2D> annotation, int currentFrame) {
+	public AnnotationLayer(AnnotatedVideoCanvas parent, Annotation<Rectangle2D> annotation, int currentFrame) {
 		super(parent);
 		
 		this.parent = parent;
@@ -78,7 +86,7 @@ public class AnnotationLayer extends Layer {
 		
 	}
 
-	public Annotation_<Rectangle2D> getAnnotation() {
+	public Annotation<Rectangle2D> getAnnotation() {
 		return annotation;
 	}
 	

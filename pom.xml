@@ -50,6 +50,13 @@
 		    <artifactId>ejml</artifactId>
 		    <version>0.25</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>de.dualuse</groupId>
+			<artifactId>Vex</artifactId>
+			<version>[0,)</version>
+		</dependency>
+		
 		<!-- <dependency>
   			<groupId>org.apache.commons</groupId>
   			<artifactId>commons-math3</artifactId>

@@ -13,20 +13,29 @@ import java.util.List;
 import org.eclipse.swt.graphics.*;
 
 public class RC {
+	
 	public final GC gc;
 	public final Device device;
-	private Transform s,t;
+	private Transform s, t;
+
+	private float[][] modelViewProjection = new float[4][4];
+	
+//==[ Constructor ]=================================================================================
 	
 	public RC(GC gc) {
+		
 		this.gc = gc;
 		this.device = gc.getDevice();
+		
 		this.t = new Transform(device);
 		this.s = new Transform(device);
 
 		initState();
 		identity(modelViewProjection);
+		
 	}
 	
+//==[ Free Resources ]==============================================================================
 	
 	public void dispose() {
 		t.dispose();
@@ -44,8 +53,7 @@ public class RC {
 		
 	}
 	
-	private float[][] modelViewProjection = new float[4][4];
-	
+//==[ Matrix Stack ]================================================================================
 	
 	private ArrayDeque<float[][]> pushed = new ArrayDeque<float[][]>();
 	private ArrayDeque<float[][]> free = new ArrayDeque<float[][]>();
@@ -68,6 +76,7 @@ public class RC {
 		free.push(m);
 	}
 
+//==================================================================================================
 
 	public boolean isVisible(double px, double py) {
 		return isVisible(px, py, 0);
@@ -145,7 +154,7 @@ public class RC {
 		return t;
 	}
 
-	static private float[][] createMatrixWithTransform(Transform at, float[][] m) {
+	private static float[][] createMatrixWithTransform(Transform at, float[][] m) {
 		identity(m);
 		
 		float[] elements = {0,0,0,0,0,0};
@@ -162,7 +171,7 @@ public class RC {
 		return m;
 	}
 	
-	static public float[][] createMatrixWithViewport(int x, int y, int width, int height) {
+	public static float[][] createMatrixWithViewport(int x, int y, int width, int height) {
 		float m[][] = new float[4][4];
 		
 		identity(m);
@@ -198,7 +207,7 @@ public class RC {
 		return m;
 	}
 	
-	static public float[][] createMatrixWithFrustum( float left, float right, float bottom, float top, float nearVal, float farVal ) {
+	public static float[][] createMatrixWithFrustum( float left, float right, float bottom, float top, float nearVal, float farVal ) {
 		float m[][] = new float[4][4];
 
 		float A = (right + left)/(right - left);
@@ -274,9 +283,7 @@ public class RC {
 //	public void setTransform(ProjectiveTransform Tx) { modelviewprojection.set(Tx.getMatrix()); }
 //	public ProjectiveTransform getTransform() { return new ProjectiveTransform(modelviewprojection); 
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	
+//==[ Rendering: Shapes ]===========================================================================
 	
 	public void draw(Shape s) {
 		Shape ts = new TransformedShape(modelViewProjection, s);
@@ -298,7 +305,40 @@ public class RC {
 		ps.dispose();
 		restoreState();
 	}
+
+	private void drawFilled(Shape p) {
+		applyState();
+		PathShape ps = new PathShape(device, p);
+		gc.fillPath( ps );
+		ps.dispose();
+		restoreState();
+	}
 	
+	private void drawPlain(Shape p) {
+		applyState();
+		PathShape ps = new PathShape(device, p);
+		gc.drawPath( ps );
+		ps.dispose();
+		restoreState();
+	}
+	
+	private void drawStroked(Shape p) {
+		PathShape ps = new PathShape(device, stroke.createStrokedShape(p));
+		applyState();
+		
+		int fillRule = gc.getFillRule();
+		gc.setFillRule(FILL_WINDING);
+		Color background = gc.getBackground();
+		gc.setBackground( gc.getForeground() );
+		gc.fillPath( ps );
+		gc.setBackground( background );
+		gc.setFillRule(fillRule);
+		
+		restoreState();
+		ps.dispose();					
+	}
+	
+//==[ Rendering: Images ]===========================================================================
 
 	final static float EPSILON = 0.005f; 
 	public boolean drawImage(Image im, int x, int y) {
@@ -314,7 +354,7 @@ public class RC {
 		
 		tiles.clear();
 		drawImageTiled(im, W,H, modelViewProjection, at, bt, 0, 0, W, H, tiles);
-
+		
 		if (tiles.size()>0)
 			quicksort(tiles);
 	
@@ -363,7 +403,7 @@ public class RC {
 		return (area>0?area:-area);
 	}
 	
-	static public boolean triangleContains(float px, float py, float ax, float ay, float bx, float by, float cx, float cy) {
+	public static boolean triangleContains(float px, float py, float ax, float ay, float bx, float by, float cx, float cy) {
 		final float v0x = cx-ax, v0y = cy-ay;
 		final float v1x = bx-ax, v1y = by-ay;
 		final float v2x = px-ax, v2y = py-ay;
@@ -399,8 +439,8 @@ public class RC {
 	}
 	
 	int counter = 0;
-	
 	int recursions = 0;
+	
 	float SKIRT = 1, MAX_PERSPECTIVE_DEVIATION = 1.337f, MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
 	private void drawImageTiled(Image im, int width, int height, float[][] m, float[] at, float[] bt, int x1, int y1, int x2, int y2, ArrayList<ImageTile> tiles) {
 		if (x1==x2 || y1==y2)
@@ -506,9 +546,7 @@ public class RC {
 		
 	}
 	
-	
-	
-	///////// Text Drawing
+//==[ Rendering: Text ]=============================================================================
 	
 	public void drawText(String str, int x, int y) {
 		this.drawText(str, x, y, false);
@@ -543,8 +581,6 @@ public class RC {
 		return gc.getAdvanceWidth(ch);
 	}
 	
-	
-	
 	public void drawString(String str, int x, int y, boolean transparent) {
 		gc.getTransform(t);
 		t.multiply(approximateTransform(x, y, s));
@@ -561,7 +597,7 @@ public class RC {
 		this.drawString(str, x, y, false);
 	}	
 	
-	
+//==[ Rendering: OpenGL Primitives ]================================================================
 	
 	public static final int LINES = PrimitivePathIterator.LINES;
 	public static final int TRIANGLES = PrimitivePathIterator.TRIANGLES;
@@ -586,7 +622,10 @@ public class RC {
 	private int backPolygonMode = LINE;
 	private int frontPolygonMode = LINE;
 	
-	public void polygonMode(int mode) { polygonMode(FRONT_AND_BACK, mode); }
+	public void polygonMode(int mode) {
+		polygonMode(FRONT_AND_BACK, mode);
+	}
+	
 	private void polygonMode(int face, int mode) {
 		if ((face&FRONT)!=0)
 			frontPolygonMode = mode;
@@ -636,41 +675,6 @@ public class RC {
 		}
 		p = null;
 	}
-	
-	private void drawFilled(Primitive p) {
-		applyState();
-		PathShape ps = new PathShape(device, p);
-		gc.fillPath( ps );
-		ps.dispose();
-		restoreState();
-	}
-	
-	private void drawPlain(Shape p) {
-		applyState();
-		PathShape ps = new PathShape(device, p);
-		gc.drawPath( ps );
-		ps.dispose();
-		restoreState();
-	}
-	
-	private void drawStroked(Shape p) {
-		PathShape ps = new PathShape(device, stroke.createStrokedShape(p));
-		applyState();
-		
-		int fillRule = gc.getFillRule();
-		gc.setFillRule(FILL_WINDING);
-		Color background = gc.getBackground();
-		gc.setBackground( gc.getForeground() );
-		gc.fillPath( ps );
-		gc.setBackground( background );
-		gc.setFillRule(fillRule);
-		
-		restoreState();
-		ps.dispose();					
-	}
-
-	
-	
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	public static interface ScreenCoordinate<T> { T define(float x, float y); }
@@ -783,15 +787,8 @@ public class RC {
 		m[3][2] = m30*n02+m31*n12+m32*n22+m33*n32;
 		m[3][3] = m30*n03+m31*n13+m32*n23+m33*n33;
 	}
-	
-	
-	
-	
-	
-	
-	
 
-	////////////////////////////////// Shadow State
+//==[ Shadow State ]================================================================================
 	
 	private void initState() {
 //		alpha = gc.getAlpha();

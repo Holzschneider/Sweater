@@ -154,7 +154,7 @@ public class TransformTest {
 
 	//////////////////// Homography from 4 point correspondences
 	
-	void from4Correspondences(Transform t,
+	void from4Correspondences(float[][] h,
 			Point2D u1, Point2D u2, Point2D u3, Point2D u4,
 			Point2D v1, Point2D v2, Point2D v3, Point2D v4) {
 
@@ -168,13 +168,13 @@ public class TransformTest {
 			float v3x = (float)v3.getX(), v3y = (float)v3.getY();
 			float v4x = (float)v4.getX(), v4y = (float)v4.getY();
 
-			from4Correspondences(t,
+			from4Correspondences(h,
 				u1x, u1y, u2x, u2y, u3x, u3y, u4x, u4y,
 				v1x, v1y, v2x, v2y, v3x, v3y, v4x, v4y
 			);
 	}
 	
-	void from4Correspondences(Transform t,
+	void from4Correspondences(float[][] h,
 		float u1x, float u1y, float u2x, float u2y, float u3x, float u3y, float u4x, float u4y,
 		float v1x, float v1y, float v2x, float v2y, float v3x, float v3y, float v4x, float v4y) {
 
@@ -194,16 +194,7 @@ public class TransformTest {
 			
 		};
 		
-		double[][] result = new double[][] {
-			{0},
-			{0},
-			{0},
-			{0},
-			{0},
-			{0},
-			{0},
-			{0}
-		};
+		double[][] result = new double[8][1];
 		
 		SimpleMatrix m = new SimpleMatrix(coefficients);
 		SimpleMatrix a = new SimpleMatrix(result);
@@ -219,14 +210,15 @@ public class TransformTest {
 		float h32 = (float)vars.get(7);
 		float h33 = 1;
 		
-		// XXX set Transform (not possible with SWT Transform since SWT Transform is only Affine)
-		
+		h[0][0] = h11; h[0][1] = h12; h[0][2] = h13;
+		h[1][0] = h21; h[1][1] = h22; h[1][2] = h23;
+		h[2][0] = h31; h[2][1] = h32; h[2][2] = h33;
 	}
 	
 	//////////////////// Constrainted Homography from 3 point correspondences? (no shear / only uniform scaling)
 	// 6 vars: r1, r2 (rotation + scaling, as above), tx, ty (translation), h13, h23 (perspective)
 
-	void from3CorrespondencesHom(Transform t, Point2D u1, Point2D u2, Point2D u3, Point2D v1, Point2D v2, Point2D v3) {
+	void from3CorrespondencesHom(float[][] h, Point2D u1, Point2D u2, Point2D u3, Point2D v1, Point2D v2, Point2D v3) {
 
 		float u1x = (float)u1.getX(), u1y = (float)u1.getY();
 		float u2x = (float)u2.getX(), u2y = (float)u2.getY();
@@ -236,13 +228,13 @@ public class TransformTest {
 		float v2x = (float)v2.getX(), v2y = (float)v2.getY();
 		float v3x = (float)v3.getX(), v3y = (float)v3.getY();
 
-		from3CorrespondencesHom(t,
+		from3CorrespondencesHom(h,
 			u1x, u1y, u2x, u2y, u3x, u3y,
 			v1x, v1y, v2x, v2y, v3x, v3y
 		);
 	}
 	
-	void from3CorrespondencesHom(Transform t,
+	void from3CorrespondencesHom(float[][] h,
 		float u1x, float u1y, float u2x, float u2y, float u3x, float u3y,
 		float v1x, float v1y, float v2x, float v2y, float v3x, float v3y) {
 
@@ -257,37 +249,56 @@ public class TransformTest {
 			{ u3y,  u3x, 0, 1, -v3y*u3x, -v3y*u3y },
 		};
 
-		double[][] result = new double[][] {
-			{0},
-			{0},
-			{0},
-			{0},
-			{0},
-			{0}
-		};
+		double[][] result = new double[6][1];
 		
 		SimpleMatrix m = new SimpleMatrix(coefficients);
 		SimpleMatrix a = new SimpleMatrix(result);
 		SimpleMatrix vars = m.solve(a);
 		
-		float r1 = (float) vars.get(0);
-		float r2 = (float) vars.get(1);
-		float tx = (float) vars.get(2);
-		float ty = (float) vars.get(3);
+		float r1  = (float) vars.get(0);
+		float r2  = (float) vars.get(1);
+		float tx  = (float) vars.get(2);
+		float ty  = (float) vars.get(3);
 		float h31 = (float) vars.get(4);
 		float h32 = (float) vars.get(5);
 		
-		float h11 = r1;
+		float h11 =  r1;
 		float h12 = -r2;
-		float h13 = tx;
-		float h21 = r2;
-		float h22 = r1;
-		float h23 = ty;
+		float h13 =  tx;
+		float h21 =  r2;
+		float h22 =  r1;
+		float h23 =  ty;
 		// h31 = h31
 		// h32 = h32
 		float h33 = 1;
-		
-		// XXX set Transform (not possible with SWT Transform since SWT Transform is only Affine)
+
+		h[0][0] = h11; h[0][1] = h12; h[0][2] = h13;
+		h[1][0] = h21; h[1][1] = h22; h[1][2] = h23;
+		h[2][0] = h31; h[2][1] = h32; h[2][2] = h33;
+	}
+	
+//==[ Matrix Transform helper ]=====================================================================
+	
+	static float transformX(float[][] m, float x, float y) {
+		float xh = m[0][0]*x + m[0][1]*y + m[0][2];
+		float w  = m[2][0]*x + m[2][1]*y + m[2][2];
+		return xh/w;
+	}
+	
+	static float transformY(float[][] m, float x, float y) {
+		float yh = m[1][0]*x + m[1][1]*y + m[1][2];
+		float w  = m[2][0]*x + m[2][1]*y + m[2][2];
+		return yh/w;
+	}
+	
+	static float[] transform(float[][] m, float[] p) {
+		float x = p[0], y = p[1];
+		float xh = m[0][0]*x + m[0][1]*y + m[0][2];
+		float yh = m[1][0]*x + m[1][1]*y + m[1][2];
+		float w  = m[2][0]*x + m[2][1]*y + m[2][2];
+		p[0] = xh/w;
+		p[1] = yh/w;
+		return p;
 	}
 	
 //==================================================================================================

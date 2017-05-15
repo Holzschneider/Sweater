@@ -1,5 +1,6 @@
-package de.dualuse.swt.experiments.scratchy.video;
+package de.dualuse.swt.experiments.scratchy.video.annotation;
 
+/*
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
@@ -9,9 +10,9 @@ import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
-import static de.dualuse.swt.experiments.scratchy.video.Annotation.HoverType.*;
+import static de.dualuse.swt.experiments.scratchy.video.AnnotationI.HoverType.*;
 
-public class AnnotationSign implements Annotation {
+public class AnnotationSign implements AnnotationI {
 
 	private AnnotatedVideoCanvas canvas;
 	private int x, y, width, height;
@@ -328,3 +329,4 @@ public class AnnotationSign implements Annotation {
 	}
 
 }
+*/
