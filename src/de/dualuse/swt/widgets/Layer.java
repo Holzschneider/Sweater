@@ -461,8 +461,6 @@ public class Layer extends Bounds implements LayerLocator, LayerContainer, Runna
 		local.setBounds(this);
 		dirty = false;
 		computeDirtyBounds(global, false);
-		if (debug==1)
-			System.out.println("PAINT COMPUTED:   "+global);
 		
 		boolean intersects = clip.intersects(
 				(int)global.left, (int)global.top, 
