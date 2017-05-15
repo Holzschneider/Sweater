@@ -20,7 +20,6 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
-import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
@@ -36,8 +35,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	public ZoomCanvas(Composite parent, int style) {
 		super(parent, style);
 
-//		canvasTransform = new Transform(getDisplay());
-		canvasTransform = getCanvasTransform();
+		canvasTransform = new Transform(getDisplay());
 		
 //		super.addListener(Paint, this);
 //		super.addListener(MouseWheel, this);
@@ -82,6 +80,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		}
 		
 		canvasTransform.translate(canvasX, canvasY);
+		setLayerTransform(canvasTransform);
 		
 		// USE .scroll instead -> so repaint will be clipped to the area that's new
 		
@@ -305,6 +304,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		
 		
 		respectCanvasBoundsAndUpdateScrollbars();
+		setLayerTransform(canvasTransform);
 
 			
 		lastSize = currentSize;
@@ -352,9 +352,8 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		float zy = (float)Math.hypot(scy, shx);
 		
 		canvasTransform.translate( deltaX / zx, deltaY / zy );
-		
-		
 		respectCanvasBoundsAndUpdateScrollbars();
+		setLayerTransform(canvasTransform);
 
 		canvasTransform.getElements(elements);
 		float tx_ = elements[4], ty_ = elements[5];
@@ -375,9 +374,8 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			return;
 		
 		inverseTransform(q);
-		
 		canvasTransform.translate(q[0], q[1]);
-			
+		
 		double scaleIncrementPerTick = 1.0337;
 		float sx = (float)Math.pow(scaleIncrementPerTick, e.count * (zoomX?1:0));
 		float sy = (float)Math.pow(scaleIncrementPerTick, e.count * (zoomY?1:0));
@@ -385,6 +383,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		canvasTransform.scale(sx, sy);
 		canvasTransform.translate(-q[0],  -q[1]);
 		respectCanvasBoundsAndUpdateScrollbars();
+		setLayerTransform(canvasTransform);
 		
 		redraw();
 	}

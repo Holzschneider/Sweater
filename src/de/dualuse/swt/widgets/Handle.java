@@ -8,12 +8,18 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.widgets.Event;
 
-public class Handle extends Gizmo implements LayerContainer.LayerTransform {
+public class Handle extends Gizmo<Handle> implements LayerContainer.LayerTransform {
+	public double centerX, centerY;
+	
+	/////////////////////
+	final private LayerContainer[] consumers;
+	
 	private static final int S = 9, R = 6;
-	public Handle(LayerContainer parent) {
+	public Handle(LayerContainer parent, LayerContainer... consumers) {
 		super(parent);
 		setExtents(-S, -S, S, S);
 		
+		this.consumers = consumers;
 	}
 	
 	private Color background = null, foreground = null;
@@ -54,6 +60,12 @@ public class Handle extends Gizmo implements LayerContainer.LayerTransform {
 	};
 	
 	private float dx = 0, dy = 0;
+
+	
+	@Override
+	protected boolean isMouseHandler() {
+		return true;
+	}
 	
 	@Override
 	public void onMouseDown(float x, float y, Event e) {
@@ -63,15 +75,18 @@ public class Handle extends Gizmo implements LayerContainer.LayerTransform {
 	
 	@Override
 	public void onMouseMove(float x, float y, Event e) {
-		if (e.stateMask==BUTTON1)
+		if (e.stateMask==BUTTON1) {
 			translate(x-dx, y-dy);
+			
+			getParent().redraw();
+		}
 	}
-
+	
 	@Override
 	final public void concatenate(float scx, float shy, float shx, float scy, float tx, float ty) {
 		scale(1/scx);
+		centerX = tx;
+		centerY = ty;
 	}
 	
-
-
 }

@@ -9,11 +9,24 @@ public interface LayerContainer {
 
 	public void capture(Layer c);
 	
-	
 
+	//////////////
+	
+	public void redraw();
+	public void redraw(float x, float y, float w, float h, boolean all);
+	
+	
+	//////////////
+	
+	public<T> T transform(double x, double y, TransformedCoordinate<T> i);
+	public<T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i);
+	
+	public interface TransformedCoordinate<T> { T define(float x, float y); }
+
+	
 	interface LayerTransform { void concatenate(float scX, float shY, float shX, float scY, float tX, float tY); }
 	interface LayerTranslation { void translate(float translationX, float translationY); }
-//	interface LayerRotation { void scale(float scaleX, float scaleY); }
+//	interface LayerRotation { void rotate(float scaleX, float scaleY); }
 //	interface LayerScale { void scale(float scaleX, float scaleY); }
 	
 }

@@ -47,12 +47,17 @@ public class LayerCanvasFunctionTest2 {
 		Listener li =  (e) -> {
 ////			System.out.println(e.x+ ", "+e.y);
 //			a.locate(e.x, e.y, (LayerLocation) (x,y) -> System.out.println(x+", "+y) );
-			Point2D.Float p = a.intersect(e.x, e.y, (x,y) -> new Point2D.Float(x,y));
-			trail.add(p);
+//			Point2D.Float p = a.intersect(e.x, e.y, (x,y) -> new Point2D.Float(x,y));
+			
+//			lc.locate(e.x, e.y).on(a);
+//			lc.intersect(e.x, e.y).with(a, (x,y) -> new Point2D.Double());
+//			lc.intersect(e.x, e.y).
+			
+			
+			trail.add( a.invert(e.x, e.y, (x,y) -> new Point2D.Float(x,y)) );
 			while (trail.size()>30)
 				trail.removeFirst();
 			a.redraw();
-			
 			
 			
 //			a.getRoot()
@@ -132,7 +137,7 @@ public class LayerCanvasFunctionTest2 {
 				a.rotate( (e.x-last.x)*0.01 );
 
 			if (e.stateMask==(BUTTON3|ALT)) {
-				lc.getCanvasTransform();
+				
 			}
 			
 			last.x = e.x;

@@ -10,6 +10,7 @@ import static org.eclipse.swt.SWT.Paint;
 
 import java.util.Arrays;
 
+import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
@@ -36,28 +37,10 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		super.addListener(Dispose, this::disposer);
 	}
 	
-	////////////////////////////////////////////////////////////
-//	float cursorX, cursorY;
-//	public LayerLocator locate(float x, float y) {
-//		return new LayerLocator() {
-//			public <T> T on(LayerCanvas lc, LayerLocation<T> l) {
-//				if (lc!=LayerCanvas.this)
-//					throw new IllegalArgumentException();
-//				return l.define(x, y);
-//			}
-//			
-//			@Override
-//			public <T> T on(Layer lc, LayerLocation<T> l) {
-//				if (lc.getRoot()!=LayerCanvas.this)
-//					throw new IllegalArgumentException();
-//				
-//				lc.validateTransform();
-//				
-//				return ;
-//			}
-//		};
-//	}
 	
+	
+	////////////////////////////////////////////////////////////
+
 	private Layer children[] = {};
 	
 	public Layer[] getLayers() {
@@ -83,6 +66,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	@Override
 	public LayerCanvas removeLayer(Layer r) {
+		
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
 				r.setParent(null);
@@ -115,31 +99,29 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	private void disposer(Event e) {
-		ownTransform.dispose();
+		layerTransform.dispose();
 	}
 	
 	private float[] backup = new float[6];
-	private Transform ownTransform = new Transform(getDisplay());
-	private Transform layerTransform = ownTransform;
-	public void setLayerTransform(Transform layerTransform) {
-		this.layerTransform = layerTransform;
+	private Transform layerTransform = new Transform(getDisplay());
+	public void setLayerTransform(Transform matrix) {
+		globalCount ++;
+		transformCount ++;
+		layerTransform.identity();
+		layerTransform.multiply(matrix);
 	}
 	
-	public Transform getCanvasTransform() {
-		return layerTransform;
+	public void getCanvasTransform(Transform matrix) {
+		matrix.identity();
+		matrix.multiply(layerTransform);
 	}
 
-	protected void prePaint(Event e) {
-		
-	}
-	
 	
 	@Override
 	public void handleEvent(Event event) {
 		switch (event.type) {
 		case Paint:
 			layerTransform.getElements(backup);
-			prePaint(event);
 			event.gc.setLineAttributes(new LineAttributes(1));
 			paint(event.gc.getClipping(), layerTransform, event);
 			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
@@ -153,8 +135,28 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			point(event);
 		}
 	}
+
 	
-////==[ To be implemented by subclasses ]=============================================================
-//	protected void renderBackground(Rectangle clip, Transform t, GC gc) { }
+	/////////////////////////////////////////
 	
+	
+	@Override
+	public <T> T transform(double x, double y, TransformedCoordinate<T> i) {
+		return i.define((float)x, (float)y);
+	}
+
+	@Override
+	public <T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i) {
+		return b.invert(x, y, i);
+	}
+
+	
+	@Override
+	public void redraw(float x, float y, float width, float height, boolean all) {
+		this.redraw((int)x, (int)y, (int)width, (int)height, all);
+	}
+
 }
+
+
+

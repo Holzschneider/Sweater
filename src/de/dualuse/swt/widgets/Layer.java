@@ -14,6 +14,7 @@ import static org.eclipse.swt.SWT.Move;
 import static org.eclipse.swt.SWT.Paint;
 import static org.eclipse.swt.SWT.Resize;
 
+import java.awt.geom.Point2D;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -27,10 +28,9 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.TypedListener;
 
 import de.dualuse.swt.events.Listeners;
-import de.dualuse.swt.events.Runnables;
 import de.dualuse.swt.events.WrappedListener;
 
-public class Layer extends Bounds implements LayerContainer, LayerLocator, Runnable {
+public class Layer extends Bounds implements LayerContainer, Runnable {
 	final static private int MouseClick = 123456789;
 	
 //	final static private int T00=0, T01=1, T10=2, T11=3, T02=4, T12=5; //, T20=3, T21=4, T22=5;
@@ -50,6 +50,9 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	private float W[] = new float[6]; // the local transformation Matrix
 	
 	private boolean redraw = true; //whether redraws are triggerd upon change 
+	
+//	private boolean visible = true; //XXX 
+//	private boolean enabled = true;
 	
 	
 	@Override
@@ -329,55 +332,33 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 		return this;
 	}
 	
-	private float cursorX=0, cursorY=0;
-	
-	public LayerLocator locate( double x, double y ) {
-		this.cursorX = (float) x;
-		this.cursorY = (float) y;
-		
-		return this;
-	}
-	
-	@Override
-	public LayerLocator on(Layer lay, LayerLocation l) {
-		validateTransform();
-		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
-		
-		lay.validateTransform();
-		float det = W[T00] * W[T11] - W[T01] * W[T10];
-		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
-		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
-		
-		l.set(i00*X+i01*Y+i02, i10*X+i11*Y+i12);
-		return this;
-	}
-	
-	@Override
-	public LayerLocator on(LayerCanvas lc, LayerLocation l) {
-		validateTransform();
-		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
-		l.set(X, Y);
-		return this;
-	}
 
-	public LayerCursor on(LayerCanvas lc) { return new LayerCursor().from(this).locate(cursorX, cursorY).on(lc); }
-	public LayerCursor on(Layer lc) { return new LayerCursor().from(this).locate(cursorX, cursorY).on(lc); }
+	public<T> T transform(double x, double y, TransformedCoordinate<T> i) {
+		validateTransform();
+		float w00 = W[T00], w01 = W[T01], w02 = W[T02];
+		float w10 = W[T00], w11 = W[T01], w12 = W[T02];
+		
+		return i.define(w00*(float)x+w01*(float)y+w02, w10*(float)x+w11*(float)y+w12); 
+	}
 	
-	public <T> T intersect(float x, float y, LayerIntersection<T> loc) {
+	
+	public<T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i) {
+		validateTransform();
+		float w00 = W[T00], w01 = W[T01], w02 = W[T02];
+		float w10 = W[T00], w11 = W[T01], w12 = W[T02];
+		
+		return b.invert(w00*(float)x+w01*(float)y+w02, w10*(float)x+w11*(float)y+w12, i);
+	}
+	
+	public<T> T invert(double x, double y, TransformedCoordinate<T> i) {
+		validateTransform();
 		float det = W[T00] * W[T11] - W[T01] * W[T10];
 		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
 		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
-		
-		return loc.define(i00*x+i01*y+i02, i10*x+i11*y+i12);
+
+		return i.define(i00*(float)x+i01*(float)y+i02, i10*(float)x+i11*(float)y+i12); 
 	}
 	
-	public void locate(float x, float y, LayerLocation lp) {
-		float det = W[T00] * W[T11] - W[T01] * W[T10];
-		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
-		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
-		
-		lp.set(i00*x+i01*y+i02, i10*x+i11*y+i12);
-	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
@@ -545,6 +526,9 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 		return paintEvent;
 	}
 	
+	
+
+
 	final public void paint(Rectangle clip, Transform t, Event e) {
 		paintEvent = true;
 		//////////////// update Transform
@@ -709,8 +693,8 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 			if (r.mouseListeners>0) //only if there are mouse listeners anyways
 				if (e.doit) //only if it shall happen
 					if (!clipping || clipping && hit) // if clipping hits or there s no clipping at all
-					if (r.captive()==captive) //either captive == null, or set to a specific layer
-						r.point(e);
+						if (r.captive()==captive) //either captive == null, or set to a specific layer
+							r.point(e);
 
 		if (hit || captive==this) {
 			if (e.doit && !entered) { 
@@ -750,6 +734,8 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 		
 	}
 	
+	////////////
+	
 	
 	private boolean onMouseEvent(float x, float y, Event e) {
 		switch (e.type) {
@@ -778,9 +764,8 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 			"onMouseWheel",
 		};
 
-	private int mouseListeners = hasMouseHandler()?1:0;
-	
-	protected boolean hasMouseHandler() {
+	private int mouseListeners = isMouseHandler()?1:0;
+	protected boolean isMouseHandler() {
 		Class<?> c = this.getClass();
 		
 		if (c.equals(Layer.class)) 

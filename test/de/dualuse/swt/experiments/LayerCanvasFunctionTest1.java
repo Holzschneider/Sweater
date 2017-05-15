@@ -48,7 +48,7 @@ public class LayerCanvasFunctionTest1 {
 				.setExtents(0, 0, 200, 200)
 				.translate(300, 300)
 //				.preRotate(.3)
-//				.setClipping(true);
+				.setClipping(true);
 				;
 		
 		
@@ -63,7 +63,7 @@ public class LayerCanvasFunctionTest1 {
 		});
 		
 		Layer b = new Layer(a)
-//				.setClipping(true)
+				.setClipping(true)
 				.setExtents(-50, -50, 50, 50)
 				.translate(100, 100);
 		
@@ -96,7 +96,7 @@ public class LayerCanvasFunctionTest1 {
 				a.rotate( (e.x-last.x)*0.01 );
 
 			if (e.stateMask==(BUTTON3|ALT)) {
-				lc.getCanvasTransform();
+				
 			}
 			
 			last.x = e.x;
