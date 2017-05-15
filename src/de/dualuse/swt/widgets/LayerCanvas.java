@@ -129,13 +129,17 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		return layerTransform;
 	}
 
+	protected void prePaint(Event e) {
+		
+	}
+	
 	
 	@Override
 	public void handleEvent(Event event) {
 		switch (event.type) {
 		case Paint:
 			layerTransform.getElements(backup);
-			
+			prePaint(event);
 			event.gc.setLineAttributes(new LineAttributes(1));
 			paint(event.gc.getClipping(), layerTransform, event);
 			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);

@@ -131,7 +131,6 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 
 	
-	public int debug = 0;
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////// CONSTRUCTOR & HIERARCHY ///////////////////////////////
 	public Layer(LayerContainer parent) {
@@ -210,10 +209,13 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			Layer t = cs[j];
 			cs[j] = cs[j-1];
 			cs[j-1] = t;
+			
+			if (redraw)
+				t.redraw();
 		}
 		
-		if (redraw)
-			redraw();
+//		if (redraw)
+//			redraw();
 	}
 	
 	
@@ -227,10 +229,10 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			Layer t = cs[j];
 			cs[j] = cs[j+1];
 			cs[j+1] = t;
+			
+			if (redraw)
+				t.redraw();
 		}
-		
-		if (redraw)
-			redraw();
 	}
 	
 	public LayerContainer getParent() { return parent==null?root:parent; }
@@ -245,34 +247,32 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////// TRANSFORMATION ///////////////////////////////////////////////////
+	public Layer preRotate(double theta) { return preConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+	public Layer preTranslate(double tx, double ty) { return preConcat(1,0,0,1,tx,ty); }
+	public Layer preScale(double s, double px, double py) { return preScale(s,s,px,py); }
+	public Layer preScale(double sx, double sy) { return preConcat(sx,0,0,sy,0,0); }
+	public Layer preScale(double s) { return preConcat(s,0,0,s,0,0); }
+
+	public Layer preScale(double sx, double sy, double x, double y) 
+	{ return this.preConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
 	
-	public Layer rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
-	public Layer translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
-	public Layer scale(double s, double px, double py) { return scale(s,s,px,py); }
-	public Layer scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
-	public Layer scale(double s) { return concatenate(s,0,0,s,0,0); }
-
-	public Layer scale(double sx, double sy, double x, double y) {
-		return this.concatenate(sx, 0, 0, sy, x-sx*x, y-sy*y);
-//	     *          [   sx    0    x-sx*x  ]
-//	     *          [   0     sy    y-sy*y ]
-
-//		return this
-//				.translate(+pivotX,+pivotY)
-//				.scale(sx, sy)
-//				.translate(-pivotX,-pivotY);
+	public Layer preRotate(double theta, double x, double y) {
+		final double cos = cos(theta), sin = sin(theta);
+		return this.preConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
 	}
 	
-	public Layer rotate(double theta, double x, double y) {
-		final double cos = cos(theta), sin = sin(theta);
-		return this.concatenate(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
-//			     *          [   cos(theta)    -sin(theta)    x-x*cos+y*sin  ]
-//	    	     *          [   sin(theta)     cos(theta)    y-x*sin-y*cos  ]
+	public Layer postRotate(double theta) { return postConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+	public Layer postTranslate(double tx, double ty) { return postConcat(1,0,0,1,tx,ty); }
+	public Layer postScale(double s, double px, double py) { return postScale(s,s,px,py); }
+	public Layer postScale(double sx, double sy) { return postConcat(sx,0,0,sy,0,0); }
+	public Layer postScale(double s) { return postConcat(s,0,0,s,0,0); }
 
-//		return this
-//				.translate(pivotX,pivotY)
-//				.rotate(theta)
-//				.translate(-pivotX,-pivotY);
+	public Layer postScale(double sx, double sy, double x, double y) 
+	{ return this.postConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
+	
+	public Layer postRotate(double theta, double x, double y) {
+		final double cos = cos(theta), sin = sin(theta);
+		return this.postConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
 	}
 	
 
@@ -289,7 +289,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		return this;
 	}
 	
-	public Layer concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+	public Layer preConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
 		final float m00 = (float) scX, m01 = (float) shX, m02 = (float) tx;
 		final float m10 = (float) shY, m11 = (float) scY, m12 = (float) ty;
 		
@@ -308,6 +308,24 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		return this;
 	}
 	
+	public Layer postConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
+		final float M00 = (float) scX, M01 = (float) shX, M02 = (float) tx;
+		final float M10 = (float) shY, M11 = (float) scY, M12 = (float) ty;
+		
+		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
+		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
+
+		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
+		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
+	
+		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
+			invalidateTransform();
+		
+		if (redraw)
+			redraw();
+		
+		return this;
+	}
 	
 //	private float cursorX=0, cursorY=0;
 //	public LayerLocator locate(final double x, final double y) {
@@ -431,7 +449,6 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 	
 	private boolean dirty = false, dirtyAll = false;
-//	private float dirtyLeft, dirtyTop, dirtyRight, dirtyBottom;
 	
 	public void redraw(float x, float y, float width, float height, boolean all) {
 		if (!dirty) { //if Event has not been scheduled, do so, and initialize dirty bounds 
@@ -439,17 +456,9 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			
 			dirty = true;
 			local.setExtents(x, y, x+width, y+height);
-//			dirtyLeft = x;
-//			dirtyTop = y;
-//			dirtyRight = x+width;
-//			dirtyBottom = y+height;
 			
 			dirtyAll = all;
 		} else { //otherwise just extend bounds of dirt.
-//			dirtyLeft = min(dirtyLeft,x);
-//			dirtyTop = min(dirtyTop,y);
-//			dirtyRight = max(dirtyRight,x+width);
-//			dirtyBottom = max(dirtyBottom,y+height);
 			local.extend(x, y);
 			local.extend(x+width, y+height);
 			
@@ -462,9 +471,6 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	private float B[] = new float[4*2]; // the oriented bounds of this Layer in world coordinates
 
 	private Bounds computeDirtyBounds(Bounds b, boolean recursive) {
-//		if (!clipping)
-//			return b.setExtents(-0f/1f, -0f/1f, +1f/0f, +1f/0f);
-		
 		B[0] = B[4] = local.getLeft();
 		B[1] = B[3] = local.getTop();
 		B[2] = B[6] = local.getRight();
@@ -483,6 +489,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 //				child.validateTransform();
 				child.globalCount = globalCount;
 				child.parentTransformCount = transformCount;
+				child.validationCount = child.transformCount;
 				concatenate(W, child.M, child.W);
 				child.computeDirtyBounds(b, recursive);
 			}
@@ -581,7 +588,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		}
 		
 		// remember global dirty bounds to be  
-		computeDirtyBounds(global.clear(), false);
+//		computeDirtyBounds(global.clear(), false);
+		// XXX SOME REPAINT BUG HERE
 
 	}
 	
@@ -833,10 +841,6 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 	
 	
-	
-	//ControlListener?
-	//onTransformed!
-
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// HELPER FUNCTIONS //////////////////////////////////////////////////
 	

@@ -38,7 +38,7 @@ public class LayerCanvasFunctionTest2 {
 		ArrayDeque<Point2D.Float> trail = new ArrayDeque<Point2D.Float>();
 		Layer a = new Layer(lc) 
 				.setExtents(0, 0, 200, 200)
-				.translate(300, 300)
+				.preTranslate(300, 300)
 //				.rotate(.3)
 //				.setClipping(true);
 				;
@@ -70,7 +70,6 @@ public class LayerCanvasFunctionTest2 {
 //			}
 //		}
 		
-		a.debug = 1;
 		
 		a.onPaint( (e) -> {
 			e.gc.setBackground(app.getSystemColor(SWT.COLOR_CYAN));
@@ -96,10 +95,9 @@ public class LayerCanvasFunctionTest2 {
 		Layer b = new Layer(a)
 //				.setClipping(true)
 				.setExtents(-50, -50, 50, 50)
-				.translate(100, 100);
+				.preTranslate(100, 100);
 		
 		
-		b.debug = 2;
 		
 		b.onPaint( (e) -> {
 			e.gc.setBackground(app.getSystemColor(SWT.COLOR_RED));
@@ -115,10 +113,10 @@ public class LayerCanvasFunctionTest2 {
 		
 		lc.addListener(MouseUp, (e) -> {
 			if (e.stateMask==SWT.BUTTON2)
-				b.rotate(2);
+				b.preRotate(2);
 			
 			if (e.stateMask==(BUTTON2|ALT))
-				a.rotate(1);
+				a.preRotate(1);
 			
 			if (e.stateMask==(BUTTON2|SHIFT)) 
 				a.removeListener(MouseMove, li);
@@ -126,10 +124,10 @@ public class LayerCanvasFunctionTest2 {
 		
 		lc.addListener(MouseMove, (e) -> {
 			if (e.stateMask==BUTTON1)
-				b.rotate( (e.x-last.x)*0.01 );
+				b.preRotate( (e.x-last.x)*0.01 );
 			
 			if (e.stateMask==BUTTON3)
-				a.rotate( (e.x-last.x)*0.01 );
+				a.preRotate( (e.x-last.x)*0.01 );
 
 			if (e.stateMask==(BUTTON3|ALT)) {
 				lc.getCanvasTransform();

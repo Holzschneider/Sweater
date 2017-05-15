@@ -14,6 +14,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
@@ -29,16 +30,27 @@ public class LayerCanvasFunctionTest1 {
 		Shell sh = new Shell(app);
 		sh.setLayout(new FillLayout());
 		
-		LayerCanvas lc = new LayerCanvas(sh, NONE);
+		LayerCanvas lc = new LayerCanvas(sh, NONE) {
+			protected void prePaint(Event e) {
+				Color c = new Color(app, new RGB((float) (Math.random()*360), .2f, 1f));
+				
+//				e.gc.setBackground(app.getSystemColor(SWT.COLOR_CYAN));
+				e.gc.setBackground(c);
+				e.gc.fillRectangle(getBounds());
+				
+				c.dispose();
+				
+			};
+		};
+		
 		
 		Layer a = new Layer(lc)
 				.setExtents(0, 0, 200, 200)
-				.translate(300, 300)
-//				.rotate(.3)
+				.preTranslate(300, 300)
+//				.preRotate(.3)
 //				.setClipping(true);
 				;
 		
-		a.debug = 1;
 		
 		a.onPaint( (e) -> {
 			Color c = new Color(app, new RGB((float) (Math.random()*360), .4f, 1f));
@@ -53,9 +65,8 @@ public class LayerCanvasFunctionTest1 {
 		Layer b = new Layer(a)
 //				.setClipping(true)
 				.setExtents(-50, -50, 50, 50)
-				.translate(100, 100);
+				.preTranslate(100, 100);
 		
-		b.debug = 2;
 		
 		b.onPaint( (e) -> {
 			e.gc.setBackground(app.getSystemColor(SWT.COLOR_RED));
@@ -71,18 +82,18 @@ public class LayerCanvasFunctionTest1 {
 		
 		lc.addListener(MouseUp, (e) -> {
 			if (e.stateMask==SWT.BUTTON2)
-				b.rotate(2);
+				b.preRotate(2);
 			
 			if (e.stateMask==(BUTTON2|ALT))
-				a.rotate(1);
+				a.preRotate(1);
 		});
 		
 		lc.addListener(MouseMove, (e) -> {
 			if (e.stateMask==BUTTON1)
-				b.rotate( (e.x-last.x)*0.01 );
+				b.preRotate( (e.x-last.x)*0.01 );
 			
 			if (e.stateMask==BUTTON3)
-				a.rotate( (e.x-last.x)*0.01 );
+				a.preRotate( (e.x-last.x)*0.01 );
 
 			if (e.stateMask==(BUTTON3|ALT)) {
 				lc.getCanvasTransform();
