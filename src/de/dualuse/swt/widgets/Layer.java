@@ -269,22 +269,22 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		return this.concatenate(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
 	}
 	
-	public Layer postRotate(double theta) { return postConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
-	public Layer postTranslate(double tx, double ty) { return postConcat(1,0,0,1,tx,ty); }
+	public Layer postRotate(double theta) { return postConcatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+	public Layer postTranslate(double tx, double ty) { return postConcatenate(1,0,0,1,tx,ty); }
 	public Layer postScale(double s, double px, double py) { return postScale(s,s,px,py); }
-	public Layer postScale(double sx, double sy) { return postConcat(sx,0,0,sy,0,0); }
-	public Layer postScale(double s) { return postConcat(s,0,0,s,0,0); }
+	public Layer postScale(double sx, double sy) { return postConcatenate(sx,0,0,sy,0,0); }
+	public Layer postScale(double s) { return postConcatenate(s,0,0,s,0,0); }
 
 	public Layer postScale(double sx, double sy, double x, double y) 
-	{ return this.postConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
+	{ return this.postConcatenate(sx, 0, 0, sy, x-sx*x, y-sy*y); }
 	
 	public Layer postRotate(double theta, double x, double y) {
 		final double cos = cos(theta), sin = sin(theta);
-		return this.postConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
+		return this.postConcatenate(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
 	}
 	
 
-	public Layer postConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
+	public Layer postConcatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
 		final float M00 = (float) scX, M01 = (float) shX, M02 = (float) tx;
 		final float M10 = (float) shY, M11 = (float) scY, M12 = (float) ty;
 		
@@ -369,25 +369,25 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
 
 	public Layer getLayerTranslation(LayerTranslation lt) {
-		lt.translate(M[T02],M[T12]);
+		lt.translation(M[T02],M[T12]);
 		return this;
 	}
 	
 	public Layer getCanvasTranslation(LayerTranslation lt) {
 		validateTransformInternal();
-		lt.translate(W[T02],W[T12]);
+		lt.translation(W[T02],W[T12]);
 		return this;
 	}
 
 	
 	public Layer getLayerTransform(LayerTransform lt) {
-		lt.concatenate(M[T00],M[T10],M[T01],M[T11],M[T02],M[T12]);
+		lt.transformation(M[T00],M[T10],M[T01],M[T11],M[T02],M[T12]);
 		return this;
 	}
 	
 	public Layer getCanvasTransform(LayerTransform lt) {
 		validateTransformInternal();
-		lt.concatenate(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
+		lt.transformation(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
 		return this;
 	}
 	

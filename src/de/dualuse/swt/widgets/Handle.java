@@ -86,7 +86,7 @@ public class Handle extends Gizmo<Handle> {
 	
 	
 	@Override
-	public Layer concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+	public Handle concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
 		super.concatenate(scX, shY, shX, scY, tx, ty);
 		getLayerTranslation(this::onLayerPositionChanges);
 		return this;

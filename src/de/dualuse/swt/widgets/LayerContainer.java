@@ -24,9 +24,9 @@ public interface LayerContainer {
 	public interface TransformedCoordinate<T> { T define(float x, float y); }
 
 	
-	interface LayerTransform { void concatenate(float scX, float shY, float shX, float scY, float tX, float tY); }
-	interface LayerTranslation { void translate(float translationX, float translationY); }
-//	interface LayerRotation { void rotate(float scaleX, float scaleY); }
+	interface LayerTransform { void transformation(float scX, float shY, float shX, float scY, float tX, float tY); }
+	interface LayerTranslation { void translation(float translationX, float translationY); }
+//	interface LayerRotation { void rotation(float scaleX, float scaleY); }
 //	interface LayerScale { void scale(float scaleX, float scaleY); }
 	
 }
