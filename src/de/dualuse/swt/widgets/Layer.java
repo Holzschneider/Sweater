@@ -84,8 +84,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 	
 	private Listener onMove = null, onResize = null;
-	public Layer onMove( Listener l ) { return addListener(Move, l); }
-	public Layer onResize( Listener l ) { return addListener(Resize, l); }
+	final public Layer onMove( Listener l ) { return addListener(Move, l); }
+	final public Layer onResize( Listener l ) { return addListener(Resize, l); }
 	
 	public Layer addControlListener( ControlListener cl ) {
 		TypedListener tl = new WrappedListener(cl);
@@ -302,7 +302,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
 			invalidateTransform();
 		
-		if (redraw)
+		if (redraw && !isValidatingTransform())
 			redraw();
 		
 		return this;
@@ -321,7 +321,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
 			invalidateTransform();
 		
-		if (redraw)
+		if (redraw && !isValidatingTransform())
 			redraw();
 		
 		return this;
@@ -386,7 +386,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 	
 	public static interface LayerTransform {
-		void set(double scalex, double shearY, double shearX, double scaleY, double translationX, double translationY);
+		void set(float scalex, float shearY, float shearX, float scaleY, float translationX, float translationY);
 	}
 	
 	public void getLayerTransform(LayerTransform lt) {
@@ -394,7 +394,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 	
 	public void getCanvasTransform(LayerTransform lt) {
-		validateTransform();
+		validateTransformInternal();
 		lt.set(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
 	}
 	
@@ -405,8 +405,19 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		onTransformed();
 	}
 	
+	private int validationReentry = 0;
+	protected boolean isValidatingTransform() { return validationReentry!=0; }
+	
+	private boolean validateTransformInternal() {
+		boolean validated = false;
+		if (validationReentry++==0) 
+			validated = validateTransform();
+		validationReentry--;
+		return validated;
+	}
+	
 	protected boolean validateTransform() {
-		if (root.globalCount==globalCount)
+		if (root.globalCount==globalCount || paintEvent)
 			return false;
 		
 		if (parent==null)
@@ -429,13 +440,16 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 				return true;
 			} else
 				return false;
-		
 	}
 	
 
 	public Layer setRedraw(boolean redraw) {
 		this.redraw = redraw;
 		return this;
+	}
+	
+	public boolean isRedraw() {
+		return this.redraw;
 	}
 	
 	public void redraw() {
@@ -451,8 +465,9 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	private boolean dirty = false, dirtyAll = false;
 	
 	public void redraw(float x, float y, float width, float height, boolean all) {
-		if (!dirty) { //if Event has not been scheduled, do so, and initialize dirty bounds 
-			root.getDisplay().asyncExec(this);
+		if (!dirty) { //if Event has not been scheduled, do so, and initialize dirty bounds
+			if (!root.isDisposed())
+				root.getDisplay().asyncExec(this);
 			
 			dirty = true;
 			local.setExtents(x, y, x+width, y+height);
@@ -476,7 +491,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		B[2] = B[6] = local.getRight();
 		B[5] = B[7] = local.getBottom();
 		
-		validateTransform();
+		validateTransformInternal();
 		transform(W, B);
 		
 		b.extend(B[0], B[1]);
@@ -520,8 +535,13 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////// RENDERING /////////////////////////////////////////
+	private boolean paintEvent = false;
+	public boolean isPaintEvent() {
+		return paintEvent;
+	}
 	
 	final public void paint(Rectangle clip, Transform t, Event e) {
+		paintEvent = true;
 		//////////////// update Transform
 		// read out parent's transform and store it
 		t.getElements(W);
@@ -530,11 +550,19 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 
 		// compute most current transform and set it
 		concatenate(W, M, W);
+		
+		// allow validateTransform to modify model matrix accordingly
+		validateTransformInternal();
+		
+		// recompute world Matrix
+		t.getElements(W);
+		concatenate(W, M, W);
 		t.setElements(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
 
-		//force validate transform
-		parentTransformCount = parent==null?root.transformCount:parent.transformCount;
+		//forcefully validate transform
 		globalCount = root.globalCount;
+		validationCount = transformCount;
+		parentTransformCount = parent==null?root.transformCount:parent.transformCount;
 		
 		//re-compute enclosing axis aligned bounding box
 		//dirty.setBounds(this)
@@ -591,6 +619,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 //		computeDirtyBounds(global.clear(), false);
 		// XXX SOME REPAINT BUG HERE
 
+		paintEvent = false;
 	}
 	
 	protected void paint(Rectangle clip, Transform t, Event e, Layer[] children) {
@@ -624,7 +653,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	
 	private Listener onPaint = null;
-	public Layer onPaint( Listener pl ) { return addListener(Paint, pl); }
+	public final Layer onPaint( Listener pl ) { return addListener(Paint, pl); }
 	public final Layer addPaintListener( PaintListener pl ) { return addListener(Paint,new WrappedListener(pl)); };
 	public final Layer removePaintListener( PaintListener pl ) { return removeListener(Paint,new WrappedListener(pl)); }
 	
@@ -658,7 +687,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		if (mouseListeners==0)
 			return ;
 		
-		validateTransform();
+		validateTransformInternal();
 		final float w00 = W[T00], w01 = W[T01], w02 = W[T02];
 		final float w10 = W[T10], w11 = W[T11], w12 = W[T12];
 		
@@ -773,14 +802,14 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	private Listener onMouseClick = null, onDoubleClick = null, onMouseDown = null, onMouseUp = null;
 	private Listener onMouseMove = null, onMouseWheel = null, onMouseEnter = null, onMouseExit = null;
 	
-	public Layer onMouseClick(Listener l) { return addListener(MouseClick,l); }
-	public Layer onMouseDoubleClick(Listener l) { return addListener(MouseDoubleClick,l); }
-	public Layer onMouseDown(Listener l) { return addListener(MouseDown,l); }
-	public Layer onMouseUp(Listener l) { return addListener(MouseUp,l); }
-	public Layer onMouseMove(Listener l) { return addListener(MouseMove,l); }
-	public Layer onMouseWheel(Listener l) { return addListener(MouseWheel,l); }
-	public Layer onMouseEnter(Listener l) { return addListener(MouseEnter,l); }
-	public Layer onMouseExit(Listener l) { return addListener(MouseExit,l); }
+	public final Layer onMouseClick(Listener l) { return addListener(MouseClick,l); }
+	public final Layer onMouseDoubleClick(Listener l) { return addListener(MouseDoubleClick,l); }
+	public final Layer onMouseDown(Listener l) { return addListener(MouseDown,l); }
+	public final Layer onMouseUp(Listener l) { return addListener(MouseUp,l); }
+	public final Layer onMouseMove(Listener l) { return addListener(MouseMove,l); }
+	public final Layer onMouseWheel(Listener l) { return addListener(MouseWheel,l); }
+	public final Layer onMouseEnter(Listener l) { return addListener(MouseEnter,l); }
+	public final Layer onMouseExit(Listener l) { return addListener(MouseExit,l); }
 	
 	public void onMouseClick(float x, float y, Event e) { defaultHandleEvent(onMouseClick, e); }
 	public void onMouseDoubleClick(float x, float y, Event e) { defaultHandleEvent(onDoubleClick, e); }
