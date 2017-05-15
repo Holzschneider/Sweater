@@ -30,7 +30,7 @@ import de.dualuse.swt.events.Listeners;
 import de.dualuse.swt.events.Runnables;
 import de.dualuse.swt.events.WrappedListener;
 
-public class Layer extends Bounds implements LayerContainer, Runnable {
+public class Layer extends Bounds implements LayerContainer, LayerLocator, Runnable {
 	final static private int MouseClick = 123456789;
 	
 //	final static private int T00=0, T01=1, T10=2, T11=3, T02=4, T12=5; //, T20=3, T21=4, T22=5;
@@ -247,49 +247,56 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////// TRANSFORMATION ///////////////////////////////////////////////////
-	public Layer preRotate(double theta) { return preConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
-	public Layer preTranslate(double tx, double ty) { return preConcat(1,0,0,1,tx,ty); }
-	public Layer preScale(double s, double px, double py) { return preScale(s,s,px,py); }
-	public Layer preScale(double sx, double sy) { return preConcat(sx,0,0,sy,0,0); }
-	public Layer preScale(double s) { return preConcat(s,0,0,s,0,0); }
+	public Layer rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+	public Layer translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
+	public Layer scale(double s, double px, double py) { return scale(s,s,px,py); }
+	public Layer scale(double sx, double sy) { return concatenate(sx,0,0,sy,0,0); }
+	public Layer scale(double s) { return concatenate(s,0,0,s,0,0); }
 
-	public Layer preScale(double sx, double sy, double x, double y) 
-	{ return this.preConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
+	public Layer scale(double sx, double sy, double x, double y) 
+	{ return this.concatenate(sx, 0, 0, sy, x-sx*x, y-sy*y); }
 	
-	public Layer preRotate(double theta, double x, double y) {
+	public Layer rotate(double theta, double x, double y) {
 		final double cos = cos(theta), sin = sin(theta);
-		return this.preConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
+		return this.concatenate(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
 	}
 	
-	public Layer postRotate(double theta) { return postConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
-	public Layer postTranslate(double tx, double ty) { return postConcat(1,0,0,1,tx,ty); }
-	public Layer postScale(double s, double px, double py) { return postScale(s,s,px,py); }
-	public Layer postScale(double sx, double sy) { return postConcat(sx,0,0,sy,0,0); }
-	public Layer postScale(double s) { return postConcat(s,0,0,s,0,0); }
-
-	public Layer postScale(double sx, double sy, double x, double y) 
-	{ return this.postConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
+//	public Layer postRotate(double theta) { return postConcat(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
+//	public Layer postTranslate(double tx, double ty) { return postConcat(1,0,0,1,tx,ty); }
+//	public Layer postScale(double s, double px, double py) { return postScale(s,s,px,py); }
+//	public Layer postScale(double sx, double sy) { return postConcat(sx,0,0,sy,0,0); }
+//	public Layer postScale(double s) { return postConcat(s,0,0,s,0,0); }
+//
+//	public Layer postScale(double sx, double sy, double x, double y) 
+//	{ return this.postConcat(sx, 0, 0, sy, x-sx*x, y-sy*y); }
+//	
+//	public Layer postRotate(double theta, double x, double y) {
+//		final double cos = cos(theta), sin = sin(theta);
+//		return this.postConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
+//	}
 	
-	public Layer postRotate(double theta, double x, double y) {
-		final double cos = cos(theta), sin = sin(theta);
-		return this.postConcat(cos, sin, -sin, cos, x-x*cos+y*sin, y-x*sin-y*cos);
-	}
-	
 
-	public Layer identity() {
-		if (M[T00]==1 && M[T11]==1 && M[T01]==0 && M[T02]==0 && M[T10]==0 && M[T12]==0)
-			return this;
-		
-		M[T00] = M[T11] = 1;
-		M[T01] = M[T02] = 0;
-		M[T10] = M[T12] = 0;
-
-		invalidateTransform();
-		
-		return this;
-	}
+//	public Layer postConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
+//		final float M00 = (float) scX, M01 = (float) shX, M02 = (float) tx;
+//		final float M10 = (float) shY, M11 = (float) scY, M12 = (float) ty;
+//		
+//		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
+//		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
+//
+//		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
+//		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
+//	
+//		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
+//			invalidateTransform();
+//		
+//		if (redraw && !isValidatingTransform())
+//			redraw();
+//		
+//		return this;
+//	}
 	
-	public Layer preConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
+	
+	public Layer concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
 		final float m00 = (float) scX, m01 = (float) shX, m02 = (float) tx;
 		final float m10 = (float) shY, m11 = (float) scY, m12 = (float) ty;
 		
@@ -308,55 +315,53 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		return this;
 	}
 	
-	public Layer postConcat(double scX, double shY, double shX, double scY, double tx, double ty) {
-		final float M00 = (float) scX, M01 = (float) shX, M02 = (float) tx;
-		final float M10 = (float) shY, M11 = (float) scY, M12 = (float) ty;
-		
-		final float m00 = M[T00], m01 = M[T01], m02 = M[T02];
-		final float m10 = M[T10], m11 = M[T11], m12 = M[T12];
 
-		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
-		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
-	
-		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
-			invalidateTransform();
+	public Layer identity() {
+		if (M[T00]==1 && M[T11]==1 && M[T01]==0 && M[T02]==0 && M[T10]==0 && M[T12]==0)
+			return this;
 		
-		if (redraw && !isValidatingTransform())
-			redraw();
+		M[T00] = M[T11] = 1;
+		M[T01] = M[T02] = 0;
+		M[T10] = M[T12] = 0;
+
+		invalidateTransform();
 		
 		return this;
 	}
 	
-//	private float cursorX=0, cursorY=0;
-//	public LayerLocator locate(final double x, final double y) {
-//		this.cursorX = (float) x;
-//		this.cursorY = (float) y;
-//		return this;
-//	}
-//	
-//	@Override
-//	public <T> T on(Layer lay, LayerPoint<T> loc) {
-//		validateTransform();
-//		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
-//		
-//		lay.validateTransform();
-//		float det = W[T00] * W[T11] - W[T01] * W[T10];
-//		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
-//		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
-//		
-//		return loc.define(i00*X+i01*Y+i02, i10*X+i11*Y+i12);
-//	}			
-//	
-//	@Override
-//	public <T> T on(LayerCanvas lc, LayerPoint<T> l) {
-//		if (lc != root)
-//			throw new IllegalArgumentException("Layer can only be located on the LayerCanvas, it has been added to.");
-//		
-//		validateTransform();
-//		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
-//		
-//		return l.define(X, Y);
-//	}
+	private float cursorX=0, cursorY=0;
+	
+	public LayerLocator locate( double x, double y ) {
+		this.cursorX = (float) x;
+		this.cursorY = (float) y;
+		
+		return this;
+	}
+	
+	@Override
+	public LayerLocator on(Layer lay, LayerLocation l) {
+		validateTransform();
+		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
+		
+		lay.validateTransform();
+		float det = W[T00] * W[T11] - W[T01] * W[T10];
+		float i00 = W[T11]/det, i01 =-W[T01]/det, i02 = (W[T01] * W[T12] - W[T11] * W[T02]) / det;
+		float i10 =-W[T10]/det, i11 = W[T00]/det, i12 = (W[T10] * W[T02] - W[T00] * W[T12]) / det;
+		
+		l.set(i00*X+i01*Y+i02, i10*X+i11*Y+i12);
+		return this;
+	}
+	
+	@Override
+	public LayerLocator on(LayerCanvas lc, LayerLocation l) {
+		validateTransform();
+		float X = W[T00]*cursorX+W[T01]*cursorY+W[T02], Y = W[T10]*cursorX+W[T11]*cursorY+W[T12];
+		l.set(X, Y);
+		return this;
+	}
+
+	public LayerCursor on(LayerCanvas lc) { return new LayerCursor().from(this).locate(cursorX, cursorY).on(lc); }
+	public LayerCursor on(Layer lc) { return new LayerCursor().from(this).locate(cursorX, cursorY).on(lc); }
 	
 	public <T> T intersect(float x, float y, LayerIntersection<T> loc) {
 		float det = W[T00] * W[T11] - W[T01] * W[T10];
@@ -376,33 +381,33 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
-	
-//	// implement this
-	public Runnable onTransformed = null; //XXX maybe define own listener type with delta transformation in event
-	public final void onTransformed( Runnable pl ) { onTransformed = new Runnables(pl, onTransformed); }
-	protected void onTransformed() { 
-		if (onTransformed!=null) 
-			onTransformed.run(); 
+
+	public Layer getLayerTranslation(LayerTranslation lt) {
+		lt.translate(M[T02],M[T12]);
+		return this;
 	}
 	
-	public static interface LayerTransform {
-		void set(float scalex, float shearY, float shearX, float scaleY, float translationX, float translationY);
-	}
-	
-	public void getLayerTransform(LayerTransform lt) {
-		lt.set(M[T00],M[T10],M[T01],M[T11],M[T02],M[T12]);		
-	}
-	
-	public void getCanvasTransform(LayerTransform lt) {
+	public Layer getCanvasTranslation(LayerTranslation lt) {
 		validateTransformInternal();
-		lt.set(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
+		lt.translate(W[T02],W[T12]);
+		return this;
+	}
+
+	
+	public Layer getLayerTransform(LayerTransform lt) {
+		lt.concatenate(M[T00],M[T10],M[T01],M[T11],M[T02],M[T12]);
+		return this;
+	}
+	
+	public Layer getCanvasTransform(LayerTransform lt) {
+		validateTransformInternal();
+		lt.concatenate(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
+		return this;
 	}
 	
 	protected void invalidateTransform() {
 		this.transformCount++;
 		root.globalCount++;
-		
-		onTransformed();
 	}
 	
 	private int validationReentry = 0;
@@ -943,6 +948,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		W[T01] = W[T02] = 0;
 		W[T10] = W[T12] = 0;
 	}
+
 
 }
 

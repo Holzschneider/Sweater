@@ -46,7 +46,7 @@ public class LayerCanvasFunctionTest1 {
 		
 		Layer a = new Layer(lc)
 				.setExtents(0, 0, 200, 200)
-				.preTranslate(300, 300)
+				.translate(300, 300)
 //				.preRotate(.3)
 //				.setClipping(true);
 				;
@@ -65,7 +65,7 @@ public class LayerCanvasFunctionTest1 {
 		Layer b = new Layer(a)
 //				.setClipping(true)
 				.setExtents(-50, -50, 50, 50)
-				.preTranslate(100, 100);
+				.translate(100, 100);
 		
 		
 		b.onPaint( (e) -> {
@@ -82,18 +82,18 @@ public class LayerCanvasFunctionTest1 {
 		
 		lc.addListener(MouseUp, (e) -> {
 			if (e.stateMask==SWT.BUTTON2)
-				b.preRotate(2);
+				b.rotate(2);
 			
 			if (e.stateMask==(BUTTON2|ALT))
-				a.preRotate(1);
+				a.rotate(1);
 		});
 		
 		lc.addListener(MouseMove, (e) -> {
 			if (e.stateMask==BUTTON1)
-				b.preRotate( (e.x-last.x)*0.01 );
+				b.rotate( (e.x-last.x)*0.01 );
 			
 			if (e.stateMask==BUTTON3)
-				a.preRotate( (e.x-last.x)*0.01 );
+				a.rotate( (e.x-last.x)*0.01 );
 
 			if (e.stateMask==(BUTTON3|ALT)) {
 				lc.getCanvasTransform();
