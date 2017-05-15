@@ -9,7 +9,7 @@ class Bounds {
 	protected float left = 1f/0f, top = 1f/0f, right = -1f/0f, bottom = -1f/0f;
 	
 	public Bounds() { }
-	public Bounds(float left, float top, float right, float bottom) { set(left,top,right,bottom); }
+	public Bounds(float left, float top, float right, float bottom) { setLimits(left,top,right,bottom); }
 	
 	public Bounds clear() {
 		top = left = 1f/0f;
@@ -17,16 +17,40 @@ class Bounds {
 		
 		return this;
 	}
+
 	
-	public Bounds get(Rectangle r) {
+	public float getLeft() { return left; }
+	public float getRight() { return right; }
+	public float getTop() { return top; }
+	public float getBottom() { return bottom; }
+
+	public Rectangle getBounds() { return getBounds(new Rectangle(0, 0, 0, 0)); }
+		
+	public Rectangle getBounds(Rectangle r) {
 		r.x = (int) floor(left);
 		r.y = (int) floor(top);
-		r.width = (int) ceil(right) - r.x;
-		r.height = (int) ceil(bottom) - r.y;
+		r.width = (int)(ceil(right) - floor(left));
+		r.height = (int)(ceil(bottom) - floor(top));
+		return r;
+	}
+	
+	public Bounds setBounds(Rectangle r) {
+		this.left = r.x;
+		this.top = r.y;
+		this.right = r.x+r.width;
+		this.bottom = r.y+r.height;
 		return this;
 	}
 	
-	public Bounds set(float left, float top, float right, float bottom) {
+	public Bounds setBounds(Bounds that) {
+		this.left = that.left;
+		this.right = that.right;
+		this.top = that.top;
+		this.bottom = that.bottom;
+		return this;
+	}
+	
+	public Bounds setLimits(float left, float top, float right, float bottom) {
 		this.left = left;
 		this.top = top;
 		this.right = right;
@@ -34,12 +58,12 @@ class Bounds {
 		return this;
 	}
 	
-	public Bounds extend(float x, float y) {
-		return this.set(left<x?left:x, top<y?top:y, right>x?right:x, bottom>y?bottom:y);
+	final public Bounds extend(float x, float y) {
+		return this.setLimits(left<x?left:x, top<y?top:y, right>x?right:x, bottom>y?bottom:y);
 	}
 	
-	public Bounds extend(float left, float top, float right, float bottom) {
-		return this.set(
+	final public Bounds extend(float left, float top, float right, float bottom) {
+		return this.setLimits(
 				this.left<left?this.left:left, 
 				this.top<top?this.top:top, 
 				this.right>right?this.right:right, 
@@ -47,8 +71,8 @@ class Bounds {
 			);
 	}
 	
-	public Bounds extend(Bounds that) {
-		return this.set(
+	final public Bounds extend(Bounds that) {
+		return this.setLimits(
 				this.left<that.left?this.left:that.left,
 				this.top<that.top?this.top:that.top,
 				this.right>that.right?this.right:that.right,
@@ -85,18 +109,18 @@ class Bounds {
 		return "Bounds("+left+","+top+","+right+","+bottom+")";
 	}
 
-	
-	public static void main(String[] args) {
-		
-		
-		Bounds b = new Bounds();
-		
-		b.extend(100, 100, 200, 200);
-		
-		System.out.println(b);
-		System.out.println(b.isEmpty());
-		
-		
-		
-	}
+//	
+//	public static void main(String[] args) {
+//		
+//		
+//		Bounds b = new Bounds();
+//		
+//		b.extend(100, 100, 200, 200);
+//		
+//		System.out.println(b);
+//		System.out.println(b.isEmpty());
+//		
+//		
+//		
+//	}
 }

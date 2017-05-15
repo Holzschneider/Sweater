@@ -1,11 +1,17 @@
 package de.dualuse.swt.widgets;
 
-import static org.eclipse.swt.SWT.*;
+import static org.eclipse.swt.SWT.Dispose;
+import static org.eclipse.swt.SWT.MouseDoubleClick;
+import static org.eclipse.swt.SWT.MouseDown;
+import static org.eclipse.swt.SWT.MouseMove;
+import static org.eclipse.swt.SWT.MouseUp;
+import static org.eclipse.swt.SWT.MouseWheel;
+import static org.eclipse.swt.SWT.Paint;
 
 import java.util.Arrays;
 
+import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.graphics.Region;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
@@ -15,7 +21,7 @@ import org.eclipse.swt.widgets.Listener;
 public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 
 	protected Transform canvasTransform = new Transform(getDisplay());
-	protected int transformCount = 0, rootCount = 0;
+	protected int transformCount = 0, globalCount = 0;
 	
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
@@ -76,7 +82,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 					r.point(e);
 	}
 	
-	Layer captive = null;
+	private Layer captive = null;
 	
 	@Override
 	public void capture(Layer c) {
@@ -84,8 +90,6 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	final protected void paint(Rectangle clip, Transform t, Event c) {
-//		renderBackground(clip, t, c);
-		
 		for (int I=children.length-1,i=0;I>=i;I--)
 			children[I].paint(clip,t,c);
 	}
@@ -111,6 +115,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		switch (event.type) {
 		case Paint:
 			layerTransform.getElements(backup);
+			
+//			event.gc.setLineAttributes(new LineAttributes(1));
 			paint(event.gc.getClipping(), layerTransform, event);
 			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
 			break;
