@@ -7,19 +7,25 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.widgets.Event;
 
-public class Handle extends Gizmo implements LayerContainer.LayerTransform {
-	
-	private static final int S = 9, R = 6;
+public class Handle extends Gizmo<Handle> {
 
+	private static final int S = 9, R = 6;
+	
+	/////////////////////
+		
+	final private LayerContainer[] consumers;
 	private Color background = null;
 	private Color foreground = null;
+
+	public double centerX, centerY;
 	
 //==[ Constructor ]=================================================================================
 	
-	public Handle(LayerContainer parent) {
+	public Handle(LayerContainer parent, LayerContainer... consumers) {
 		super(parent);
 		setExtents(-S, -S, S, S);
-		
+
+		this.consumers = consumers;
 	}
 	
 //==[ Setter/Getter ]===============================================================================
@@ -59,9 +65,13 @@ public class Handle extends Gizmo implements LayerContainer.LayerTransform {
 	}
 
 //==[ Event Handling ]==============================================================================
-	
+
 	private float dx = 0, dy = 0;
 	private boolean drag;
+
+	@Override protected boolean isMouseHandler() {
+		return true;
+	}
 	
 	@Override public void onMouseDown(float x, float y, Event e) {
 		if (e.button!=1) return;
@@ -76,19 +86,43 @@ public class Handle extends Gizmo implements LayerContainer.LayerTransform {
 	}
 	
 	@Override public void onMouseMove(float x, float y, Event e) {
-		if (drag)
+		if (drag) {
 			translate(x-dx, y-dy);
+			
+			getParent().redraw();
+			for (LayerContainer lc: consumers)
+				lc.redraw();
+		}
 	}
 
 //==[ Transform ]===================================================================================
 	
 	@Override protected boolean validateTransform() {
-		getCanvasTransform(this);
+		getCanvasTransform( this::normalizeCanvasTransform );
+			
 		return super.validateTransform();
 	}
+
+	@Override public Handle concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+		super.concatenate(scX, shY, shX, scY, tx, ty);
+		getLayerTranslation(this::onLayerPositionChanges);
+		return this;
+	}
 	
-	@Override final public void concatenate(float scx, float shy, float shx, float scy, float tx, float ty) {
+	
+	public void center( LayerTranslation l ) {
+		getLayerTranslation(l);
+	}
+	
+	protected void onLayerPositionChanges(float x, float y) {
+		centerX = x;
+		centerY = y;
+	}
+	
+	private void normalizeCanvasTransform(float scx, float shy, float shx, float scy, float tx, float ty) {
 		scale(1/scx);
 	}
 
 }
+
+

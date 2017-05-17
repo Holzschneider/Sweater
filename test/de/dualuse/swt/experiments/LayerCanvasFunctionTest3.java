@@ -165,12 +165,12 @@ public class LayerCanvasFunctionTest3 {
 		
 		d.removeListener(SWT.MouseEnter, listener1);
 		
-		d.addPaintListener(new PaintListener() {
-			@Override public void paintControl(PaintEvent e) {
-				e.gc.setBackground(e.gc.getDevice().getSystemColor(SWT.COLOR_RED));
-				e.gc.fillRectangle(-6, -6, 12, 12);
-			}
-		});
+//		d.addPaintListener(new PaintListener() {
+//			@Override public void paintControl(PaintEvent e) {
+//				e.gc.setBackground(e.gc.getDevice().getSystemColor(SWT.COLOR_RED));
+//				e.gc.fillRectangle(-6, -6, 12, 12);
+//			}
+//		});
 		
 		sh.setBounds(1200, 200, 800, 800);
 		sh.setVisible(true);

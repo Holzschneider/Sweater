@@ -52,7 +52,12 @@ public class Listeners implements Listener {
 	}
 	
 	public static Listener exclude(Listener chain, Listener excludee) {
-		if (chain.equals(excludee)) return null;
+		if (chain.equals(excludee))
+			if (chain instanceof Listeners)
+				return ((Listeners)chain).others;
+			else 
+				return null;
+		
 		Listeners l = ((Listeners)chain).exclude(excludee);
 		return l.others!=null?l:l.listener;
 	}
