@@ -113,15 +113,14 @@ public class RCTest {
 			rc.translate(-id.width/2, -id.height/2);
 //			rc.fill(new Rectangle2D.Double(0,0,id.width,id.height));
 
-			rc.setAlpha(100);
 
-			rc.drawImage(im, 0, 0);
+//			rc.drawImage(im, 0, 0);
 			rc.popTransform();
 			
+
+			rc.setAlpha(50);			
 			
-			
-			
-//			rc.drawString("hallo", 0, 0, true);
+			rc.drawString("hallo", -10, -5, true);
 			
 
 //			col.dispose();
