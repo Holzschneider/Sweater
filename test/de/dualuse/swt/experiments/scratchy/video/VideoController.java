@@ -3,7 +3,7 @@ package de.dualuse.swt.experiments.scratchy.video;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 // VideoSource + Cursor
-public class VideoEditor {
+public class VideoController {
 	
 	Video video;
 	Video videoSD;
@@ -13,12 +13,12 @@ public class VideoEditor {
 	
 //==[ Constructor ]=================================================================================
 	
-	public VideoEditor(Video video) {
+	public VideoController(Video video) {
 		this.video = video;
 		this.total = video.numFrames();
 	}
 	
-	public VideoEditor(Video video, Video videoSD) {
+	public VideoController(Video video, Video videoSD) {
 		this.video = video;
 		this.videoSD = videoSD;
 		this.total = video.numFrames();

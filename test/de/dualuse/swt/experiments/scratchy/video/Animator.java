@@ -9,7 +9,7 @@ public class Animator {
 	
 	Display dsp;
 	Composite canvas;
-	VideoEditor editor;
+	VideoController editor;
 
 	double fps;
 	int numFrames;
@@ -27,7 +27,7 @@ public class Animator {
 	
 //==[ Constructor ]=================================================================================
 	
-	public Animator(Composite canvas, VideoEditor editor) {
+	public Animator(Composite canvas, VideoController editor) {
 		this.dsp = canvas.getDisplay();
 		this.canvas = canvas;
 		this.editor = editor;

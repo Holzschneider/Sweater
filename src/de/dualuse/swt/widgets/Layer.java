@@ -52,14 +52,14 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	private boolean redraw = true; //whether redraws are triggerd upon change 
 	
 	
-	@Override
-	public Bounds setBounds(Rectangle r) {
+//==[ Bounds/Extents & Resize/Move/Control Listener ]===============================================
+	
+	@Override public Bounds setBounds(Rectangle r) {
 		super.setBounds(r);
 		return this;
 	}
 	
-	@Override
-	public Layer setExtents(float left, float top, float right, float bottom) {
+	@Override public Layer setExtents(float left, float top, float right, float bottom) {
 		boolean changed = this.left!=left || this.top!=top || this.right!=right || this.bottom!=bottom;
 
 		float deltaX = left-this.left, deltaY = top-this.top;
@@ -103,6 +103,7 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	
 	protected void onMove(float deltax, float deltay) 
 	{ if (onMove!=null)  onMove.handleEvent(controlEvent(Move, deltax, deltay)); }
+	
 	protected void onResize(float deltaWidth, float deltaHeight) 
 	{ if (onResize!=null)  onResize.handleEvent(controlEvent(Resize, deltaWidth, deltaHeight)); }
 	
@@ -130,9 +131,8 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 		return clipping;
 	}
 
+//==[ Constructor & Resource Disposal ]=============================================================
 	
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////// CONSTRUCTOR & HIERARCHY ///////////////////////////////
 	public Layer(LayerContainer parent) {
 		parent.addLayer(this);
 		
@@ -140,18 +140,71 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 		identity();
 	}
 	
+	boolean isDisposed;
+	
 	public void dispose() {
 		getParent().removeLayer(this);
 		setRoot(null);
 		parent = null;
+		isDisposed=true;
+	}
+	
+	public boolean isDisposed() {
+		return isDisposed;
 	}
 
-	public Layer addLayer(Layer r) {
-		if (r.setParent(this))
-			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
+//==[ Hierarchy ]===================================================================================
 
-		if (redraw)
-			redraw();
+	///// Root
+	
+	protected void setRoot(LayerCanvas root) { 
+		this.root = root;
+		for (Layer child: children)
+			child.setRoot(root);
+	}
+
+	public LayerCanvas getRoot() { return root; }
+	
+	///// Parent
+
+	protected boolean setParent(Layer r) {
+		if (parent==r)
+			return false;
+		
+		if (parent!=null) {
+			parent = r;
+			getParent().removeLayer(this);
+		} else {
+			parent = r;
+		}
+		
+		if (parent!=null)
+			getParent().addLayer(this);
+		
+		return true;
+	}
+	
+	public LayerContainer getParent() { return parent==null?root:parent; }
+	
+	///// Children (add, get, remove, z-order)
+	
+	public Layer addLayer(Layer r) {
+		if (r.setParent(this)) {
+			
+//			((children = Arrays.copyOf(children, children.length+1))[children.length-1]=r).setRoot(root);
+			
+			// Child 0 is the top-most element; intuitively new layers should be added on top
+			// ( z-order -> insertion order )
+			Layer[] newChildren = new Layer[children.length+1];
+			for (int i=0; i<children.length; i++)
+				newChildren[i+1] = children[i];
+			newChildren[0] = r;
+			children = newChildren;
+			r.setRoot(root);
+			
+			if (redraw)
+				redraw();
+		}
 
 		return this;
 	}
@@ -161,8 +214,11 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 			if (children[i]==r) {
 				r.setParent(null);
 				r.setRoot(null);
+
+				// XXX z-order modified due to element swap during removal
 				children[i] = children[children.length-1];
 				children = Arrays.copyOf(children, children.length-1);
+				
 				return this;
 			}
 	
@@ -170,21 +226,6 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 			redraw();
 				
 		return this;
-	}
-	
-	protected boolean setParent(Layer r) {
-		if (parent==r)
-			return false;
-		
-		if (parent!=null) 
-			getParent().removeLayer(this);
-			
-		parent = r;
-		
-		if (parent!=null)
-			getParent().addLayer(this);
-		
-		return true;
 	}
 	
 	public Layer[] getLayers() {
@@ -199,54 +240,49 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 		return -1;
 	}
 	
+	// Moves Layer above the specified sibling Layer r
+	// (if r==null, moves Layer to the first child position at index 0)
+	public void moveTop() { moveAbove(null); }
 	public void moveAbove(Layer r) {
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
 		
-		for (int j=ir;j>=1 && cs[j]!=r;j--) {
-			Layer t = cs[j];
+		for (int j=ir; j>=1 && cs[j]!=r; j--) {
+			
+			Layer tmp = cs[j];
 			cs[j] = cs[j-1];
-			cs[j-1] = t;
+			cs[j-1] = tmp;
 			
 			if (redraw)
-				t.redraw();
+				tmp.redraw();
 		}
-		
-//		if (redraw)
-//			redraw();
 	}
 	
-	
+	// Moves Layer below the specified sibling Layer r
+	// (if r==null, moves Layer to the last child position at length-1)
+	public void moveBottom() { moveBelow(null); }
 	public void moveBelow(Layer r) {
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
 		
-		for (int j=ir,J=cs.length;j<J-1 && cs[j]!=r;j++) {
-			Layer t = cs[j];
+		for (int j=ir,J=cs.length; j<J-1 && cs[j]!=r; j++) {
+			
+			Layer tmp = cs[j];
 			cs[j] = cs[j+1];
-			cs[j+1] = t;
+			cs[j+1] = tmp;
 			
 			if (redraw)
-				t.redraw();
+				tmp.redraw();
 		}
 	}
 	
-	public LayerContainer getParent() { return parent==null?root:parent; }
-	
-	public LayerCanvas getRoot() { return root; }
-	protected void setRoot(LayerCanvas root) { 
-		this.root = root;
-		for (Layer child: children)
-			child.setRoot(root);
-	}
-	
-	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////// TRANSFORMATION ///////////////////////////////////////////////////
+	
 	public Layer rotate(double theta) { return concatenate(cos(theta),sin(theta),-sin(theta),cos(theta),0,0); }
 	public Layer translate(double tx, double ty) { return concatenate(1,0,0,1,tx,ty); }
 	public Layer scale(double s, double px, double py) { return scale(s,s,px,py); }
@@ -518,6 +554,8 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	}
 	
 	final public void run() {
+		if (isDisposed()) return;
+		
 		final float globalLeft = global.left, globalTop = global.top;
 		final float globalRight = global.right, globalBottom = global.bottom;
 		
@@ -540,6 +578,7 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////// RENDERING /////////////////////////////////////////
+	
 	private boolean paintEvent = false;
 	public boolean isPaintEvent() {
 		return paintEvent;
@@ -681,7 +720,8 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	
 	public void capture(Layer c) {
 		captive = c;
-		getParent().capture(c);
+		if (getParent()!=null)
+			getParent().capture(c);
 	}
 	
 	public Layer captive() {
@@ -753,12 +793,12 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	
 	private boolean onMouseEvent(float x, float y, Event e) {
 		switch (e.type) {
-		default: return false;
-		case MouseMove: onMouseMove(x,y,e); break;
-		case MouseUp: onMouseUp(x,y,e); break;
-		case MouseDown: onMouseDown(x,y,e); break;
-		case MouseWheel: onMouseWheel(x,y,e); break;
-		case MouseDoubleClick: onMouseDoubleClick(x,y,e); break;
+			case MouseMove: onMouseMove(x,y,e); break;
+			case MouseUp: onMouseUp(x,y,e); break;
+			case MouseDown: onMouseDown(x,y,e); break;
+			case MouseWheel: onMouseWheel(x,y,e); break;
+			case MouseDoubleClick: onMouseDoubleClick(x,y,e); break;
+			default: return false;
 		}
 		return true;
 	}
@@ -768,15 +808,15 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 	private static Class<?>[] parameterTypes = new Class<?>[] { float.class,float.class,Event.class };
 	public Collection<String> names = Arrays.asList(methodNames); 
 	private static String[] methodNames = { 
-			"onMouseDown", 
-			"onMouseUp", 
-			"onMouseClick", 
-			"onMouseDoubleClick", 
-			"onMouseMove",
-			"onMouseEnter",
-			"onMouseExit",
-			"onMouseWheel",
-		};
+		"onMouseDown", 
+		"onMouseUp", 
+		"onMouseClick", 
+		"onMouseDoubleClick", 
+		"onMouseMove",
+		"onMouseEnter",
+		"onMouseExit",
+		"onMouseWheel",
+	};
 
 	private int mouseListeners = hasMouseHandler()?1:0;
 	
@@ -792,7 +832,7 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 					return true;
 		} catch (Exception ex) {
 			throw new Error(ex);
-		};
+		}
 		
 		return false;	
 	}
@@ -858,7 +898,7 @@ public class Layer extends Bounds implements LayerContainer, LayerLocator, Runna
 		
 		case Paint: onPaint = Listeners.exclude(onPaint, l); break;
 		
-		case MouseClick: onMouseClick = Listeners.exclude(onMouseClick,l); countMouseListeners(+1); break;
+		case MouseClick: onMouseClick = Listeners.exclude(onMouseClick,l); countMouseListeners(-1); break;
 		case MouseDoubleClick: onDoubleClick = Listeners.exclude(onDoubleClick,l); countMouseListeners(-1); break;
 		case MouseDown: onMouseDown = Listeners.exclude(onMouseDown,l); countMouseListeners(-1); break;
 		case MouseUp: onMouseUp = Listeners.exclude(onMouseUp,l); countMouseListeners(-1); break;

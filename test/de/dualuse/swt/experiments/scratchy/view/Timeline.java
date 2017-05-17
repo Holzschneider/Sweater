@@ -13,8 +13,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
-import de.dualuse.swt.experiments.scratchy.video.VideoEditor;
-import de.dualuse.swt.experiments.scratchy.video.VideoEditor.EditorListener;
+import de.dualuse.swt.experiments.scratchy.video.VideoController;
+import de.dualuse.swt.experiments.scratchy.video.VideoController.EditorListener;
 
 public class Timeline extends Canvas implements EditorListener { // FrameListener, EditorListener {
 
@@ -26,11 +26,11 @@ public class Timeline extends Canvas implements EditorListener { // FrameListene
 	int totalFrames;
 	int currentFrame;
 
-	VideoEditor editor;
+	VideoController editor;
 
 //==[ Constructor ]=================================================================================
 	
-	public Timeline(Composite parent, int style, VideoEditor editor) {
+	public Timeline(Composite parent, int style, VideoController editor) {
 		super(parent, style);
 
 		dsp = getDisplay();
