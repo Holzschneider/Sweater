@@ -33,6 +33,9 @@ public class Listeners implements Listener {
 		if (this.listener.equals(l))
 			return others;
 
+		if (this.others==null)
+			return this;
+		
 		return new Listeners(this.listener, this.others.exclude(l));
 	}
 	
