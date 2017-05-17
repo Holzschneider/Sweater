@@ -7,9 +7,11 @@ import static org.eclipse.swt.SWT.NONE;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
@@ -134,9 +136,44 @@ public class LayerCanvasFunctionTest3 {
 		Layer d = new Handle(a)
 				.translate(400, 200);
 		
+		Listener listener1 = new Listener() {
+			@Override public void handleEvent(Event event) {
+				System.out.println("Listener 1");
+			}
+		};
+		Listener listener2 = new Listener() {
+			@Override public void handleEvent(Event event) {
+				System.out.println("Listener 2");
+			}
+		};
+		Listener listener3 = new Listener() {
+			@Override public void handleEvent(Event event) {
+				System.out.println("Listener 3");
+			}
+		};
+		
+//		d.addListener(SWT.MouseEnter, l);
+//		d.removeListener(SWT.MouseEnter, l);
+//
+//		d.addListener(SWT.MouseEnter, l);
+//		d.removeListener(SWT.MouseEnter, l);
+//		d.removeListener(SWT.MouseEnter, l);
+
+		d.addListener(SWT.MouseEnter, listener1);
+		d.addListener(SWT.MouseEnter, listener2);
+		d.addListener(SWT.MouseEnter, listener3);
+		
+		d.removeListener(SWT.MouseEnter, listener1);
+		
+		d.addPaintListener(new PaintListener() {
+			@Override public void paintControl(PaintEvent e) {
+				e.gc.setBackground(e.gc.getDevice().getSystemColor(SWT.COLOR_RED));
+				e.gc.fillRectangle(-6, -6, 12, 12);
+			}
+		});
+		
 		sh.setBounds(1200, 200, 800, 800);
 		sh.setVisible(true);
-		
 		app.loop(sh);
 		
 	}
