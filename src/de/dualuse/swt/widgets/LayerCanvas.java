@@ -71,7 +71,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
 				r.setParent(null);
-				children[i] = children[children.length-1];
+				children[i] = children[children.length-1]; // XXX z Order
 				children = Arrays.copyOf(children, children.length-1);
 			}
 		
@@ -81,7 +81,9 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	final protected void point(Event e) {
-		for (Layer r: children) {
+		// for (Layer r: children) {
+		for (int i=children.length-1, I=0; i>=I; i--) {
+			Layer r = children[i];
 			if (e.doit)
 				if (r.captive()==captive) //either captive == null, or set to a specific layer
 					r.point(e);
@@ -96,7 +98,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	final protected void paint(Rectangle clip, Transform t, Event c) {
-		for (int I=children.length-1,i=0;I>=i;I--)
+		// for (int I=children.length-1,i=0;I>=i;I--)
+		for (int I=0,i=children.length-1; I<=i; I++)
 			children[I].paint(clip,t,c);
 	}
 	
@@ -107,8 +110,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	private float[] backup = new float[6];
 	private Transform layerTransform = new Transform(getDisplay());
 	public void setLayerTransform(Transform matrix) {
-		globalCount ++;
-		transformCount ++;
+		globalCount++;
+		transformCount++;
 		layerTransform.identity();
 		layerTransform.multiply(matrix);
 	}

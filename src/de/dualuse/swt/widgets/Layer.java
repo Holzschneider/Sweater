@@ -238,8 +238,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	// Moves Layer above the specified sibling Layer r
 	// (if r==null, moves Layer to the first child position at index 0)
-	public void moveTop() { moveAbove(null); }
-	public void moveAbove(Layer r) {
+	public void moveBottom() { moveBelow(null); }
+	public void moveBelow(Layer r) {
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
@@ -258,8 +258,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	// Moves Layer below the specified sibling Layer r
 	// (if r==null, moves Layer to the last child position at length-1)
-	public void moveBottom() { moveBelow(null); }
-	public void moveBelow(Layer r) {
+	public void moveTop() { moveAbove(null); }
+	public void moveAbove(Layer r) {
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
@@ -649,7 +649,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		// Apply to clip and also to GC c
 		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
 		
-		for (int I=children.length-1,i=0;I>=i;I--) {
+		// for (int I=children.length-1,i=0;I>=i;I--) {
+		for (int I=0,i=children.length-1; I<=i; I++) {
 			int x = clip.x, y = clip.y, w = clip.width, h = clip.height;
 
 			if (clipping) { 
@@ -722,13 +723,16 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		
 		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
-		for (Layer r: children)
+//		for (Layer r: children) {
+		for (int i=children.length-1, I=0; i>=I; i--) {
+			Layer r = children[i];
 			if (r.mouseListeners>0) //only if there are mouse listeners anyways
 				if (e.doit) //only if it shall happen
 					if (!clipping || clipping && hit) // if clipping hits or there s no clipping at all
 						if (r.captive()==captive) //either captive == null, or set to a specific layer
 							r.point(e);
-
+		}
+		
 		if (hit || captive==this) {
 			if (e.doit && !entered) { 
 				onMouseEnter(x,y,e);

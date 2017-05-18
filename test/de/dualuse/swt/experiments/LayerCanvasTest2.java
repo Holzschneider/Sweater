@@ -10,6 +10,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Path;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Event;
@@ -29,12 +30,15 @@ public class LayerCanvasTest2 {
 		RGB col = new RGB(rng.nextFloat()*360, 0.8f, 0.9f);
 
 		static int counter = 0;
+		
+		int id;
 		String name;
 		
 		public Frame(LayerContainer parent) {
 			super(parent);
 			setExtents(-50, -50, 50, 50);
-			name = "Frame " + (++counter);
+			id = ++counter;
+			name = "Frame " + id;
 		}
 		
 		@Override public void onPaint(Event e) {
@@ -47,6 +51,10 @@ public class LayerCanvasTest2 {
 			gc.fillPath(path);
 			path.dispose();
 			rc.dispose();
+			
+			gc.setForeground(gc.getDevice().getSystemColor(SWT.COLOR_WHITE));
+			Point extents = gc.stringExtent("" + id);
+			gc.drawString("" + id, -extents.x/2, -extents.y/2);
 		}
 		
 		
@@ -116,6 +124,7 @@ public class LayerCanvasTest2 {
 				.translate(100, 100).scale(.5, .5);
 //		d.addListener(SWT.MouseMove, (e) -> { e.doit = true; });
 		
+		new Frame(d);
 		new Frame(d);
 		new Frame(d);
 		new Frame(d);
