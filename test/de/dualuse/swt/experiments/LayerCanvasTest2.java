@@ -28,9 +28,13 @@ public class LayerCanvasTest2 {
 		Random rng = new Random();
 		RGB col = new RGB(rng.nextFloat()*360, 0.8f, 0.9f);
 
+		static int counter = 0;
+		String name;
+		
 		public Frame(LayerContainer parent) {
 			super(parent);
 			setExtents(-50, -50, 50, 50);
+			name = "Frame " + (++counter);
 		}
 		
 		@Override public void onPaint(Event e) {
@@ -47,17 +51,31 @@ public class LayerCanvasTest2 {
 		
 		
 		float x0, y0;
+		boolean drag;
 		
 		@Override public void onMouseDown(float x, float y, Event event) {
+//			System.out.println(this + ".onMouseDown()");
+			if (event.button!=1) return;
 			moveTop();
 			x0 = x;
 			y0 = y;
+			drag = true;
+			event.doit = false;
+		}
+		
+		@Override public void onMouseUp(float x, float y, Event event) {
+//			System.out.println(this + ".onMouseUp()");
+			if (event.button!=1) return;
+			drag = false;
+			event.doit = false;
 		}
 		
 		@Override public void onMouseMove(float x, float y, Event event) {
-			if (event.stateMask!=0) {
+//			System.out.println(this + ".onMouseMove()");
+			if (drag) {
 				translate(x-x0, y-y0);
 			}
+			event.doit = false;
 		}
 		
 		@Override public void onMouseWheel(float x, float y, Event event) {
@@ -72,6 +90,8 @@ public class LayerCanvasTest2 {
 			
 			redraw();
 		}
+		
+		@Override public String toString() { return name; }
 	}
 	
 	
@@ -88,18 +108,20 @@ public class LayerCanvasTest2 {
 			if (e.keyCode == SWT.ESC)
 				sh.dispose();
 		});
-		
+
+
 		Layer d = new Layer(dc)
 				// .setSize(100, 100);
 				// .rotate(0.5)
 				.translate(100, 100).scale(.5, .5);
-
-		d.addListener(SWT.MouseMove, (e) -> {});
+//		d.addListener(SWT.MouseMove, (e) -> { e.doit = true; });
 		
 		new Frame(d);
 		new Frame(d);
-		new Frame(dc);
 		new Frame(d);
+
+		Frame frame1 = (Frame)new Frame(dc).translate(320, 50);
+		Frame frame2 = (Frame)new Frame(dc).translate(50,  320);
 		
 		sh.setBounds(1500, 150, 800, 600);
 		sh.setVisible(true);

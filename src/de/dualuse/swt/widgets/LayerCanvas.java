@@ -81,10 +81,11 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	final protected void point(Event e) {
-		for (Layer r: children)
+		for (Layer r: children) {
 			if (e.doit)
 				if (r.captive()==captive) //either captive == null, or set to a specific layer
 					r.point(e);
+		}
 	}
 	
 	private Layer captive = null;
@@ -121,19 +122,19 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	@Override
 	public void handleEvent(Event event) {
 		switch (event.type) {
-		case Paint:
-			layerTransform.getElements(backup);
-			event.gc.setLineAttributes(new LineAttributes(1));
-			paint(event.gc.getClipping(), layerTransform, event);
-			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
-			break;
-		
-		case MouseDown:
-		case MouseUp:
-		case MouseMove:
-		case MouseWheel:
-		case MouseDoubleClick:
-			point(event);
+			case Paint:
+				layerTransform.getElements(backup);
+				event.gc.setLineAttributes(new LineAttributes(1));
+				paint(event.gc.getClipping(), layerTransform, event);
+				layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
+				break;
+			
+			case MouseDown:
+			case MouseUp:
+			case MouseMove:
+			case MouseWheel:
+			case MouseDoubleClick:
+				point(event);
 		}
 	}
 

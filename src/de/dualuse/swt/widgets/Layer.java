@@ -736,11 +736,11 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			}
 			
 			if (e.doit) {
+				e.doit = false;
+				
 				if (onMouseEvent(x,y,e)) {
-					if (e.type==MouseDown)
+					if (e.type==MouseDown && !e.doit) // only capture if e.doit was not modified
 						capture(this);
-					
-					e.doit = false;
 				}
 			}
 			
@@ -847,7 +847,13 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	public void onMouseEnter(float x, float y, Event e) { defaultHandleEvent(onMouseEnter, e); }
 	public void onMouseExit(float x, float y, Event e) { defaultHandleEvent(onMouseExit, e); }
 
-	private void defaultHandleEvent(Listener l,Event e) { if (l!=null) l.handleEvent(e); }
+	private void defaultHandleEvent(Listener l, Event e) {
+		if (l!=null) {
+			l.handleEvent(e);
+		} else {
+			e.doit = true; // if no event handler defined, let event pass through
+		}
+	}
 	
 
 	public Layer addListener(int eventType, Listener l) {
