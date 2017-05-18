@@ -8,7 +8,6 @@ public interface Silenced {
 	static class System extends FakeSystem {
 		@Deprecated
 		static final private OutputStream silentStream = new OutputStream() {
-			StringBuilder sb = new StringBuilder();
 			public void write(int b) throws IOException { }
 			public void write(byte[] b) throws IOException {  }
 			public void write(byte[] b, int off, int len) throws IOException {  }
@@ -21,7 +20,7 @@ public interface Silenced {
 		static public final PrintStream err = new PrintStream(silentStream,true);
 
 		@Deprecated
-		static public final InputStream in = System.in;
+		static public final InputStream in = java.lang.System.in;
 	}
 
 }

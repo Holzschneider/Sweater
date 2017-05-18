@@ -31,7 +31,7 @@ public class HandleTest2 {
 		
 		Handle a = new Handle(z).translate(100, 100);
 		Handle b = new Handle(z).translate(200, 200);
-		z.addPaintListener( (e) -> a.center( (ax,ay) -> b.center( (bx,by ) -> e.gc.drawLine( (int)ax, (int)ay, (int)bx, (int)by) )) );
+//		z.addPaintListener( (e) -> a.getCenter( (ax,ay) -> b.getCenter( (bx,by ) -> e.gc.drawLine( (int)ax, (int)ay, (int)bx, (int)by) )) );
 
 
 //		z.addListener(MouseDown, (e) -> l.setLocation(lc.transform(e.x, e.y, z, (x,y) -> new Point2D.Float(x, y))));

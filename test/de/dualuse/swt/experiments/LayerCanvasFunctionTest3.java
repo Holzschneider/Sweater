@@ -163,7 +163,7 @@ public class LayerCanvasFunctionTest3 {
 		d.removeListener(SWT.MouseEnter, listener1);
 		
 		// Listeners l = (Listeners) d.onMouseEnter;
-		// Listener l = d.onMouseEnter;
+//		Listener l = d.onMouseEnter;
 		
 		d.addListener(SWT.MouseEnter, listener2);
 //		

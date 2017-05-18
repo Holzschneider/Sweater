@@ -24,10 +24,15 @@ public interface LayerContainer {
 	public interface TransformedCoordinate<T> { T define(float x, float y); }
 
 	
-	interface LayerTransform { void transformation(float scX, float shY, float shX, float scY, float tX, float tY); }
-	interface LayerTranslation { void translation(float translationX, float translationY); }
-//	interface LayerRotation { void rotation(float scaleX, float scaleY); }
-//	interface LayerScale { void scale(float scaleX, float scaleY); }
+	interface LayerTransformFunction<T> { T transform(double scX, double shY, double shX, double scY, double tX, double tY); }
+	interface LayerTranslationFunction<T> { T translate(double translationX, double translationY); }
+//	interface LayerRotationFunction<T> { T rotation(double scaleX, double scaleY); }
+//	interface LayerScaleFunction<T> { T scale(double scaleX, double scaleY); }
+
+	interface LayerTransformConsumer { void transform(double scX, double shY, double shX, double scY, double tX, double tY); }
+	interface LayerTranslationConsumer { void translate(double translationX, double translationY); }
+//	interface LayerRotationConsumer { void rotation(double scaleX, double scaleY); }
+//	interface LayerScaleConsumer { void scale(double scaleX, double scaleY); }
 	
 }
 
