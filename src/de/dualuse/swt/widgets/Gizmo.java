@@ -34,5 +34,13 @@ public class Gizmo<T extends Gizmo<?>> extends Layer {
  	@Override public T identity() { return (T)super.identity(); }
  	@Override public T setRedraw(boolean redraw) { return (T)super.setRedraw(redraw); }
  	@Override public T addListener(int eventType, Listener l) { return (T)super.addListener(eventType, l); }
- 	@Override public T removeListener(int eventType, Listener l) { return (T)super.removeListener(eventType, l); }  
+ 	@Override public T removeListener(int eventType, Listener l) { return (T)super.removeListener(eventType, l); }
+ 	
+ 	
+ 	@Override public T readCanvasTransform(LayerTransformConsumer lt) { return (T) super.readCanvasTransform(lt); }
+ 	@Override public T readCanvasTranslation(LayerTranslationConsumer lt) { return (T) super.readCanvasTranslation(lt); }
+ 	
+ 	@Override public T readLayerTransform(LayerTransformConsumer lt) { return (T)super.readLayerTransform(lt); }
+ 	@Override public T readLayerTranslation(LayerTranslationConsumer lt) { return (T)super.readLayerTranslation(lt); }
 }
+

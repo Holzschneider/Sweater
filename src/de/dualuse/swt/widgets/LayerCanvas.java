@@ -68,23 +68,44 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	@Override
 	public LayerCanvas removeLayer(Layer r) {
-		for (int i=0,I=children.length;i<I;i++)
-			if (children[i]==r) {
-				r.setParent(null);
-				children[i] = children[children.length-1];
-				children = Arrays.copyOf(children, children.length-1);
-			}
 		
-		r.setRoot(null);
+		int i = indexOf(r);
+		if (i>=0) {
+			
+			// Remove child without changing the z-order of the remaining children 
+			Layer[] newchildren = new Layer[children.length-1];
+			for (int j=0, J=children.length, k=0; j<J; j++) {
+				if (j==i) continue;
+				newchildren[k++] = children[j];
+			}
+			children = newchildren;
+			
+			r.setRoot(null);
+
+			redraw(); // XXX only layer bounds?
+			
+		}
+		
+//		for (int i=0,I=children.length;i<I;i++)
+//			if (children[i]==r) {
+//				r.setParent(null);
+//				children[i] = children[children.length-1]; // XXX z Order
+//				children = Arrays.copyOf(children, children.length-1);
+//			}
+//		
+//		r.setRoot(null);
 		
 		return this;
 	}
 	
 	final protected void point(Event e) {
-		for (Layer r: children)
+		// for (Layer r: children) {
+		for (int i=children.length-1, I=0; i>=I; i--) {
+			Layer r = children[i];
 			if (e.doit)
 				if (r.captive()==captive) //either captive == null, or set to a specific layer
 					r.point(e);
+		}
 	}
 	
 	private Layer captive = null;
@@ -95,7 +116,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 	
 	final protected void paint(Rectangle clip, Transform t, Event c) {
-		for (int I=children.length-1,i=0;I>=i;I--)
+		// for (int I=children.length-1,i=0;I>=i;I--)
+		for (int I=0,i=children.length-1; I<=i; I++)
 			children[I].paint(clip,t,c);
 	}
 	
@@ -106,8 +128,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	private float[] backup = new float[6];
 	private Transform layerTransform = new Transform(getDisplay());
 	public void setLayerTransform(Transform matrix) {
-		globalCount ++;
-		transformCount ++;
+		globalCount++;
+		transformCount++;
 		layerTransform.identity();
 		layerTransform.multiply(matrix);
 	}
@@ -121,19 +143,19 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	@Override
 	public void handleEvent(Event event) {
 		switch (event.type) {
-		case Paint:
-			layerTransform.getElements(backup);
-			event.gc.setLineAttributes(new LineAttributes(1));
-			paint(event.gc.getClipping(), layerTransform, event);
-			layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
-			break;
-		
-		case MouseDown:
-		case MouseUp:
-		case MouseMove:
-		case MouseWheel:
-		case MouseDoubleClick:
-			point(event);
+			case Paint:
+				layerTransform.getElements(backup);
+				event.gc.setLineAttributes(new LineAttributes(1));
+				paint(event.gc.getClipping(), layerTransform, event);
+				layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
+				break;
+			
+			case MouseDown:
+			case MouseUp:
+			case MouseMove:
+			case MouseWheel:
+			case MouseDoubleClick:
+				point(event);
 		}
 	}
 

@@ -176,7 +176,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			return false;
 		
 		if (parent!=null)
-			getParent().removeLayer(this); // XXX danger: calls this.setParent(null), potential loop between setParent() and removeLayer()
+			getParent().removeLayer(this);
 
 		parent = r;
 		
@@ -204,22 +204,47 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 
 	public Layer removeLayer(Layer r) {
-		for (int i=0,I=children.length;i<I;i++)
-			if (children[i]==r) {
-				r.setParent(null);
-				r.setRoot(null);
+		
+		int i = indexOf(r);
+		if (i>=0) {
 
-				// XXX z-order modified due to element swap during removal
-				children[i] = children[children.length-1];
-				children = Arrays.copyOf(children, children.length-1);
+			if (redraw)
+				redraw();
 
-				if (redraw)
-					redraw();
-									
-				this.mouseListeners -= r.mouseListeners;
-				
-				return this;
+			// Remove child without changing the z-order of the remaining children 
+			Layer[] newchildren = new Layer[children.length-1];
+			for (int j=0, J=children.length, k=0; j<J; j++) {
+				if (j==i) continue;
+				newchildren[k++] = children[j];
 			}
+			children = newchildren;
+			
+			// setParent to null after child has been removed from the children array to prevent ping pong between removeLayer and setParent
+			r.setParent(null);
+			r.setRoot(null);
+					
+			this.mouseListeners -= r.mouseListeners;
+			
+			return this;
+		}
+		
+//		for (int i=0,I=children.length;i<I;i++)
+//			if (children[i]==r) {
+//				
+//				r.setParent(null);
+//				r.setRoot(null);
+//
+//				// XXX z-order modified due to element swap during removal
+//				children[i] = children[children.length-1];
+//				children = Arrays.copyOf(children, children.length-1);
+//
+//				if (redraw)
+//					redraw();
+//									
+//				this.mouseListeners -= r.mouseListeners;
+//				
+//				return this;
+//			}
 		
 		return this;
 	}
@@ -238,8 +263,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	// Moves Layer above the specified sibling Layer r
 	// (if r==null, moves Layer to the first child position at index 0)
-	public void moveTop() { moveAbove(null); }
-	public void moveAbove(Layer r) {
+	public void moveBottom() { moveBelow(null); }
+	public void moveBelow(Layer r) {
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
@@ -258,8 +283,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	// Moves Layer below the specified sibling Layer r
 	// (if r==null, moves Layer to the last child position at length-1)
-	public void moveBottom() { moveBelow(null); }
-	public void moveBelow(Layer r) {
+	public void moveTop() { moveAbove(null); }
+	public void moveAbove(Layer r) {
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
@@ -667,7 +692,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		// Apply to clip and also to GC c
 		// but beware GC may be pre-transformed and setClipping may be excected in local coords			
 		
-		for (int I=children.length-1,i=0;I>=i;I--) {
+		// for (int I=children.length-1,i=0;I>=i;I--) {
+		for (int I=0,i=children.length-1; I<=i; I++) {
 			int x = clip.x, y = clip.y, w = clip.width, h = clip.height;
 
 			if (clipping) { 
@@ -740,13 +766,16 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		
 		boolean hit = x>=left && x<right && y>=top && y<bottom;
 
-		for (Layer r: children)
+//		for (Layer r: children) {
+		for (int i=children.length-1, I=0; i>=I; i--) {
+			Layer r = children[i];
 			if (r.mouseListeners>0) //only if there are mouse listeners anyways
 				if (e.doit) //only if it shall happen
 					if (!clipping || clipping && hit) // if clipping hits or there s no clipping at all
 						if (r.captive()==captive) //either captive == null, or set to a specific layer
 							r.point(e);
-
+		}
+		
 		if (hit || captive==this) {
 			if (e.doit && !entered) { 
 				onMouseEnter(x,y,e);
@@ -754,11 +783,11 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			}
 			
 			if (e.doit) {
+				e.doit = false;
+				
 				if (onMouseEvent(x,y,e)) {
-					if (e.type==MouseDown)
+					if (e.type==MouseDown && !e.doit) // only capture if e.doit was not modified
 						capture(this);
-					
-					e.doit = false;
 				}
 			}
 			
@@ -865,7 +894,13 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	public void onMouseEnter(float x, float y, Event e) { defaultHandleEvent(onMouseEnter, e); }
 	public void onMouseExit(float x, float y, Event e) { defaultHandleEvent(onMouseExit, e); }
 
-	private void defaultHandleEvent(Listener l,Event e) { if (l!=null) l.handleEvent(e); }
+	private void defaultHandleEvent(Listener l, Event e) {
+		if (l!=null) {
+			l.handleEvent(e);
+		} else {
+			e.doit = true; // if no event handler defined, let event pass through
+		}
+	}
 	
 
 	public Layer addListener(int eventType, Listener l) {

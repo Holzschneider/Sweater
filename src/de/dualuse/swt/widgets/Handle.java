@@ -121,7 +121,7 @@ public class Handle extends Gizmo<Handle> {
 	public double getCenterY() { return centerY; }
 	
 	public<T> T getCenter( LayerTranslationFunction<T> l ) { return getLayerTranslation(l); }
-//	public<T> T readCenter( LayerTranslation<T> l ) { return readLayerTranslation(l); }
+	public Handle readCenter( LayerTranslationConsumer l ) { return readLayerTranslation(l); }
 	
 	protected Handle onLayerPositionChanges(double x, double y) {
 		centerX = x;
