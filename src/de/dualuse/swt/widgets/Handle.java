@@ -17,9 +17,13 @@ public class Handle extends Gizmo<Handle> {
 	private Color background = null;
 	private Color foreground = null;
 
-	public double centerX, centerY;
+	private double centerX, centerY;
+	
+	
 	
 //==[ Constructor ]=================================================================================
+
+	public Handle(LayerContainer parent) { this(parent,new LayerContainer[0]); }
 	
 	public Handle(LayerContainer parent, LayerContainer... consumers) {
 		super(parent);
@@ -109,18 +113,24 @@ public class Handle extends Gizmo<Handle> {
 		return this;
 	}
 	
-	
-	public void center( LayerTranslation l ) {
-		getLayerTranslation(l);
+	public Handle setCenter( double x, double y ) {
+		return identity().translate(x, y);
 	}
 	
-	protected void onLayerPositionChanges(float x, float y) {
+	public double getCenterX() { return centerX; }
+	public double getCenterY() { return centerY; }
+	
+	public<T> T getCenter( LayerTranslationFunction<T> l ) { return getLayerTranslation(l); }
+//	public<T> T readCenter( LayerTranslation<T> l ) { return readLayerTranslation(l); }
+	
+	protected Handle onLayerPositionChanges(double x, double y) {
 		centerX = x;
 		centerY = y;
+		return this;
 	}
 	
-	private void normalizeCanvasTransform(float scx, float shy, float shx, float scy, float tx, float ty) {
-		scale(1/scx);
+	private Handle normalizeCanvasTransform(double scx, double shy, double shx, double scy, double tx, double ty) {
+		return scale(1/scx);
 	}
 
 }

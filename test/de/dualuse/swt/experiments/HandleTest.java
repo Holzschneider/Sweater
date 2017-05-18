@@ -25,7 +25,7 @@ public class HandleTest {
 		
 		
 		lc.addPaintListener((e) -> {
-			e.gc.drawLine( (int)a.centerX, (int)a.centerY, (int)b.centerX, (int)b.centerY);
+			e.gc.drawLine( (int)a.getCenterX(), (int)a.getCenterY(), (int)b.getCenterX(), (int)b.getCenterY());
 		});
 		
 		

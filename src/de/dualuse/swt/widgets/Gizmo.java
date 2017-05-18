@@ -32,10 +32,6 @@ public class Gizmo<T extends Gizmo<?>> extends Layer {
  	@Override public T postConcatenate(double scX, double shY, double shX, double scY, double tx, double ty) { return (T)super.postConcatenate(scX, shY, shX, scY, tx, ty); }
  	@Override public T concatenate(double scX, double shY, double shX, double scY, double tx, double ty) { return (T)super.concatenate(scX, shY, shX, scY, tx, ty); }
  	@Override public T identity() { return (T)super.identity(); }
- 	@Override public T getLayerTranslation(LayerTranslation lt) { return (T)super.getLayerTranslation(lt); }
- 	@Override public T getCanvasTranslation(LayerTranslation lt) { return (T)super.getCanvasTranslation(lt); }
- 	@Override public T getLayerTransform(LayerTransform lt) { return (T)super.getLayerTransform(lt); }
- 	@Override public T getCanvasTransform(LayerTransform lt) { return (T)super.getCanvasTransform(lt); }
  	@Override public T setRedraw(boolean redraw) { return (T)super.setRedraw(redraw); }
  	@Override public T addListener(int eventType, Listener l) { return (T)super.addListener(eventType, l); }
  	@Override public T removeListener(int eventType, Listener l) { return (T)super.removeListener(eventType, l); }  

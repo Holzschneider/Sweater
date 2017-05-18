@@ -391,28 +391,46 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////// DRAW EVENTS ////////////////////////////////////////
-
-	public Layer getLayerTranslation(LayerTranslation lt) {
-		lt.translation(M[T02],M[T12]);
+	
+	
+	public Layer readLayerTranslation(LayerTranslationConsumer lt) {
+		lt.translate(M[T02],M[T12]);
 		return this;
 	}
 	
-	public Layer getCanvasTranslation(LayerTranslation lt) {
+	public Layer readCanvasTranslation(LayerTranslationConsumer lt) {
 		validateTransformInternal();
-		lt.translation(W[T02],W[T12]);
-		return this;
-	}
-
-	
-	public Layer getLayerTransform(LayerTransform lt) {
-		lt.transformation(M[T00],M[T10],M[T01],M[T11],M[T02],M[T12]);
+		lt.translate(W[T02],W[T12]);
 		return this;
 	}
 	
-	public Layer getCanvasTransform(LayerTransform lt) {
+	public Layer readLayerTransform(LayerTransformConsumer lt) {
+		lt.transform(M[T00],M[T10],M[T01],M[T11],M[T02],M[T12]);
+		return this;
+	}
+	
+	public Layer readCanvasTransform(LayerTransformConsumer lt) {
 		validateTransformInternal();
-		lt.transformation(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
+		lt.transform(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
 		return this;
+	}
+	
+	public<T> T getLayerTranslation(LayerTranslationFunction<T> lt) {
+		return lt.translate(M[T02],M[T12]);
+	}
+	
+	public<T> T getCanvasTranslation(LayerTranslationFunction<T> lt) {
+		validateTransformInternal();
+		return lt.translate(W[T02],W[T12]);
+	}
+	
+	public<T> T getLayerTransform(LayerTransformFunction<T> lt) {
+		return lt.transform(M[T00],M[T10],M[T01],M[T11],M[T02],M[T12]);
+	}
+	
+	public<T> T getCanvasTransform(LayerTransformFunction<T> lt) {
+		validateTransformInternal();
+		return lt.transform(W[T00],W[T10],W[T01],W[T11],W[T02],W[T12]);
 	}
 	
 	protected void invalidateTransform() {
