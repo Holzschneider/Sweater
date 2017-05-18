@@ -11,8 +11,8 @@ public class GeomTest {
 	
 	float tick = 0f;
 	
-	public GeomTest() {
-		
+	public static void main(String[] args) {
+
 		Display dsp = Display.getDefault();
 		Shell shell = new Shell(dsp);
 		
@@ -90,10 +90,6 @@ public class GeomTest {
 				dsp.sleep();
 		
 		dsp.dispose();
-	}
-	
-	public static void main(String[] args) {
-		new GeomTest();
 	}
 	
 	static void print(String label, float[] elements) {
