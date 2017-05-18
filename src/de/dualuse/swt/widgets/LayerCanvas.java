@@ -29,7 +29,10 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
 		
-		super.addListener(Paint, this);
+		super.addListener(Paint, this); 
+		//XXX suggestion: add Layers as paint listeners upon addLayer and remove them upon removelayer, for paint order
+		
+		
 		super.addListener(MouseUp, this);
 		super.addListener(MouseDown, this);
 		super.addListener(MouseMove, this);
