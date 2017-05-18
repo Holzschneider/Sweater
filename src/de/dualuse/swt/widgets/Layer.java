@@ -866,24 +866,35 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	public final Layer addMouseWheelListener( MouseWheelListener pl ) { return addListener(MouseWheel,new WrappedListener(pl)); };
 	public final Layer removeMouseWheelListener( MouseWheelListener pl ) { return removeListener(MouseWheel,new WrappedListener(pl)); }
 	
-	
-	public void onMouseClick(float x, float y, Event e) { defaultHandleEvent(onMouseClick, e); }
-	public void onMouseDoubleClick(float x, float y, Event e) { defaultHandleEvent(onDoubleClick, e); }
-	public void onMouseDown(float x, float y, Event e) { defaultHandleEvent(onMouseDown, e); }
-	public void onMouseUp(float x, float y, Event e) { defaultHandleEvent(onMouseUp, e); }
-	public void onMouseMove(float x, float y, Event e) { defaultHandleEvent(onMouseMove, e); }
-	public void onMouseWheel(float x, float y, Event e) { defaultHandleEvent(onMouseWheel, e); }
-	public void onMouseEnter(float x, float y, Event e) { defaultHandleEvent(onMouseEnter, e); }
-	public void onMouseExit(float x, float y, Event e) { defaultHandleEvent(onMouseExit, e); }
+	// Default handlers don't consume event if not overridden/no listeners installed (reset e.doit back to true)
+	public void onMouseClick(float x, float y, Event e) { defaultHandleEvent(onMouseClick, e, false); }
+	public void onMouseDoubleClick(float x, float y, Event e) { defaultHandleEvent(onDoubleClick, e, false); }
+	public void onMouseDown(float x, float y, Event e) { defaultHandleEvent(onMouseDown, e, false); }
+	public void onMouseUp(float x, float y, Event e) { defaultHandleEvent(onMouseUp, e, false); }
+	public void onMouseMove(float x, float y, Event e) { defaultHandleEvent(onMouseMove, e, false); }
+	public void onMouseWheel(float x, float y, Event e) { defaultHandleEvent(onMouseWheel, e, false); }
+	public void onMouseEnter(float x, float y, Event e) { defaultHandleEvent(onMouseEnter, e, false); }
+	public void onMouseExit(float x, float y, Event e) { defaultHandleEvent(onMouseExit, e, false); }
 
-	private void defaultHandleEvent(Listener l, Event e) {
+	// Can be called if onMouse... methods overridden to call installed listeners as well (without resetting e.doit back to True)
+	protected void fireOnMouseClick(float x, float y, Event e) { defaultHandleEvent(onMouseClick, e, true); }
+	protected void fireOnMouseDoubleClick(float x, float y, Event e) { defaultHandleEvent(onDoubleClick, e, true); }
+	protected void fireOnMouseDown(float x, float y, Event e) { defaultHandleEvent(onMouseDown, e, true); }
+	protected void fireOnMouseUp(float x, float y, Event e) { defaultHandleEvent(onMouseUp, e, true); }
+	protected void fireOnMouseMove(float x, float y, Event e) { defaultHandleEvent(onMouseMove, e, true); }
+	protected void fireOnMouseWheel(float x, float y, Event e) { defaultHandleEvent(onMouseWheel, e, true); }
+	protected void fireOnMouseEnter(float x, float y, Event e) { defaultHandleEvent(onMouseEnter, e, true); }
+	protected void fireOnMouseExit(float x, float y, Event e) { defaultHandleEvent(onMouseExit, e, true); }
+	
+	
+	private void defaultHandleEvent(Listener l, Event e, boolean consume) {
 		if (l!=null) {
 			l.handleEvent(e);
 		} else {
-			e.doit = true; // if no event handler defined, let event pass through
+			if (!consume) 
+				e.doit = true; // if no event handler defined, let event pass through
 		}
 	}
-	
 
 	public Layer addListener(int eventType, Listener l) {
 		switch (eventType) {
