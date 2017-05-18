@@ -68,7 +68,6 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	@Override
 	public LayerCanvas removeLayer(Layer r) {
-		
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r) {
 				r.setParent(null);

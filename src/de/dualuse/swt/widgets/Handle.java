@@ -1,6 +1,5 @@
 package de.dualuse.swt.widgets;
 
-import static org.eclipse.swt.SWT.BUTTON1;
 import static org.eclipse.swt.SWT.COLOR_BLACK;
 import static org.eclipse.swt.SWT.COLOR_WHITE;
 
@@ -9,27 +8,38 @@ import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.widgets.Event;
 
 public class Handle extends Gizmo<Handle> {
-	public double centerX, centerY;
+
+	private static final int S = 9, R = 6;
 	
 	/////////////////////
+		
 	final private LayerContainer[] consumers;
+	private Color background = null;
+	private Color foreground = null;
+
+	public double centerX, centerY;
 	
-	private static final int S = 9, R = 6;
+//==[ Constructor ]=================================================================================
+	
 	public Handle(LayerContainer parent, LayerContainer... consumers) {
 		super(parent);
 		setExtents(-S, -S, S, S);
-		
+
 		this.consumers = consumers;
 	}
 	
-	private Color background = null, foreground = null;
+//==[ Setter/Getter ]===============================================================================
+	
 	public void setBackground(Color c) { this.background = c; }
 	public void setForeground(Color c) { this.foreground = c; }
 	
 	public Color getBackground() { return background; }
 	public Color getForeground() { return foreground; }
 	
-	protected void onPaint(Event e) {
+//==[ Rendering ]===================================================================================
+	
+	// if additional PaintListeners should get the chance to be called, requires call to super.onPaint(e)
+	@Override protected void onPaint(Event e) {
 		LineAttributes la = e.gc.getLineAttributes();
 		Color fg = e.gc.getForeground();
 		
@@ -52,30 +62,31 @@ public class Handle extends Gizmo<Handle> {
 		
 		e.gc.setLineAttributes(la);
 		e.gc.setForeground(fg);
-	};
-	
-	protected boolean validateTransform() {
-		getCanvasTransform( this::normalizeCanvasTransform );
-			
-		return super.validateTransform();
-	};
+	}
+
+//==[ Event Handling ]==============================================================================
 
 	private float dx = 0, dy = 0;
+	private boolean drag;
 
-	@Override
-	protected boolean isMouseHandler() {
+	@Override protected boolean isMouseHandler() {
 		return true;
 	}
 	
-	@Override
-	public void onMouseDown(float x, float y, Event e) {
+	@Override public void onMouseDown(float x, float y, Event e) {
+		if (e.button!=1) return;
+		moveTop();
+		drag = true;
 		dx = x;
 		dy = y;
 	}
 	
-	@Override
-	public void onMouseMove(float x, float y, Event e) {
-		if (e.stateMask==BUTTON1) {
+	@Override public void onMouseUp(float x, float y, Event e) {
+		drag = false;
+	}
+	
+	@Override public void onMouseMove(float x, float y, Event e) {
+		if (drag) {
 			translate(x-dx, y-dy);
 			
 			getParent().redraw();
@@ -83,10 +94,16 @@ public class Handle extends Gizmo<Handle> {
 				lc.redraw();
 		}
 	}
+
+//==[ Transform ]===================================================================================
 	
-	
-	@Override
-	public Handle concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+	@Override protected boolean validateTransform() {
+		getCanvasTransform( this::normalizeCanvasTransform );
+			
+		return super.validateTransform();
+	}
+
+	@Override public Handle concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
 		super.concatenate(scX, shY, shX, scY, tx, ty);
 		getLayerTranslation(this::onLayerPositionChanges);
 		return this;
@@ -97,8 +114,6 @@ public class Handle extends Gizmo<Handle> {
 		getLayerTranslation(l);
 	}
 	
-	
-	
 	protected void onLayerPositionChanges(float x, float y) {
 		centerX = x;
 		centerY = y;
@@ -107,7 +122,6 @@ public class Handle extends Gizmo<Handle> {
 	private void normalizeCanvasTransform(float scx, float shy, float shx, float scy, float tx, float ty) {
 		scale(1/scx);
 	}
-	
 
 }
 
