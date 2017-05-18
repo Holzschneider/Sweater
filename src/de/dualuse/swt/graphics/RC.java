@@ -6,13 +6,15 @@ import static org.eclipse.swt.SWT.*;
 
 import java.awt.BasicStroke;
 import java.awt.Shape;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.swt.graphics.*;
 
-public class RC {
+public class RC implements Closeable {
 	
 	public final GC gc;
 	public final Device device;
@@ -50,7 +52,11 @@ public class RC {
 			backgroundCreated.dispose();
 			backgroundCreated = null;
 		}
-		
+	}
+	
+	@Override
+	public void close() {
+		dispose();
 	}
 	
 //==[ Matrix Stack ]================================================================================
