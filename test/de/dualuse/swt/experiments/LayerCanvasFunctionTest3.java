@@ -15,6 +15,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
+import de.dualuse.swt.events.Listeners;
 import de.dualuse.swt.widgets.Handle;
 import de.dualuse.swt.widgets.Layer;
 import de.dualuse.swt.widgets.LayerCanvas;
@@ -135,23 +136,7 @@ public class LayerCanvasFunctionTest3 {
 //				.locate(0,0).on(b);
 		Layer d = new Handle(a)
 				.translate(400, 200);
-		
-		Listener listener1 = new Listener() {
-			@Override public void handleEvent(Event event) {
-				System.out.println("Listener 1");
-			}
-		};
-		Listener listener2 = new Listener() {
-			@Override public void handleEvent(Event event) {
-				System.out.println("Listener 2");
-			}
-		};
-		Listener listener3 = new Listener() {
-			@Override public void handleEvent(Event event) {
-				System.out.println("Listener 3");
-			}
-		};
-		
+	
 //		d.addListener(SWT.MouseEnter, l);
 //		d.removeListener(SWT.MouseEnter, l);
 //
@@ -159,11 +144,54 @@ public class LayerCanvasFunctionTest3 {
 //		d.removeListener(SWT.MouseEnter, l);
 //		d.removeListener(SWT.MouseEnter, l);
 
+		Listener listener1 = createListener("listener1");
+		Listener listener2 = createListener("listener2");
+		Listener listener3 = createListener("listener3");
+		Listener listener4 = createListener("listener4");
+		Listener listener5 = createListener("listener5");
+		
 		d.addListener(SWT.MouseEnter, listener1);
 		d.addListener(SWT.MouseEnter, listener2);
 		d.addListener(SWT.MouseEnter, listener3);
+		d.addListener(SWT.MouseEnter, listener4);
+		d.addListener(SWT.MouseEnter, listener5);
+		d.addListener(SWT.MouseExit,  (e) -> System.out.println());
 		
+		d.removeListener(SWT.MouseEnter, listener4);
+		d.removeListener(SWT.MouseEnter, listener2);
+		d.removeListener(SWT.MouseEnter, listener3);
 		d.removeListener(SWT.MouseEnter, listener1);
+		
+		// Listeners l = (Listeners) d.onMouseEnter;
+		Listener l = d.onMouseEnter;
+		
+		d.addListener(SWT.MouseEnter, listener2);
+//		
+//		l.handleEvent(null);
+//		
+//		System.out.println();
+
+		/*
+		System.out.println("============================================");
+		
+		while (l != null) {
+			
+			System.out.println("Listener: " + l.listener);
+			System.out.println("Listener: " + l.listener.getClass());
+			System.out.println();
+			System.out.println("Others: " + l.others);
+			System.out.println("Others  : " + l.listener.getClass());
+			System.out.println("=====");
+			
+			l = l.others;
+			
+//			if (l.listener instanceof Listeners)
+//				l = (Listeners) l.listener;
+//			else
+//				l = l.others;
+			
+		}
+		*/
 		
 //		d.addPaintListener(new PaintListener() {
 //			@Override public void paintControl(PaintEvent e) {
@@ -178,4 +206,12 @@ public class LayerCanvasFunctionTest3 {
 		
 	}
 
+	static Listener createListener(String name) {
+		return new Listener() {
+			@Override public String toString() { return name; }
+			@Override public void handleEvent(Event event) {
+				System.out.println(name + ".handleEvent()");
+			}
+		};
+	}
 }
