@@ -3,9 +3,11 @@ package de.dualuse.swt.experiments;
 import static java.lang.Math.pow;
 import static org.eclipse.swt.SWT.*;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
@@ -24,89 +26,82 @@ public class LayerCanvasTest {
 			
 			LayerCanvas dc = new LayerCanvas(sh, NONE);
 			Layer d = new Layer(dc) {
-				@Override protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
+				@Override public void onMouseDown(float x, float y, Event event) {
 					System.out.println("clocked");
-					return true;
-				};
+				}
 			}
 	//		.setSize(100, 100);
-	//		.rotate(0.5)
+//			.rotate(0.5)
 			.translate(100, 100)
 			.scale(.5, .5);
 			
+			dc.addListener(SWT.KeyDown, (e) -> {
+				if (e.keyCode == SWT.ESC)
+					sh.dispose();
+			});
 			
 			Layer f = new Layer(d) {
-				protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) {
-					if (modifierKeysAndButtons==BUTTON1)
+				@Override public void onMouseMove(float x, float y, Event event) {
+					if ((event.stateMask&BUTTON1) != 0)
 						translate(x-xl, y-yl);
-					
 					dc.redraw();
-					return true;
-				};
-			
-				
+				}
 			
 				float xl, yl;
-				@Override
-				protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
-					moveAbove(null);
+				@Override public void onMouseDown(float x, float y, Event event) {
+					moveTop();
 					System.out.println("clicked!");
 					xl = x;
 					yl = y;
-					return true;
 				}
 				
-				@Override
-				protected void render(GC c) {
-					c.setLineAttributes(new LineAttributes(1));
+				@Override public void onPaint(Event e) {
+					e.gc.setLineAttributes(new LineAttributes(1));
 					PathShape p = new PathShape(app, new java.awt.Rectangle(0, 0, 100, 100));
-					c.drawPath(p);
+					e.gc.drawPath(p);
 					p.dispose();
 				}
-			}.setBounds(0, 0, 100, 100).translate(300, 100);
+			}.setExtents(0, 0, 100, 100).translate(300, 100);
 			
 			Layer e = new Layer(d) {
 				boolean in = false;
-				protected boolean onMouseEnter() { 
+				
+				@Override public void onMouseEnter(float x, float y, Event event) { 
 					in = true;
 					System.out.println("IN");
 					dc.redraw();
-					
-					return false;
-				};
+				}
 				
-				protected boolean onMouseClick(float x, float y, int button, int modifierKeys) {
+				@Override public void onMouseClick(float x, float y, Event event) {
 					System.out.println("REAL CLICK!");
-					return true;
-				};
-				protected boolean onDoubleClick(float x, float y, int button, int modifierKeys) {
-					System.out.println("huhu");
-					return true;
-				};
+				}
 				
-				protected boolean onMouseExit() { 
+				@Override public void onMouseDoubleClick(float x, float y, Event event) {
+					System.out.println("huhu");
+				}
+				
+				@Override public void onMouseExit(float x, float y, Event event) { 
 					in = false; 
 					System.out.println("OUT");
 					dc.redraw();
-					return true;
-				};
+				}
 				
 				float xl, yl;
-				@Override
-				protected boolean onMouseDown(float x, float y, int button, int modifierKeys) {
+				@Override public void onMouseDown(float x, float y, Event event) {
 					moveAbove(null);
 					System.out.println("clicked!");
 					xl = x;
 					yl = y;
-					return true;
 				}
 				
-				protected boolean onMouseWheel(float x, float y, int tickCount, int modifierKeys) {
+				@Override public void onMouseWheel(float x, float y, Event event) {
 	//				System.out.println(tickCount);
+					
+					int tickCount = event.count;
 					
 					translate(x,y);
 					
-					if (modifierKeys==ALT)
+					if ((event.stateMask&ALT) != 0)
 						rotate( tickCount*0.01337 );
 					else
 						scale( pow(1.0337, tickCount));
@@ -114,25 +109,22 @@ public class LayerCanvasTest {
 					translate(-x,-y);
 	
 					dc.redraw();
-					return true;
-				};
+				}
 				
-				protected boolean onMouseMove(float x, float y, int modifierKeysAndButtons) {
-					if (modifierKeysAndButtons==BUTTON1)
+				@Override public void onMouseMove(float x, float y, Event event) {
+					if ((event.stateMask&BUTTON1)!=0)
 						translate(x-xl, y-yl);
 					
 					dc.redraw();
-					return true;
-				};
+				}
 				
-				@Override
-				protected void render(GC c) {
-					c.setLineAttributes(new LineAttributes(in?5:1));
+				@Override public void onPaint(Event e) {
+					e.gc.setLineAttributes(new LineAttributes(in?5:1));
 					PathShape p = new PathShape(app, new java.awt.Rectangle(0, 0, 100, 100));
-					c.drawPath(p);
+					e.gc.drawPath(p);
 					p.dispose();
 				}
-			}.setBounds(0,0,100, 100);
+			}.setExtents(0,0,100, 100);
 			
 			
 			dc.addListener(MouseDown, (ev) -> {
