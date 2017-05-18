@@ -68,14 +68,32 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	@Override
 	public LayerCanvas removeLayer(Layer r) {
-		for (int i=0,I=children.length;i<I;i++)
-			if (children[i]==r) {
-				r.setParent(null);
-				children[i] = children[children.length-1]; // XXX z Order
-				children = Arrays.copyOf(children, children.length-1);
-			}
 		
-		r.setRoot(null);
+		int i = indexOf(r);
+		if (i>=0) {
+			
+			// Remove child without changing the z-order of the remaining children 
+			Layer[] newchildren = new Layer[children.length-1];
+			for (int j=0, J=children.length, k=0; j<J; j++) {
+				if (j==i) continue;
+				newchildren[k++] = children[j];
+			}
+			children = newchildren;
+			
+			r.setRoot(null);
+
+			redraw(); // XXX only layer bounds?
+			
+		}
+		
+//		for (int i=0,I=children.length;i<I;i++)
+//			if (children[i]==r) {
+//				r.setParent(null);
+//				children[i] = children[children.length-1]; // XXX z Order
+//				children = Arrays.copyOf(children, children.length-1);
+//			}
+//		
+//		r.setRoot(null);
 		
 		return this;
 	}

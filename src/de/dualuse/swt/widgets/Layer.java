@@ -176,7 +176,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			return false;
 		
 		if (parent!=null)
-			getParent().removeLayer(this); // XXX danger: calls this.setParent(null), potential loop between setParent() and removeLayer()
+			getParent().removeLayer(this);
 
 		parent = r;
 		
@@ -204,22 +204,47 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 
 	public Layer removeLayer(Layer r) {
-		for (int i=0,I=children.length;i<I;i++)
-			if (children[i]==r) {
-				r.setParent(null);
-				r.setRoot(null);
+		
+		int i = indexOf(r);
+		if (i>=0) {
 
-				// XXX z-order modified due to element swap during removal
-				children[i] = children[children.length-1];
-				children = Arrays.copyOf(children, children.length-1);
+			if (redraw)
+				redraw();
 
-				if (redraw)
-					redraw();
-									
-				this.mouseListeners -= r.mouseListeners;
-				
-				return this;
+			// Remove child without changing the z-order of the remaining children 
+			Layer[] newchildren = new Layer[children.length-1];
+			for (int j=0, J=children.length, k=0; j<J; j++) {
+				if (j==i) continue;
+				newchildren[k++] = children[j];
 			}
+			children = newchildren;
+			
+			// setParent to null after child has been removed from the children array to prevent ping pong between removeLayer and setParent
+			r.setParent(null);
+			r.setRoot(null);
+					
+			this.mouseListeners -= r.mouseListeners;
+			
+			return this;
+		}
+		
+//		for (int i=0,I=children.length;i<I;i++)
+//			if (children[i]==r) {
+//				
+//				r.setParent(null);
+//				r.setRoot(null);
+//
+//				// XXX z-order modified due to element swap during removal
+//				children[i] = children[children.length-1];
+//				children = Arrays.copyOf(children, children.length-1);
+//
+//				if (redraw)
+//					redraw();
+//									
+//				this.mouseListeners -= r.mouseListeners;
+//				
+//				return this;
+//			}
 		
 		return this;
 	}

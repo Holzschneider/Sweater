@@ -64,18 +64,20 @@ public class LayerCanvasTest2 {
 		@Override public void onMouseDown(float x, float y, Event event) {
 //			System.out.println(this + ".onMouseDown()");
 			if (event.button!=1) return;
+			if (event.count==2) {
+				dispose();
+				return;
+			}
 			moveTop();
 			x0 = x;
 			y0 = y;
 			drag = true;
-			event.doit = false;
 		}
 		
 		@Override public void onMouseUp(float x, float y, Event event) {
 //			System.out.println(this + ".onMouseUp()");
 			if (event.button!=1) return;
 			drag = false;
-			event.doit = false;
 		}
 		
 		@Override public void onMouseMove(float x, float y, Event event) {
@@ -83,7 +85,6 @@ public class LayerCanvasTest2 {
 			if (drag) {
 				translate(x-x0, y-y0);
 			}
-			event.doit = false;
 		}
 		
 		@Override public void onMouseWheel(float x, float y, Event event) {
@@ -123,6 +124,15 @@ public class LayerCanvasTest2 {
 				// .rotate(0.5)
 				.translate(100, 100).scale(.5, .5);
 //		d.addListener(SWT.MouseMove, (e) -> { e.doit = true; });
+		
+		d.addListener(SWT.MouseDown,  (e) -> {
+			if (e.button!=1 || e.count!=2) {
+				e.doit = true;
+				return;
+			}
+			
+			d.invert(e.x, e.y, (x,y) -> new Frame(d).translate(x, y));
+		});
 		
 		new Frame(d);
 		new Frame(d);
