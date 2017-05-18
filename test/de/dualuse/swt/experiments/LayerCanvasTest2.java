@@ -3,6 +3,9 @@ package de.dualuse.swt.experiments;
 import static java.lang.Math.pow;
 import static org.eclipse.swt.SWT.NONE;
 
+import java.awt.Shape;
+import java.awt.geom.Area;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.util.Random;
 
@@ -24,6 +27,8 @@ import de.dualuse.swt.widgets.LayerContainer;
 
 public class LayerCanvasTest2 {
 
+//==[ Frame ]=======================================================================================
+	
 	static class Frame extends Layer {
 		
 		Random rng = new Random();
@@ -103,6 +108,93 @@ public class LayerCanvasTest2 {
 		@Override public String toString() { return name; }
 	}
 	
+//==[ Click-Through Frame ]=========================================================================
+	
+	static class ClickthroughFrame extends Layer {
+		
+		Random rng = new Random();
+		RGB col = new RGB(rng.nextFloat()*360, 0.8f, 0.9f);
+
+		static int counter = 0;
+		
+		Shape shape;
+		
+		public ClickthroughFrame(LayerContainer parent) {
+			super(parent);
+			setExtents(-50, -50, 50, 50);
+			
+			Area a1 = new Area(new Ellipse2D.Double(-50, -50, 100, 100));
+			Area a2 = new Area(new Ellipse2D.Double(-25, -25, 50, 50));
+			a1.subtract(a2);
+			shape = a1;
+		}
+		
+		@Override public void onPaint(Event e) {
+			GC gc = e.gc;
+
+			Color rc = new Color(getRoot().getDisplay(), col);
+			gc.setBackground(rc);
+			Path path = new PathShape(gc.getDevice(), shape);
+			gc.fillPath(path);
+			path.dispose();
+			rc.dispose();
+			
+		}
+		
+		
+		float x0, y0;
+		boolean drag;
+		
+		@Override public void onMouseDown(float x, float y, Event event) {
+			
+			if (!shape.contains(x, y)) {
+				event.doit = true;
+				return;
+			}
+			
+			if (event.button!=1) return;
+			if (event.count==2) {
+				dispose();
+				return;
+			}
+			moveTop();
+			x0 = x;
+			y0 = y;
+			drag = true;
+		}
+		
+		@Override public void onMouseUp(float x, float y, Event event) {
+			if (event.button!=1) return;
+			drag = false;
+		}
+		
+		@Override public void onMouseMove(float x, float y, Event event) {
+			if (drag) {
+				translate(x-x0, y-y0);
+			}
+		}
+		
+		@Override public void onMouseWheel(float x, float y, Event event) {
+
+			if (!shape.contains(x, y)) {
+				event.doit = true;
+				return;
+			}
+			
+			int tickCount = event.count;
+			
+			moveTop();
+			
+			if (event.button==0) 
+				scale( pow(1.0337, tickCount), x,y );
+			else
+				rotate( tickCount/10f, x,y );
+			
+			redraw();
+		}
+	}
+
+//==[ Test-Main ]===================================================================================
 	
 	public static void main(String[] args) {
 
@@ -138,7 +230,8 @@ public class LayerCanvasTest2 {
 		new Frame(d);
 		new Frame(d);
 		new Frame(d);
-
+		new ClickthroughFrame(d);
+		
 		Frame frame1 = (Frame)new Frame(dc).translate(320, 50);
 		Frame frame2 = (Frame)new Frame(dc).translate(50,  320);
 		
