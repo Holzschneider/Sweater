@@ -81,7 +81,31 @@ public class RC implements Closeable {
 		copy(m, modelViewProjection);
 		free.push(m);
 	}
-
+	
+	
+	public void loadIdentity() {
+		identity(modelViewProjection);
+	}
+	
+	public static interface ModelViewProjection<T> {
+		T define(
+				double m00, double m01, double m02, double m03,
+				double m10, double m11, double m12, double m13,
+				double m20, double m21, double m22, double m23,
+				double m30, double m31, double m32, double m33
+				);
+	}
+	
+	public<T> T getTransform(ModelViewProjection<T> mvp) {
+		final float[][] m = modelViewProjection;
+		return mvp.define( 
+				m[0][0], m[0][1], m[0][2], m[0][3], 
+				m[1][0], m[1][1], m[1][2], m[1][3], 
+				m[2][0], m[2][1], m[2][2], m[2][3], 
+				m[3][0], m[3][1], m[3][2], m[3][3] 
+			);
+	}
+	
 //==================================================================================================
 
 	public boolean isVisible(double px, double py) {
@@ -160,24 +184,24 @@ public class RC implements Closeable {
 		return t;
 	}
 
-	private static float[][] createMatrixWithTransform(Transform at, float[][] m) {
-		identity(m);
-		
-		float[] elements = {0,0,0,0,0,0};
-		at.getElements(elements);
-		
-		m[0][0] = elements[0];
-		m[1][0] = elements[1];
-		m[0][1] = elements[2];
-		m[1][1] = elements[3];
-		
-		m[0][3] = elements[4];
-		m[1][3] = elements[5];
-		
-		return m;
-	}
+//	private static float[][] createMatrixWithTransform(Transform at, float[][] m) {
+//		identity(m);
+//		
+//		float[] elements = {0,0,0,0,0,0};
+//		at.getElements(elements);
+//		
+//		m[0][0] = elements[0];
+//		m[1][0] = elements[1];
+//		m[0][1] = elements[2];
+//		m[1][1] = elements[3];
+//		
+//		m[0][3] = elements[4];
+//		m[1][3] = elements[5];
+//		
+//		return m;
+//	}
 	
-	public static float[][] createMatrixWithViewport(int x, int y, int width, int height) {
+	static float[][] createMatrixWithViewport(int x, int y, int width, int height) {
 		float m[][] = new float[4][4];
 		
 		identity(m);
@@ -273,35 +297,35 @@ public class RC implements Closeable {
 			float m01, float m11, float m21, float m31,
 			float m02, float m12, float m22, float m32,
 			float m03, float m13, float m23, float m33,
-					
+			
 			float n00, float n10, float n20, float n30, 
 			float n01, float n11, float n21, float n31,
 			float n02, float n12, float n22, float n32,
 			float n03, float n13, float n23, float n33
 			) 
 	{
-		float[][] m = modelViewProjection;
+		final float[][] m = modelViewProjection;
 
-		m[0][0] = m00 * n00 + m10 * n01 + m20 * n02 + m30 * n03;
-		m[0][1] = m00 * n10 + m10 * n11 + m20 * n12 + m30 * n13;
-		m[0][2] = m00 * n20 + m10 * n21 + m20 * n22 + m30 * n23;
-		m[0][3] = m00 * n30 + m10 * n31 + m20 * n32 + m30 * n33;
-			
-		m[1][0] = m01 * n00 + m11 * n01 + m21 * n02 + m31 * n03;
-		m[1][1] = m01 * n10 + m11 * n11 + m21 * n12 + m31 * n13;
-		m[1][2] = m01 * n20 + m11 * n21 + m21 * n22 + m31 * n23;
-		m[1][3] = m01 * n30 + m11 * n31 + m21 * n32 + m31 * n33;
+		m[0][0] = m00 * n00 + m01 * n10 + m02 * n20 + m03 * n30;
+		m[0][1] = m00 * n01 + m01 * n11 + m02 * n21 + m03 * n31;
+		m[0][2] = m00 * n02 + m01 * n12 + m02 * n22 + m03 * n32;
+		m[0][3] = m00 * n03 + m01 * n13 + m02 * n23 + m03 * n33;
 
-		m[2][0] = m02 * n00 + m12 * n01 + m22 * n02 + m32 * n03;
-		m[2][1] = m02 * n10 + m12 * n11 + m22 * n12 + m32 * n13;
-		m[2][2] = m02 * n20 + m12 * n21 + m22 * n22 + m32 * n23;
-		m[2][3] = m02 * n30 + m12 * n31 + m22 * n32 + m32 * n33;
-
-		m[3][0] = m03 * n00 + m13 * n01 + m23 * n02 + m33 * n03;
-		m[3][1] = m03 * n10 + m13 * n11 + m23 * n12 + m33 * n13;
-		m[3][2] = m03 * n20 + m13 * n21 + m23 * n22 + m33 * n23;
-		m[3][3] = m03 * n30 + m13 * n31 + m23 * n32 + m33 * n33;
-
+		m[1][0] = m10 * n00 + m11 * n10 + m12 * n20 + m13 * n30;
+		m[1][1] = m10 * n01 + m11 * n11 + m12 * n21 + m13 * n31;
+		m[1][2] = m10 * n02 + m11 * n12 + m12 * n22 + m13 * n32;
+		m[1][3] = m10 * n03 + m11 * n13 + m12 * n23 + m13 * n33;
+		
+		m[2][0] = m20 * n00 + m21 * n10 + m22 * n20 + m23 * n30;
+		m[2][1] = m20 * n01 + m21 * n11 + m22 * n21 + m23 * n31;
+		m[2][2] = m20 * n02 + m21 * n12 + m22 * n22 + m23 * n32;
+		m[2][3] = m20 * n03 + m21 * n13 + m22 * n23 + m23 * n33;
+		
+		m[3][0] = m30 * n00 + m31 * n10 + m32 * n20 + m33 * n30;
+		m[3][1] = m30 * n01 + m31 * n11 + m32 * n21 + m33 * n31;
+		m[3][2] = m30 * n02 + m31 * n12 + m32 * n22 + m33 * n32;
+		m[3][3] = m30 * n03 + m31 * n13 + m32 * n23 + m33 * n33;
+		
 	}
 	
 	public void translate(double tx, double ty, double tz) {
@@ -313,7 +337,6 @@ public class RC implements Closeable {
 	}
 	
 	public void rotate(double theta, double ax, double ay, double az) {
-		
 		final float s = (float) sin(theta), c = (float) cos(theta), t = 1-c, l = (float) sqrt(ax*ax+ay*ay+az*az);
 		final float x = (float) (ax/l), y = (float) (ay/l), z= (float) (az/l);
 		final float xz = x*z, xy = x*y, yz = y*z, xx=x*x, yy=y*y, zz=z*z;
@@ -1062,7 +1085,7 @@ public class RC implements Closeable {
 			backgroundSaved = null;
 		}
 		
-		if (stroke!=NULL_STROKE) {
+		if (stroke==NULL_STROKE) {
 			if (lineAttributesSaved!=null) {
 				gc.setLineAttributes(lineAttributesSaved);
 				lineAttributesSaved = null;
