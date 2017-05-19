@@ -237,7 +237,7 @@ public class RC implements Closeable {
 				0,0,0,1);
 	}
 	
-	public void rotate(double ax, double ay, double az, double theta) {
+	public void rotate(double theta, double ax, double ay, double az) {
 		
 		final float s = (float) sin(theta), c = (float) cos(theta), t = 1-c, l = (float) sqrt(ax*ax+ay*ay+az*az);
 		final float x = (float) (ax/l), y = (float) (ay/l), z= (float) (az/l);
