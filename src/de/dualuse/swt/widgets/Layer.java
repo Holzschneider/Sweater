@@ -144,13 +144,24 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		identity();
 	}
 	
+//==[ Resource Disposal ]===========================================================================
+	
 	boolean isDisposed;
 	
 	public void dispose() {
+		for (Layer child : children)
+			child.dispose();
+		
 		getParent().removeLayer(this);
 		setRoot(null);
 		parent = null;
 		isDisposed=true;
+		
+		onDispose();
+	}
+	
+	protected void onDispose() {
+		// subclasses can add additional disposal code here
 	}
 	
 	public boolean isDisposed() {
@@ -478,16 +489,22 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		if (root.globalCount==globalCount || paintEvent)
 			return false;
 		
-		if (parent==null)
+		if (parent==null) {
+			
 			if (root.transformCount!=parentTransformCount || transformCount!=validationCount) {
+				
 				root.canvasTransform.getElements(W);
 				concatenate(W,M,W);
 				validationCount = transformCount;
 				parentTransformCount = root.transformCount;
 				return true;
-			} else
+				
+			} else {
 				return false;
-		else
+			}
+			
+		} else {
+			
 			if (parent.validateTransform() || //the parent had to be revalidated, due to it's parent or own change 
 				parent.transformCount!=parentTransformCount || //the parent had an change before  
 				transformCount!=validationCount)  //this Layer had been changed
@@ -496,8 +513,11 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 				validationCount = transformCount;
 				parentTransformCount = parent.transformCount;
 				return true;
-			} else
+			} else {
 				return false;
+			}
+			
+		}
 	}
 	
 
@@ -571,17 +591,18 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 	
 	final public void run() {
-		if (isDisposed()) return;
+		if (root==null || root.isDisposed() || isDisposed()) // async exec, check whether request still valid
+			return;
 		
 		final float globalLeft = global.left, globalTop = global.top;
 		final float globalRight = global.right, globalBottom = global.bottom;
 		
 		global.clear();
-		computeDirtyBounds(global, dirtyAll&&!clipping);
+		computeDirtyBounds(global, dirtyAll&&!clipping); // also requires a valid root, as indirectly calls validateTransform()
 		global.extend(globalLeft, globalTop).extend(globalRight, globalBottom);
 		
 		int M = 1; // due to antialiasing
-		if (root!=null && !root.isDisposed())
+		// if (root!=null && !root.isDisposed())
 			root.redraw( // root / canvas coordinates are never negative, so integer truncation effects do not matter
 					(int)global.left-M, (int) global.top-M, 
 					(int)global.right -(int)global.left+2*M, 

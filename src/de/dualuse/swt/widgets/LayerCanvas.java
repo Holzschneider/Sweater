@@ -20,9 +20,14 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 
 public class LayerCanvas extends Canvas implements LayerContainer, Listener {
-
+	
 	protected Transform canvasTransform = new Transform(getDisplay());
+	
 	protected int transformCount = 0, globalCount = 0;
+
+	private Layer children[] = {};
+	
+//==[ Constructors ]================================================================================
 	
 	public LayerCanvas(Composite parent) { this(parent,NONE); }
 	
@@ -36,21 +41,23 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		super.addListener(MouseWheel, this);
 		super.addListener(MouseDoubleClick, this);
 		
-		super.addListener(Dispose, this::disposer);
+		super.addListener(Dispose, this::onDispose);
 	}
 	
+	protected void onDispose(Event event) {
+		for (Layer child : children)
+			child.dispose();
+		
+		canvasTransform.dispose();
+	}
 	
-	
-	////////////////////////////////////////////////////////////
+//==[ Child Layers ]================================================================================
 
-	private Layer children[] = {};
-	
-	public Layer[] getLayers() {
+	@Override public Layer[] getLayers() {
 		return children;
 	}
 	
-	@Override
-	public int indexOf(Layer r) {
+	@Override public int indexOf(Layer r) {
 		for (int i=0,I=children.length;i<I;i++)
 			if (children[i]==r)
 				return i;
@@ -58,16 +65,14 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		return -1;
 	}
 	
-	@Override
-	public LayerCanvas addLayer(Layer r) {
+	@Override public LayerCanvas addLayer(Layer r) {
 		(children = Arrays.copyOf(children, children.length+1))[children.length-1]=r;
 		r.setRoot(this);
 		
 		return this;
 	}
 	
-	@Override
-	public LayerCanvas removeLayer(Layer r) {
+	@Override public LayerCanvas removeLayer(Layer r) {
 		
 		int i = indexOf(r);
 		if (i>=0) {
@@ -86,68 +91,21 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			
 		}
 		
-//		for (int i=0,I=children.length;i<I;i++)
-//			if (children[i]==r) {
-//				r.setParent(null);
-//				children[i] = children[children.length-1]; // XXX z Order
-//				children = Arrays.copyOf(children, children.length-1);
-//			}
-//		
-//		r.setRoot(null);
-		
 		return this;
 	}
-	
-	final protected void point(Event e) {
-		// for (Layer r: children) {
-		for (int i=children.length-1, I=0; i>=I; i--) {
-			Layer r = children[i];
-			if (e.doit)
-				if (r.captive()==captive) //either captive == null, or set to a specific layer
-					r.point(e);
-		}
-	}
+
+//==[ Event Handling ]==============================================================================
 	
 	private Layer captive = null;
-	
-	@Override
-	public void capture(Layer c) {
-		captive = c;
-	}
-	
-	final protected void paint(Rectangle clip, Transform t, Event c) {
-		// for (int I=children.length-1,i=0;I>=i;I--)
-		for (int I=0,i=children.length-1; I<=i; I++)
-			children[I].paint(clip,t,c);
-	}
-	
-	private void disposer(Event e) {
-		layerTransform.dispose();
-	}
-	
 	private float[] backup = new float[6];
-	private Transform layerTransform = new Transform(getDisplay());
-	public void setLayerTransform(Transform matrix) {
-		globalCount++;
-		transformCount++;
-		layerTransform.identity();
-		layerTransform.multiply(matrix);
-	}
 	
-	public void getCanvasTransform(Transform matrix) {
-		matrix.identity();
-		matrix.multiply(layerTransform);
-	}
-
-	
-	@Override
-	public void handleEvent(Event event) {
+	@Override public void handleEvent(Event event) {
 		switch (event.type) {
 			case Paint:
-				layerTransform.getElements(backup);
+				canvasTransform.getElements(backup);
 				event.gc.setLineAttributes(new LineAttributes(1));
-				paint(event.gc.getClipping(), layerTransform, event);
-				layerTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
+				paint(event.gc.getClipping(), canvasTransform, event);
+				canvasTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
 				break;
 			
 			case MouseDown:
@@ -159,26 +117,59 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		}
 	}
 
+	final protected void point(Event e) {
+		for (int i=children.length-1, I=0; i>=I; i--) {
+			Layer r = children[i];
+			if (e.doit)
+				if (r.captive()==captive) //either captive == null, or set to a specific layer
+					r.point(e);
+		}
+	}
 	
-	/////////////////////////////////////////
+	@Override public void capture(Layer c) {
+		captive = c;
+	}
 	
+//==[ Rendering ]===================================================================================
 	
-	@Override
-	public <T> T transform(double x, double y, TransformedCoordinate<T> i) {
-		return i.define((float)x, (float)y);
+	final protected void paint(Rectangle clip, Transform t, Event c) {
+		for (int I=0,i=children.length-1; I<=i; I++)
+			children[I].paint(clip,t,c);
+		paintOverlay(clip, t, c);
 	}
 
-	@Override
-	public <T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i) {
-		return b.invert(x, y, i);
+	protected void paintOverlay(Rectangle clip, Transform t, Event c) {
+		// Override if additional overlay unaffected by canvasTransform should be painted
 	}
-
 	
-	@Override
-	public void redraw(float x, float y, float width, float height, boolean all) {
+	@Override public void redraw(float x, float y, float width, float height, boolean all) {
 		this.redraw((int)x, (int)y, (int)width, (int)height, all);
 	}
 
+//==[ CanvasTransform ]=============================================================================
+	
+	public void setCanvasTransform(Transform matrix) {
+		globalCount++;
+		transformCount++;
+		canvasTransform.identity();
+		canvasTransform.multiply(matrix);
+	}
+	
+	public void getCanvasTransform(Transform matrix) {
+		matrix.identity();
+		matrix.multiply(canvasTransform);
+	}
+	
+	///// Coordinate Transformations
+	
+	@Override public <T> T transform(double x, double y, TransformedCoordinate<T> i) {
+		return i.define((float)x, (float)y);
+	}
+
+	@Override public <T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i) {
+		return b.invert(x, y, i);
+	}
+	
 }
 
 

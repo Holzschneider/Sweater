@@ -24,6 +24,7 @@ import de.dualuse.swt.graphics.PathShape;
 import de.dualuse.swt.widgets.Layer;
 import de.dualuse.swt.widgets.LayerCanvas;
 import de.dualuse.swt.widgets.LayerContainer;
+import de.dualuse.swt.widgets.ZoomCanvas;
 
 public class LayerCanvasTest2 {
 
@@ -203,7 +204,8 @@ public class LayerCanvasTest2 {
 
 		sh.setLayout(new FillLayout());
 
-		LayerCanvas dc = new LayerCanvas(sh, NONE);
+//		LayerCanvas dc = new LayerCanvas(sh, NONE);
+		ZoomCanvas dc = new ZoomCanvas(sh, NONE);
 		
 		dc.addListener(SWT.KeyDown, (e) -> {
 			if (e.keyCode == SWT.ESC)
