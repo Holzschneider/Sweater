@@ -228,6 +228,81 @@ public class RC implements Closeable {
 		
 		return m;
 	}
+
+	/**
+	 * multMatrix multiplies the current matrix with the one specified using m, and replaces the current matrix 
+	 * with the product.
+	 * 
+	 * Caution! The array expects the matrix in column order!
+	 * 
+	 *  If the current matrix is C, and the coordinates to be transformed are, v = (v[0], v[1], v[2], v[3]).  
+	 *  Then the current transformation is C X v, or
+	 *          c[0]  c[4]  c[8]  c[12]     v[0]
+	 *          c[1]  c[5]  c[9]  c[13]     v[1]
+	 *          c[2]  c[6]  c[10] c[14]  X  v[2]
+	 *          c[3]  c[7]  c[11] c[15]     v[3]
+	 *          
+	 *          
+	 *  Calling glMultMatrix with an argument of m = m[0], m[1], ..., m[15] replaces the current transformation 
+	 *  with (C X M) x v, or
+	 *        c[0]  c[4]  c[8]  c[12]   m[0]  m[4]  m[8]  m[12]   v[0]
+	 *        c[1]  c[5]  c[9]  c[13]   m[1]  m[5]  m[9]  m[13]   v[1]
+	 *        c[2]  c[6]  c[10] c[14] X m[2]  m[6]  m[10] m[14] X v[2]
+	 *        c[3]  c[7]  c[11] c[15]   m[3]  m[7]  m[11] m[15]   v[3]
+	 *
+	 * Where 'X' denotes matrix multiplication, and v is represented as a 4 X 1 matrix.
+	 * @param n
+	 */
+	public void multMatrix( double[] n ) {
+		float[][] m = modelViewProjection;
+		setToConcatenation(	
+					m[0][0], m[1][0], m[2][0], m[3][0],				
+					m[0][1], m[1][1], m[2][1], m[3][1],				
+					m[0][2], m[1][2], m[2][2], m[3][2],				
+					m[0][3], m[1][3], m[2][3], m[3][3],				
+				
+					(float)n[ 0], (float)n[ 1], (float)n[ 2], (float)n[ 3],
+					(float)n[ 4], (float)n[ 5], (float)n[ 6], (float)n[ 7],
+					(float)n[ 8], (float)n[ 9], (float)n[10], (float)n[11],
+					(float)n[12], (float)n[13], (float)n[14], (float)n[15] );
+	}
+	
+	//XXX be super careful!! these matrices are transposed!
+	private void setToConcatenation(	
+			float m00, float m10, float m20, float m30, 
+			float m01, float m11, float m21, float m31,
+			float m02, float m12, float m22, float m32,
+			float m03, float m13, float m23, float m33,
+					
+			float n00, float n10, float n20, float n30, 
+			float n01, float n11, float n21, float n31,
+			float n02, float n12, float n22, float n32,
+			float n03, float n13, float n23, float n33
+			) 
+	{
+		float[][] m = modelViewProjection;
+
+		m[0][0] = m00 * n00 + m10 * n01 + m20 * n02 + m30 * n03;
+		m[0][1] = m00 * n10 + m10 * n11 + m20 * n12 + m30 * n13;
+		m[0][2] = m00 * n20 + m10 * n21 + m20 * n22 + m30 * n23;
+		m[0][3] = m00 * n30 + m10 * n31 + m20 * n32 + m30 * n33;
+			
+		m[1][0] = m01 * n00 + m11 * n01 + m21 * n02 + m31 * n03;
+		m[1][1] = m01 * n10 + m11 * n11 + m21 * n12 + m31 * n13;
+		m[1][2] = m01 * n20 + m11 * n21 + m21 * n22 + m31 * n23;
+		m[1][3] = m01 * n30 + m11 * n31 + m21 * n32 + m31 * n33;
+
+		m[2][0] = m02 * n00 + m12 * n01 + m22 * n02 + m32 * n03;
+		m[2][1] = m02 * n10 + m12 * n11 + m22 * n12 + m32 * n13;
+		m[2][2] = m02 * n20 + m12 * n21 + m22 * n22 + m32 * n23;
+		m[2][3] = m02 * n30 + m12 * n31 + m22 * n32 + m32 * n33;
+
+		m[3][0] = m03 * n00 + m13 * n01 + m23 * n02 + m33 * n03;
+		m[3][1] = m03 * n10 + m13 * n11 + m23 * n12 + m33 * n13;
+		m[3][2] = m03 * n20 + m13 * n21 + m23 * n22 + m33 * n23;
+		m[3][3] = m03 * n30 + m13 * n31 + m23 * n32 + m33 * n33;
+
+	}
 	
 	public void translate(double tx, double ty, double tz) {
 		concat( modelViewProjection,
