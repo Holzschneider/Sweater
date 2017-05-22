@@ -11,6 +11,7 @@ import static org.eclipse.swt.SWT.Paint;
 
 import java.util.Arrays;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
@@ -118,12 +119,12 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 
 	final protected void point(Event e) {
-		for (int i=children.length-1, I=0; i>=I; i--) {
-			Layer r = children[i];
-			if (e.doit)
-				if (r.captive()==captive) //either captive == null, or set to a specific layer
+		if (e.doit)
+			for (int i=children.length-1, I=0; i>=I; i--) {
+				Layer r = children[i];
+				if (r.captive()==captive && r.isVisible() && r.isEnabled()) //either captive == null, or set to a specific layer
 					r.point(e);
-		}
+			}
 	}
 	
 	@Override public void capture(Layer c) {
@@ -133,11 +134,16 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 //==[ Rendering ]===================================================================================
 	
 	final protected void paint(Rectangle clip, Transform t, Event c) {
+		paintBackground(clip, t, c);
 		for (int I=0,i=children.length-1; I<=i; I++)
 			children[I].paint(clip,t,c);
 		paintOverlay(clip, t, c);
 	}
 
+	protected void paintBackground(Rectangle clip, Transform t, Event c) {
+		// Override if background unaffected by canvasTrasnform should be painted
+	}
+	
 	protected void paintOverlay(Rectangle clip, Transform t, Event c) {
 		// Override if additional overlay unaffected by canvasTransform should be painted
 	}

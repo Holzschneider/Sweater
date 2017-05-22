@@ -19,16 +19,15 @@ public class Handle extends Gizmo<Handle> {
 
 	private double centerX, centerY;
 	
-	
-	
 //==[ Constructor ]=================================================================================
 
-	public Handle(LayerContainer parent) { this(parent,new LayerContainer[0]); }
+	public Handle(LayerContainer parent) {
+		this(parent,new LayerContainer[0]);
+	}
 	
 	public Handle(LayerContainer parent, LayerContainer... consumers) {
 		super(parent);
 		setExtents(-S, -S, S, S);
-
 		this.consumers = consumers;
 	}
 	
@@ -39,6 +38,8 @@ public class Handle extends Gizmo<Handle> {
 	
 	public Color getBackground() { return background; }
 	public Color getForeground() { return foreground; }
+	
+	public boolean isDragged() { return drag; }
 	
 //==[ Rendering ]===================================================================================
 	
@@ -78,7 +79,11 @@ public class Handle extends Gizmo<Handle> {
 	}
 	
 	@Override public void onMouseDown(float x, float y, Event e) {
-		if (e.button!=1) return;
+		if (e.button!=1 || !hit(x,y)) { // only capture&start drag if button 1 and hit
+			e.doit = true;
+			return;
+		}
+		
 		moveTop();
 		drag = true;
 		dx = x;
@@ -86,33 +91,49 @@ public class Handle extends Gizmo<Handle> {
 	}
 	
 	@Override public void onMouseUp(float x, float y, Event e) {
+		if (!drag) { // only consume if we were dragging
+			e.doit = true;
+			return;
+		}
+		
 		drag = false;
 	}
 	
 	@Override public void onMouseMove(float x, float y, Event e) {
-		if (drag) {
-			translate(x-dx, y-dy);
-			
-			getParent().redraw();
-			for (LayerContainer lc: consumers)
-				lc.redraw();
+		if (!drag) {
+			if (!hit(x,y))
+				e.doit = true;
+			return;
 		}
+		
+		translate(x-dx, y-dy);
+		
+		getParent().redraw();
+		for (LayerContainer lc: consumers)
+			lc.redraw();
 	}
 
+	// Hit detection (round handle with radius S)
+	@Override protected boolean hit(float x, float y) {
+		return (x*x + y*y) <= S*S;
+	}
+	
 //==[ Transform ]===================================================================================
 	
 	@Override protected boolean validateTransform() {
 		getCanvasTransform( this::normalizeCanvasTransform );
-			
 		return super.validateTransform();
 	}
 
-	@Override public Handle concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
-		super.concatenate(scX, shY, shX, scY, tx, ty);
-		getLayerTranslation(this::onLayerPositionChanges);
-		return this;
+	double lastScx;
+	private Handle normalizeCanvasTransform(double scx, double shy, double shx, double scy, double tx, double ty) {
+		if (lastScx!=scx)
+			return scale(1/(lastScx=scx));
+		else return this;
 	}
-	
+
+//==[ Keep Track of Center ]========================================================================
+
 	public Handle setCenter( double x, double y ) {
 		return identity().translate(x, y);
 	}
@@ -122,6 +143,12 @@ public class Handle extends Gizmo<Handle> {
 	
 	public<T> T getCenter( LayerTranslationFunction<T> l ) { return getLayerTranslation(l); }
 	public Handle readCenter( LayerTranslationConsumer l ) { return readLayerTranslation(l); }
+
+	@Override public Handle concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
+		super.concatenate(scX, shY, shX, scY, tx, ty);
+		getLayerTranslation(this::onLayerPositionChanges);
+		return this;
+	}
 	
 	protected Handle onLayerPositionChanges(double x, double y) {
 		centerX = x;
@@ -129,10 +156,6 @@ public class Handle extends Gizmo<Handle> {
 		return this;
 	}
 	
-	private Handle normalizeCanvasTransform(double scx, double shy, double shx, double scy, double tx, double ty) {
-		return scale(1/scx);
-	}
-
 }
 
 

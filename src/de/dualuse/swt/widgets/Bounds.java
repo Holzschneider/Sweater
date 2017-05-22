@@ -5,7 +5,7 @@ import static java.lang.Math.*;
 
 import org.eclipse.swt.graphics.Rectangle;
 
-class Bounds {
+public class Bounds {
 	protected float left = 1f/0f, top = 1f/0f, right = -1f/0f, bottom = -1f/0f;
 	
 	public Bounds() { }

@@ -551,7 +551,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	
 	private void updateTransform() {
 		combinedTransform.identity();
-		combinedTransform.multiply(contentTransform);
+		// combinedTransform.multiply(contentTransform);
 		combinedTransform.multiply(zoomTransform);
 		
 		try {
@@ -666,7 +666,8 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	// 1. constrain size (width/height) (width >= right-left, height >= bottom-top) (sx >= 1, sy >= 1)
 	// 2. constrain x1, y1, x2, y2 (translation) (allow corner points to be moved outside the visible area, but not the reverse, e.g. the visible space is always fully covered by the content)
 	private void constrainTransform() {
-		// if (true) return;
+		if (true) return;
+		
 		/*
 		float[] p1 = new float[] { 0, 0 };
 		float[] p2 = new float[] { contentWidth, contentHeight };
