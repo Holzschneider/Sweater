@@ -403,7 +403,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	@Override public<T> T transform(double x, double y, TransformedCoordinate<T> i) {
 		validateTransform();
 		float w00 = W[T00], w01 = W[T01], w02 = W[T02];
-		float w10 = W[T00], w11 = W[T01], w12 = W[T02];
+		float w10 = W[T10], w11 = W[T11], w12 = W[T12];
 		
 		return i.define(w00*(float)x+w01*(float)y+w02, w10*(float)x+w11*(float)y+w12); 
 	}
@@ -412,7 +412,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	@Override public<T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i) {
 		validateTransform();
 		float w00 = W[T00], w01 = W[T01], w02 = W[T02];
-		float w10 = W[T00], w11 = W[T01], w12 = W[T02];
+		float w10 = W[T10], w11 = W[T11], w12 = W[T12];
 		
 		return b.invert(w00*(float)x+w01*(float)y+w02, w10*(float)x+w11*(float)y+w12, i);
 	}

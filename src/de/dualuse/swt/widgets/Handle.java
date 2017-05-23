@@ -14,8 +14,8 @@ public class Handle extends Gizmo<Handle> {
 	/////////////////////
 		
 	final private LayerContainer[] consumers;
-	private Color background = null;
-	private Color foreground = null;
+	protected Color background = null;
+	protected Color foreground = null;
 
 	private double centerX, centerY;
 	
@@ -71,23 +71,27 @@ public class Handle extends Gizmo<Handle> {
 
 //==[ Event Handling ]==============================================================================
 
-	private float dx = 0, dy = 0;
-	private boolean drag;
+	protected float dx = 0, dy = 0;
+	protected boolean drag;
 
 	@Override protected boolean isMouseHandler() {
 		return true;
 	}
 	
 	@Override public void onMouseDown(float x, float y, Event e) {
-		if (e.button!=1 || !hit(x,y)) { // only capture&start drag if button 1 and hit
+		if (!hit(x,y)) { // only capture&start drag if button 1 and hit
 			e.doit = true;
 			return;
 		}
 		
-		moveTop();
-		drag = true;
-		dx = x;
-		dy = y;
+		fireOnMouseDown(x, y, e);
+		
+		if (e.button==1) {
+			moveTop();
+			drag = true;
+			dx = x;
+			dy = y;
+		}
 	}
 	
 	@Override public void onMouseUp(float x, float y, Event e) {
@@ -151,8 +155,15 @@ public class Handle extends Gizmo<Handle> {
 	}
 	
 	protected Handle onLayerPositionChanges(double x, double y) {
+		if (centerX==x && centerY==y) return this;
+		
 		centerX = x;
 		centerY = y;
+		
+		float deltax = (float)(centerX-x);
+		float deltay = (float)(centerY-y);
+		onMove(deltax, deltay);
+		
 		return this;
 	}
 	
