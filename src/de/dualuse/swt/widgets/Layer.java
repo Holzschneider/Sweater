@@ -304,8 +304,14 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		M[T00]=m10*M01+m00*M00; M[T01]= m11*M01+m01*M00; M[T02]= M02+m12*M01+m02*M00;
 		M[T10]=m10*M11+m00*M10; M[T11]= m11*M11+m01*M10; M[T12]= M12+m12*M11+m02*M10;
 	
-		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
+		if (M[T00]!=M00 || M[T10]!=M10 || M[T01]!=M01 || M[T11]!=M11 || M[T02]!=M02 || M[T12]!=M12)
 			invalidateTransform();
+		
+//		if (M[T02]!=M02 || M[T12]!=M12) {
+//			float dx = M[T02]-M02;
+//			float dy = M[T12]-M12;
+//			onMove(dx, dy);
+//		}
 		
 		if (redraw && !isValidatingTransform())
 			redraw();
@@ -325,6 +331,12 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 		if (M[T00]!=m00 || M[T10]!=m10 || M[T01]!=m01 || M[T11]!=m11 || M[T02]!=m02 || M[T12]!=m12)
 			invalidateTransform();
+
+//		if (M[T02]!=m02 || M[T12]!=m12) {
+//			float dx = M[T02]-m02;
+//			float dy = M[T12]-m12;
+//			onMove(dx, dy);
+//		}
 		
 		if (redraw && !isValidatingTransform())
 			redraw();
@@ -907,6 +919,9 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 
 	///// Install Listeners
 	
+	// XXX also trigger in concatenate/postconcatenate if tx/ty chagnes?
+	//     problem: needs global transform, but that only gets invalidated and not computed straight away?
+	//	   (but unless called from concatenate onMove only gets called via setExtents(..)) 
 	final public Layer onMove( Listener l ) { return addListener(Move, l); }
 	final public Layer onResize( Listener l ) { return addListener(Resize, l); }
 	
@@ -926,6 +941,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	///// Fire Events
 	
+	// XXX also trigger with concatenate() if layer translation changes?
 	protected void onMove(float deltax, float deltay) 
 	{ if (onMove!=null)  onMove.handleEvent(controlEvent(Move, deltax, deltay)); }
 	

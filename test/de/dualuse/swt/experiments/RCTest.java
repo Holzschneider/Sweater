@@ -62,11 +62,11 @@ public class RCTest {
 			
 			
 			double t = (System.nanoTime()-start)/1e9;
-			rc.rotate( 1,0,0, 1.0);
-			rc.rotate( 0,1,0, 10.2);
-//			rc.rotate( 0,0,1, t);
-			rc.rotate( 0,1,0, t);
-			rc.rotate( 1,0,0, t);
+			rc.rotate( 1.0, 1,0,0 );
+			rc.rotate(10.2, 0,1,0 );
+			rc.rotate( t, 0,0,1);
+			rc.rotate( t, 0,1,0);
+			rc.rotate( t, 1,0,0);
 			
 
 			rc.setStroke(cs);

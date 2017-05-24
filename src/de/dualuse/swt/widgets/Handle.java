@@ -17,7 +17,7 @@ public class Handle extends Gizmo<Handle> {
 	protected Color background = null;
 	protected Color foreground = null;
 
-	private double centerX, centerY;
+	private float centerX, centerY;
 	
 //==[ Constructor ]=================================================================================
 
@@ -109,9 +109,14 @@ public class Handle extends Gizmo<Handle> {
 				e.doit = true;
 			return;
 		}
-		
-		translate(x-dx, y-dy);
-		
+
+		float fromX = centerX, fromY = centerY;
+		float deltaX = x-dx, deltaY = y-dy;
+		translate(deltaX, deltaY);
+			
+		if (deltaX!=0 || deltaY!=0)
+			onHandleDragged(fromX, fromY, fromX+deltaX, fromY+deltaY, e);
+			
 		getParent().redraw();
 		for (LayerContainer lc: consumers)
 			lc.redraw();
@@ -121,6 +126,30 @@ public class Handle extends Gizmo<Handle> {
 	@Override protected boolean hit(float x, float y) {
 		return (x*x + y*y) <= S*S;
 	}
+
+//==[ Handler ]=====================================================================================
+	
+	
+//	static class HandleListeners extends Chain<HandleListener> implements HandleListener {
+//		public HandleListeners(HandleListener element) {
+//			super(element);
+//		}
+//
+//		public void onHandleChanged(float fromX, float fromY, float toX, float toY) {
+//			element.onHandleChanged(fromX, fromY, toX, toY);
+//		}
+//	}
+//	
+//	public static interface HandleListener {
+//		public void onHandleMoved( float fromX, float fromY, float toX, float toY ); 
+//	}
+//
+//	private HandleListener onHandleDragged = null, onHandleMoved = null;
+//	public Handle onHandleDragged( HandleListener hl ) { onHandleDragged = hl; return this; }
+//	public Handle onHandleMoved( HandleListener hl ) { onHandleMoved = hl; return this; }
+	
+	protected void onHandleDragged(float fromX, float fromY, float toX, float toY, Event e) { }
+	protected void onHandleMoved(float fromX, float fromY, float toX, float toY) { }
 	
 //==[ Transform ]===================================================================================
 	
@@ -147,7 +176,7 @@ public class Handle extends Gizmo<Handle> {
 	
 	public<T> T getCenter( LayerTranslationFunction<T> l ) { return getLayerTranslation(l); }
 	public Handle readCenter( LayerTranslationConsumer l ) { return readLayerTranslation(l); }
-
+	
 	@Override public Handle concatenate(double scX, double shY, double shX, double scY, double tx, double ty) {
 		super.concatenate(scX, shY, shX, scY, tx, ty);
 		getLayerTranslation(this::onLayerPositionChanges);
@@ -155,14 +184,21 @@ public class Handle extends Gizmo<Handle> {
 	}
 	
 	protected Handle onLayerPositionChanges(double x, double y) {
-		if (centerX==x && centerY==y) return this;
+		float fromX = centerX, fromY = centerY;
+		centerX = (float) x;
+		centerY = (float) y;
 		
-		centerX = x;
-		centerY = y;
+		if (fromX!=centerX || fromY !=centerY)
+			onHandleMoved(fromX, fromY, centerX, centerY);
 		
-		float deltax = (float)(centerX-x);
-		float deltay = (float)(centerY-y);
-		onMove(deltax, deltay);
+//		if (centerX==x && centerY==y) return this;
+//		
+//		centerX = x;
+//		centerY = y;
+//		
+//		float deltax = (float)(centerX-x);
+//		float deltay = (float)(centerY-y);
+//		onMove(deltax, deltay);
 		
 		return this;
 	}

@@ -2,7 +2,7 @@ package de.dualuse.swt.events;
 
 public class Chain<T> {
 	private Chain<T> rest;
-	private T element;
+	protected T element;
 	
 	public Chain(T element) {
 		this.element = element;

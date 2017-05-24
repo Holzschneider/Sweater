@@ -6,13 +6,15 @@ import static org.eclipse.swt.SWT.*;
 
 import java.awt.BasicStroke;
 import java.awt.Shape;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.swt.graphics.*;
 
-public class RC {
+public class RC implements Closeable {
 	
 	public final GC gc;
 	public final Device device;
@@ -50,7 +52,11 @@ public class RC {
 			backgroundCreated.dispose();
 			backgroundCreated = null;
 		}
-		
+	}
+	
+	@Override
+	public void close() {
+		dispose();
 	}
 	
 //==[ Matrix Stack ]================================================================================
@@ -75,7 +81,31 @@ public class RC {
 		copy(m, modelViewProjection);
 		free.push(m);
 	}
-
+	
+	
+	public void loadIdentity() {
+		identity(modelViewProjection);
+	}
+	
+	public static interface ModelViewProjection<T> {
+		T define(
+				double m00, double m01, double m02, double m03,
+				double m10, double m11, double m12, double m13,
+				double m20, double m21, double m22, double m23,
+				double m30, double m31, double m32, double m33
+				);
+	}
+	
+	public<T> T getTransform(ModelViewProjection<T> mvp) {
+		final float[][] m = modelViewProjection;
+		return mvp.define( 
+				m[0][0], m[0][1], m[0][2], m[0][3], 
+				m[1][0], m[1][1], m[1][2], m[1][3], 
+				m[2][0], m[2][1], m[2][2], m[2][3], 
+				m[3][0], m[3][1], m[3][2], m[3][3] 
+			);
+	}
+	
 //==================================================================================================
 
 	public boolean isVisible(double px, double py) {
@@ -154,24 +184,24 @@ public class RC {
 		return t;
 	}
 
-	private static float[][] createMatrixWithTransform(Transform at, float[][] m) {
-		identity(m);
-		
-		float[] elements = {0,0,0,0,0,0};
-		at.getElements(elements);
-		
-		m[0][0] = elements[0];
-		m[1][0] = elements[1];
-		m[0][1] = elements[2];
-		m[1][1] = elements[3];
-		
-		m[0][3] = elements[4];
-		m[1][3] = elements[5];
-		
-		return m;
-	}
+//	private static float[][] createMatrixWithTransform(Transform at, float[][] m) {
+//		identity(m);
+//		
+//		float[] elements = {0,0,0,0,0,0};
+//		at.getElements(elements);
+//		
+//		m[0][0] = elements[0];
+//		m[1][0] = elements[1];
+//		m[0][1] = elements[2];
+//		m[1][1] = elements[3];
+//		
+//		m[0][3] = elements[4];
+//		m[1][3] = elements[5];
+//		
+//		return m;
+//	}
 	
-	public static float[][] createMatrixWithViewport(int x, int y, int width, int height) {
+	static float[][] createMatrixWithViewport(int x, int y, int width, int height) {
 		float m[][] = new float[4][4];
 		
 		identity(m);
@@ -222,6 +252,81 @@ public class RC {
 		
 		return m;
 	}
+
+	/**
+	 * multMatrix multiplies the current matrix with the one specified using m, and replaces the current matrix 
+	 * with the product.
+	 * 
+	 * Caution! The array expects the matrix in column order!
+	 * 
+	 *  If the current matrix is C, and the coordinates to be transformed are, v = (v[0], v[1], v[2], v[3]).  
+	 *  Then the current transformation is C X v, or
+	 *          c[0]  c[4]  c[8]  c[12]     v[0]
+	 *          c[1]  c[5]  c[9]  c[13]     v[1]
+	 *          c[2]  c[6]  c[10] c[14]  X  v[2]
+	 *          c[3]  c[7]  c[11] c[15]     v[3]
+	 *          
+	 *          
+	 *  Calling glMultMatrix with an argument of m = m[0], m[1], ..., m[15] replaces the current transformation 
+	 *  with (C X M) x v, or
+	 *        c[0]  c[4]  c[8]  c[12]   m[0]  m[4]  m[8]  m[12]   v[0]
+	 *        c[1]  c[5]  c[9]  c[13]   m[1]  m[5]  m[9]  m[13]   v[1]
+	 *        c[2]  c[6]  c[10] c[14] X m[2]  m[6]  m[10] m[14] X v[2]
+	 *        c[3]  c[7]  c[11] c[15]   m[3]  m[7]  m[11] m[15]   v[3]
+	 *
+	 * Where 'X' denotes matrix multiplication, and v is represented as a 4 X 1 matrix.
+	 * @param n
+	 */
+	public void multMatrix( double[] n ) {
+		float[][] m = modelViewProjection;
+		setToConcatenation(	
+					m[0][0], m[1][0], m[2][0], m[3][0],				
+					m[0][1], m[1][1], m[2][1], m[3][1],				
+					m[0][2], m[1][2], m[2][2], m[3][2],				
+					m[0][3], m[1][3], m[2][3], m[3][3],				
+				
+					(float)n[ 0], (float)n[ 1], (float)n[ 2], (float)n[ 3],
+					(float)n[ 4], (float)n[ 5], (float)n[ 6], (float)n[ 7],
+					(float)n[ 8], (float)n[ 9], (float)n[10], (float)n[11],
+					(float)n[12], (float)n[13], (float)n[14], (float)n[15] );
+	}
+	
+	//XXX be super careful!! these matrices are transposed!
+	private void setToConcatenation(	
+			float m00, float m10, float m20, float m30, 
+			float m01, float m11, float m21, float m31,
+			float m02, float m12, float m22, float m32,
+			float m03, float m13, float m23, float m33,
+			
+			float n00, float n10, float n20, float n30, 
+			float n01, float n11, float n21, float n31,
+			float n02, float n12, float n22, float n32,
+			float n03, float n13, float n23, float n33
+			) 
+	{
+		final float[][] m = modelViewProjection;
+
+		m[0][0] = m00 * n00 + m01 * n10 + m02 * n20 + m03 * n30;
+		m[0][1] = m00 * n01 + m01 * n11 + m02 * n21 + m03 * n31;
+		m[0][2] = m00 * n02 + m01 * n12 + m02 * n22 + m03 * n32;
+		m[0][3] = m00 * n03 + m01 * n13 + m02 * n23 + m03 * n33;
+
+		m[1][0] = m10 * n00 + m11 * n10 + m12 * n20 + m13 * n30;
+		m[1][1] = m10 * n01 + m11 * n11 + m12 * n21 + m13 * n31;
+		m[1][2] = m10 * n02 + m11 * n12 + m12 * n22 + m13 * n32;
+		m[1][3] = m10 * n03 + m11 * n13 + m12 * n23 + m13 * n33;
+		
+		m[2][0] = m20 * n00 + m21 * n10 + m22 * n20 + m23 * n30;
+		m[2][1] = m20 * n01 + m21 * n11 + m22 * n21 + m23 * n31;
+		m[2][2] = m20 * n02 + m21 * n12 + m22 * n22 + m23 * n32;
+		m[2][3] = m20 * n03 + m21 * n13 + m22 * n23 + m23 * n33;
+		
+		m[3][0] = m30 * n00 + m31 * n10 + m32 * n20 + m33 * n30;
+		m[3][1] = m30 * n01 + m31 * n11 + m32 * n21 + m33 * n31;
+		m[3][2] = m30 * n02 + m31 * n12 + m32 * n22 + m33 * n32;
+		m[3][3] = m30 * n03 + m31 * n13 + m32 * n23 + m33 * n33;
+		
+	}
 	
 	public void translate(double tx, double ty, double tz) {
 		concat( modelViewProjection,
@@ -231,8 +336,7 @@ public class RC {
 				0,0,0,1);
 	}
 	
-	public void rotate(double ax, double ay, double az, double theta) {
-		
+	public void rotate(double theta, double ax, double ay, double az) {
 		final float s = (float) sin(theta), c = (float) cos(theta), t = 1-c, l = (float) sqrt(ax*ax+ay*ay+az*az);
 		final float x = (float) (ax/l), y = (float) (ay/l), z= (float) (az/l);
 		final float xz = x*z, xy = x*y, yz = y*z, xx=x*x, yy=y*y, zz=z*z;
@@ -981,7 +1085,7 @@ public class RC {
 			backgroundSaved = null;
 		}
 		
-		if (stroke!=NULL_STROKE) {
+		if (stroke==NULL_STROKE) {
 			if (lineAttributesSaved!=null) {
 				gc.setLineAttributes(lineAttributesSaved);
 				lineAttributesSaved = null;
