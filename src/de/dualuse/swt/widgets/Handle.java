@@ -83,15 +83,15 @@ public class Handle extends Gizmo<Handle> {
 			e.doit = true;
 			return;
 		}
-		
-		fireOnMouseDown(x, y, e);
-		
+
 		if (e.button==1) {
 			moveTop();
 			drag = true;
 			dx = x;
 			dy = y;
 		}
+		
+		fireOnMouseDown(x, y, e);
 	}
 	
 	@Override public void onMouseUp(float x, float y, Event e) {

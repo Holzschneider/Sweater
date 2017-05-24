@@ -39,7 +39,9 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	/// Attributes
 	private Layer parent; 
 	private LayerCanvas root;
+	
 	private Layer children[] = {};
+	private Layer snapshot[] = {};
 
 	private int validationCount = 0;
 	private int transformCount = 0;
@@ -63,13 +65,21 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		identity();
 	}
 	
+//==[ Restore normal object equality behavior (override bounds equality check ]=====================
+	
+	@Override public boolean equals(Object obj) {
+		return this==obj;
+	}
+	
 //==[ Resource Disposal ]===========================================================================
 	
 	boolean isDisposed;
 	
 	final public void dispose() {
-		for (Layer child : children)
+		updateSnapshot();
+		for (Layer child : snapshot)
 			child.dispose();
+		clearSnapshot();
 		
 		getParent().removeLayer(this);
 		setRoot(null);
@@ -243,6 +253,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	// (if r==null, moves Layer to the first child position at index 0)
 	public void moveBottom() { moveBelow(null); }
 	public void moveBelow(Layer r) {
+		if (getParent() == null) return; // already disposed?
+		
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
@@ -263,6 +275,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	// (if r==null, moves Layer to the last child position at length-1)
 	public void moveTop() { moveAbove(null); }
 	public void moveAbove(Layer r) {
+		if (getParent() == null) return; // already disposed?
+		
 		LayerContainer p = getParent();
 		Layer[] cs = p.getLayers();
 
@@ -797,6 +811,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		if (mouseListeners==0)
 			return ;
 		
+		updateSnapshot();
 		validateTransformInternal();
 		
 		final float w00 = W[T00], w01 = W[T01], w02 = W[T02];
@@ -812,8 +827,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		boolean hit = hit(x,y);
 
 		if (!clipping || clipping && hit) { // if clipping hits or there s no clipping at all
-			for (int i=children.length-1, I=0; i>=I; i--) {
-				Layer r = children[i];
+			for (int i=snapshot.length-1, I=0; i>=I; i--) {
+				Layer r = snapshot[i];
 				if (r.mouseListeners>0 && e.doit && r.visible && r.enabled) { //only if there are mouse listeners anyways
 					if (r.captive()==captive) //either captive == null, or set to a specific layer
 						r.point(e);
@@ -859,10 +874,23 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 
 		if (e.type==MouseUp) 
 			capture(null);
+		
+		clearSnapshot();
 	}
 	
 	protected boolean hit(float x, float y) {
 		return x>=left && x<right && y>=top && y<bottom;
+	}
+
+	private void updateSnapshot() {
+		if (snapshot.length!=children.length)
+			snapshot = new Layer[children.length];
+		for (int i=0, I=children.length; i<I; i++)
+			snapshot[i] = children[i];
+	}
+	
+	private void clearSnapshot() {
+		Arrays.fill(snapshot, null);
 	}
 	
 //==[ Listener Management ]=========================================================================

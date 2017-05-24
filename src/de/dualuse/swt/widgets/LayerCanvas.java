@@ -11,7 +11,6 @@ import static org.eclipse.swt.SWT.Paint;
 
 import java.util.Arrays;
 
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
@@ -27,6 +26,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	protected int transformCount = 0, globalCount = 0;
 
 	private Layer children[] = {};
+	private Layer snapshot[] = {};
 	
 //==[ Constructors ]================================================================================
 	
@@ -104,6 +104,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	private float[] backup = new float[6];
 	
 	@Override public void handleEvent(Event event) {
+		updateSnapshot();
+		
 		switch (event.type) {
 			case Paint:
 				canvasTransform.getElements(backup);
@@ -119,12 +121,14 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			case MouseDoubleClick:
 				point(event);
 		}
+		
+		clearSnapshot();
 	}
 
 	final protected void point(Event e) {
 		if (e.doit)
-			for (int i=children.length-1, I=0; i>=I; i--) {
-				Layer r = children[i];
+			for (int i=snapshot.length-1, I=0; i>=I; i--) {
+				Layer r = snapshot[i];
 				if (r.captive()==captive && r.isVisible() && r.isEnabled()) //either captive == null, or set to a specific layer
 					r.point(e);
 			}
@@ -134,12 +138,23 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		captive = c;
 	}
 	
+	private void updateSnapshot() {
+		if (snapshot.length!=children.length)
+			snapshot = new Layer[children.length];
+		for (int i=0, I=children.length; i<I; i++)
+			snapshot[i] = children[i];
+	}
+	
+	private void clearSnapshot() {
+		Arrays.fill(snapshot, null);
+	}
+	
 //==[ Rendering ]===================================================================================
 	
 	final protected void paint(Rectangle clip, Transform t, Event c) {
 		paintBackground(clip, t, c);
-		for (int I=0,i=children.length-1; I<=i; I++)
-			children[I].paint(clip,t,c);
+		for (int I=0,i=snapshot.length-1; I<=i; I++)
+			snapshot[I].paint(clip,t,c);
 		paintOverlay(clip, t, c);
 	}
 
