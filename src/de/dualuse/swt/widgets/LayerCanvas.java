@@ -1,11 +1,13 @@
 package de.dualuse.swt.widgets;
 
 import static org.eclipse.swt.SWT.Dispose;
+
 import static org.eclipse.swt.SWT.MouseDoubleClick;
 import static org.eclipse.swt.SWT.MouseDown;
 import static org.eclipse.swt.SWT.MouseMove;
 import static org.eclipse.swt.SWT.MouseUp;
 import static org.eclipse.swt.SWT.MouseWheel;
+
 import static org.eclipse.swt.SWT.NONE;
 import static org.eclipse.swt.SWT.Paint;
 
@@ -113,7 +115,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 				paint(event.gc.getClipping(), canvasTransform, event);
 				canvasTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
 				break;
-			
+				
 			case MouseDown:
 			case MouseUp:
 			case MouseMove:
@@ -126,12 +128,11 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 
 	final protected void point(Event e) {
-		if (e.doit)
-			for (int i=snapshot.length-1, I=0; i>=I; i--) {
-				Layer r = snapshot[i];
-				if (r.captive()==captive && r.isVisible() && r.isEnabled()) //either captive == null, or set to a specific layer
-					r.point(e);
-			}
+		for (int i=snapshot.length-1, I=0; i>=I; i--) {
+			Layer r = snapshot[i];
+			if (e.doit && r.captive()==captive && r.isVisible() && r.isEnabled()) //either captive == null, or set to a specific layer
+				r.point(e);
+		}
 	}
 	
 	@Override public void capture(Layer c) {
