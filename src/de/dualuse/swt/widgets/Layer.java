@@ -521,10 +521,12 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	}
 	
 	private boolean dirty = false, dirtyAll = false;
+	private int dirtification = 0; 
 	
 	public void redraw(float x, float y, float width, float height, boolean all) {
+		dirtification ++;
 		if (!dirty) { //if Event has not been scheduled, do so, and initialize dirty bounds
-			if (!root.isDisposed())
+			if (!root.isDisposed()) 
 				root.getDisplay().asyncExec(this);
 			
 			dirty = true;
@@ -570,8 +572,13 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		return b;
 	}
 	
+	private int cleanification = 0;
 	final public void run() {
 		if (isDisposed()) return;
+		
+		if (cleanification==dirtification)
+			return;
+		
 		
 		final float globalLeft = global.left, globalTop = global.top;
 		final float globalRight = global.right, globalBottom = global.bottom;
@@ -591,6 +598,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 		dirty = false;
 		
 		computeDirtyBounds(global.clear(), false); //necessary?
+		
+		cleanification = dirtification;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////

@@ -143,7 +143,12 @@ public class Handle extends Gizmo<Handle> {
 	}
 	
 	public Handle setCenter( double x, double y ) {
-		return identity().translate(x, y);
+		if (Math.hypot(x-centerX, y-centerY)<1e-4) 
+			return this;
+		else {
+			System.out.println(centerX+", "+centerY+" -> "+x+", "+y);
+			return identity().translate(x, y);
+		}
 	}
 	
 	public double getCenterX() { return centerX; }
