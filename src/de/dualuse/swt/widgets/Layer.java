@@ -574,6 +574,11 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	
 	private int cleanification = 0;
 	final public void run() {
+		//TODO "eigentlich" müsste man im Layer mitloggen ob der Redraw ausgelöst wurde durch einen call auf 
+		//`redraw()` oder durch `concatenate()` und wenn kein explicitRedraw=true gesetzt wurde und sich rausstellt 
+		//dass sich zum letzten `run()` aufruf garnicht die Transformation geändert hat, dann löst man keinen 
+		//`root.redraw(...)` erst aus
+		
 		if (isDisposed()) return;
 		
 		if (cleanification==dirtification)
