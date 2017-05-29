@@ -7,7 +7,6 @@ import static org.eclipse.swt.SWT.*;
 import java.awt.BasicStroke;
 import java.awt.Shape;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +51,8 @@ public class RC implements Closeable {
 			backgroundCreated.dispose();
 			backgroundCreated = null;
 		}
+		
+		
 	}
 	
 	@Override
@@ -64,7 +65,7 @@ public class RC implements Closeable {
 	private ArrayDeque<float[][]> pushed = new ArrayDeque<float[][]>();
 	private ArrayDeque<float[][]> free = new ArrayDeque<float[][]>();
 	
-	public void pushTransform() {
+	public RC pushTransform() {
 		float[][] m = free.poll();
 		
 		if (m==null)
@@ -73,18 +74,21 @@ public class RC implements Closeable {
 		copy(modelViewProjection, m);
 		
 		pushed.push(m);
+		return this;
 	}
 	
 	
-	public void popTransform() {
+	public RC popTransform() {
 		float[][] m = pushed.poll();
 		copy(m, modelViewProjection);
 		free.push(m);
+		return this;
 	}
 	
 	
-	public void loadIdentity() {
+	public RC loadIdentity() {
 		identity(modelViewProjection);
+		return this;
 	}
 	
 	public static interface ModelViewProjection<T> {
@@ -277,7 +281,7 @@ public class RC implements Closeable {
 	 * Where 'X' denotes matrix multiplication, and v is represented as a 4 X 1 matrix.
 	 * @param n
 	 */
-	public void multMatrix( double[] n ) {
+	public RC multMatrix( double[] n ) {
 		float[][] m = modelViewProjection;
 		setToConcatenation(	
 					m[0][0], m[1][0], m[2][0], m[3][0],				
@@ -289,6 +293,8 @@ public class RC implements Closeable {
 					(float)n[ 4], (float)n[ 5], (float)n[ 6], (float)n[ 7],
 					(float)n[ 8], (float)n[ 9], (float)n[10], (float)n[11],
 					(float)n[12], (float)n[13], (float)n[14], (float)n[15] );
+		
+		return this;
 	}
 	
 	//XXX be super careful!! these matrices are transposed!
@@ -328,15 +334,16 @@ public class RC implements Closeable {
 		
 	}
 	
-	public void translate(double tx, double ty, double tz) {
+	public RC translate(double tx, double ty, double tz) {
 		concat( modelViewProjection,
 				1,0,0,(float)tx,
 				0,1,0,(float)ty,
 				0,0,1,(float)tz,
 				0,0,0,1);
+		return this;
 	}
 	
-	public void rotate(double theta, double ax, double ay, double az) {
+	public RC rotate(double theta, double ax, double ay, double az) {
 		final float s = (float) sin(theta), c = (float) cos(theta), t = 1-c, l = (float) sqrt(ax*ax+ay*ay+az*az);
 		final float x = (float) (ax/l), y = (float) (ay/l), z= (float) (az/l);
 		final float xz = x*z, xy = x*y, yz = y*z, xx=x*x, yy=y*y, zz=z*z;
@@ -346,25 +353,28 @@ public class RC implements Closeable {
 				t*xy+s*z, t*yy+c  , t*yz-s*x, 0,
 				t*xz-s*y, t*yz+s*x, t*zz+c  , 0,
 				       0,        0,      0,   1);
-
+		return this;
 	}
 	
-	public void scale(double sx, double sy, double sz) {
+	public RC scale(double sx, double sy, double sz) {
 		concat(modelViewProjection,
 				(float)sx,0,0,0,
 				0,(float)sy,0,0,
 				0,0,(float)sz,0,
 				0,0,0,1	
-					);	
+					);
+		
+		return this;
 	}
 
 
 	
-	public void viewport(int x, int y, int width, int height) {
+	public RC viewport(int x, int y, int width, int height) {
 		concat(modelViewProjection,createMatrixWithViewport(x, y, width, height));
+		return this;
 	}
 	
-	public void frustum(double left, double right, double bottom, double top, double nearVal, double farVal ) {
+	public RC frustum(double left, double right, double bottom, double top, double nearVal, double farVal ) {
 		concat(modelViewProjection,
 				createMatrixWithFrustum(
 						(float)left, (float)right, 
@@ -372,33 +382,35 @@ public class RC implements Closeable {
 						(float)nearVal, (float)farVal
 				)
 		);
+		return this;
 	}
 	
 
-	public void translate(double tx, double ty) { translate(tx, ty, 0); }
-	public void rotate(double theta) { rotate(0,0,1,theta); }
-	public void rotate(double theta, double x, double y) { translate(x,y);rotate(theta);translate(-x,-y); }
-	public void scale(double sx, double sy) { scale(sx,sy,1); }
+	public RC translate(double tx, double ty) { translate(tx, ty, 0); return this;}
+	public RC rotate(double theta) { rotate(0,0,1,theta); return this;}
+	public RC rotate(double theta, double x, double y) { translate(x,y);rotate(theta);translate(-x,-y); return this;}
+	public RC scale(double sx, double sy) { scale(sx,sy,1); return this; }
 	
-//	public void shear(double shx, double shy) { modelviewprojection.mul(createMatrixWithTransform(AffineTransform.getRotateInstance(shx, shy))); }
-//	public void transform(AffineTransform Tx) { modelviewprojection.mul(createMatrixWithTransform(Tx)); }
-//	public void transform(ProjectiveTransform Tx) { modelviewprojection.mul(Tx.getMatrix(new Matrix4f())); }
-//	public void setTransform(AffineTransform Tx) { modelviewprojection.set(createMatrixWithTransform(Tx)); }
-//	public void setTransform(ProjectiveTransform Tx) { modelviewprojection.set(Tx.getMatrix()); }
+//	public RC shear(double shx, double shy) { modelviewprojection.mul(createMatrixWithTransform(AffineTransform.getRotateInstance(shx, shy))); }
+//	public RC transform(AffineTransform Tx) { modelviewprojection.mul(createMatrixWithTransform(Tx)); }
+//	public RC transform(ProjectiveTransform Tx) { modelviewprojection.mul(Tx.getMatrix(new Matrix4f())); }
+//	public RC setTransform(AffineTransform Tx) { modelviewprojection.set(createMatrixWithTransform(Tx)); }
+//	public RC setTransform(ProjectiveTransform Tx) { modelviewprojection.set(Tx.getMatrix()); }
 //	public ProjectiveTransform getTransform() { return new ProjectiveTransform(modelviewprojection); 
 
 //==[ Rendering: Shapes ]===========================================================================
 	
-	public void draw(Shape s) {
+	public RC draw(Shape s) {
 		Shape ts = new TransformedShape(modelViewProjection, s);
 		
 		if (stroke!=NULL_STROKE) 
 			drawStroked(ts);
 		else
 			drawPlain(ts);
+		return this;
 	}
 	
-	public void fill(Shape s) {
+	public RC fill(Shape s) {
 		applyState();
 		PathShape ps = new PathShape(device, new TransformedShape(modelViewProjection, s));
 		
@@ -408,6 +420,7 @@ public class RC implements Closeable {
 		
 		ps.dispose();
 		restoreState();
+		return this;
 	}
 
 	private void drawFilled(Shape p) {
@@ -652,15 +665,17 @@ public class RC implements Closeable {
 	
 //==[ Rendering: Text ]=============================================================================
 	
-	public void drawText(String str, int x, int y) {
+	public RC drawText(String str, int x, int y) {
 		this.drawText(str, x, y, false);
+		return this;
 	}	
 	
-	public void drawText(String str, int x, int y, boolean transparent) {
+	public RC drawText(String str, int x, int y, boolean transparent) {
 		drawText(str, x, y, DRAW_DELIMITER|DRAW_TAB|DRAW_TRANSPARENT);
+		return this;
 	}
 	
-	public void drawText(String str, int x, int y, int flags) {
+	public RC drawText(String str, int x, int y, int flags) {
 		gc.getTransform(t);
 		t.multiply(approximateTransform(x, y, s));
 
@@ -670,6 +685,7 @@ public class RC implements Closeable {
 		gc.drawText(str, x, y, flags);
 		
 		gc.setTransform(s);
+		return this;
 	}
 	
 	
@@ -685,7 +701,7 @@ public class RC implements Closeable {
 		return gc.getAdvanceWidth(ch);
 	}
 	
-	public void drawString(String str, int x, int y, boolean transparent) {
+	public RC drawString(String str, int x, int y, boolean transparent) {
 		gc.getTransform(t);
 		t.multiply(approximateTransform(x, y, s));
 
@@ -695,10 +711,12 @@ public class RC implements Closeable {
 		gc.drawString(str, x, y, transparent);
 		
 		gc.setTransform(s);
+		return this;
 	}
 	
-	public void drawString(String str, int x, int y) {
+	public RC drawString(String str, int x, int y) {
 		this.drawString(str, x, y, false);
+		return this;
 	}	
 	
 //==[ Rendering: OpenGL Primitives ]================================================================
@@ -726,31 +744,39 @@ public class RC implements Closeable {
 	private int backPolygonMode = LINE;
 	private int frontPolygonMode = LINE;
 	
-	public void polygonMode(int mode) {
+	public RC polygonMode(int mode) {
 		polygonMode(FRONT_AND_BACK, mode);
+		
+		return this;
 	}
 	
-	private void polygonMode(int face, int mode) {
+	private RC polygonMode(int face, int mode) {
 		if ((face&FRONT)!=0)
 			frontPolygonMode = mode;
 		
 		if ((face&BACK)!=0)
 			backPolygonMode = mode;
+		
+		return this;
 	}
 	
-	public void begin(int type) {
+	public RC begin(int type) {
 		p = cached.reset(modelViewProjection, type);
+		return this;
 	}
 
-	public void vertex(int x, int y) { p.addVertex(x, y, 0f);}
-	public void vertex(float x, float y) { p.addVertex(x, y, 0f);}
-	public void vertex(double x, double y) { p.addVertex((float)x, (float)y, 0f); }
+	public RC vertex(int x, int y) { p.addVertex(x, y, 0f); return this; }
+	public RC vertex(float x, float y) { p.addVertex(x, y, 0f); return this; }
+	public RC vertex(double x, double y) { p.addVertex((float)x, (float)y, 0f); return this;  }
 	
-	public void vertex(int x, int y, int z) { p.addVertex(x, y, z); }
-	public void vertex(float x, float y, float z) { p.addVertex(x, y, z); }
-	public void vertex(double x, double y, double z) { p.addVertex((float)x, (float)y, (float)z); }
+	public RC vertex(int x, int y, int z) { p.addVertex(x, y, z); return this;  }
+	public RC vertex(float x, float y, float z) { p.addVertex(x, y, z); return this;  }
+	public RC vertex(double x, double y, double z) { p.addVertex((float)x, (float)y, (float)z); return this; }
 	
-	public void end() {
+	
+	
+	
+	public RC end() {
 		boolean strokeSet = stroke!=NULL_STROKE;
 		
 		switch (p.getType()) {
@@ -778,6 +804,8 @@ public class RC implements Closeable {
 			break;
 		}
 		p = null;
+		
+		return this;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -915,11 +943,12 @@ public class RC implements Closeable {
 	final static private BasicStroke NULL_STROKE = new BasicStroke(1);
 	BasicStroke stroke = NULL_STROKE;
 	
-	public void setStroke(BasicStroke stroke) {
+	public RC setStroke(BasicStroke stroke) {
 		if (stroke!=null)
 			this.stroke = stroke;
 		else
 			this.stroke = NULL_STROKE;
+		return this;
 	}
 	
 	public BasicStroke getStroke() {
@@ -927,9 +956,10 @@ public class RC implements Closeable {
 	}
 	
 	LineAttributes lineAttributes, lineAttributesSaved;
-	public void setLineAttributes(LineAttributes lineAttributes) {
+	public RC setLineAttributes(LineAttributes lineAttributes) {
 		this.stroke = NULL_STROKE;
 		this.lineAttributes = lineAttributes;
+		return this;
 	}
 	
 	public LineAttributes getLineAttributes() {
@@ -937,16 +967,18 @@ public class RC implements Closeable {
 	}
 	
 	
-	public void setFont(Font font) {
+	public RC setFont(Font font) {
 		this.font = font;
+		return this;
 	}
 	
 	public Font getFont() {
 		return font;
 	}
 	
-	public void setFillRule(int fillRule) {
+	public RC setFillRule(int fillRule) {
 		this.fillRule = fillRule;
+		return this;
 	}
 	
 	public int getFillRule() {
@@ -954,29 +986,32 @@ public class RC implements Closeable {
 	}
 	
 	
-	public void setAlpha(int alpha) {
+	public RC setAlpha(int alpha) {
 		this.alpha = alpha;
+		return this;
 	}
 	
 	public int getAlpha() {
 		return alpha;
 	}
 	
-	public void setForeground(RGB color) {
+	public RC setForeground(RGB color) {
 		if (foregroundCreated!=null)
 			foregroundCreated.dispose();
 		
 		foregroundCreated = new Color(device,color);
 		setForeground(foregroundCreated);
+		return this;
 	}
 	
-	public void setForeground(Color foreground) {
+	public RC setForeground(Color foreground) {
 		if (foregroundCreated!=foreground) {
 			foregroundCreated.dispose();
 			foregroundCreated = null;
 		}
 		
 		this.foreground = foreground;
+		return this;
 	}
 	
 	public Color getForeground() {
@@ -984,22 +1019,24 @@ public class RC implements Closeable {
 	}
 	
 
-	public void setBackground(RGB color) {
+	public RC setBackground(RGB color) {
 		if (backgroundCreated!=null)
 			backgroundCreated.dispose();
 		
 		backgroundCreated = new Color(device,color);
 		setBackground(backgroundCreated);
+		return this;
 	}
 
 	
-	public void setBackground(Color background) {
+	public RC setBackground(Color background) {
 		if (backgroundCreated!=background) {
 			backgroundCreated.dispose();
 			backgroundCreated = null;
 		}
 		
 		this.background = background;
+		return this;
 	}
 	
 	public Color getBackground() {
