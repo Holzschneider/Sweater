@@ -563,17 +563,17 @@ public class RC implements Closeable {
 		float boow = 1f/(m[3][0]* bx+ m[3][1]*by + m[3][2] * 0 + m[3][3] *1 );
 		float bx_ = (m[0][0]*bx+ m[0][1]*by+m[0][2]*0+m[0][3]*1)*boow;
 		float by_ = (m[1][0]*bx+ m[1][1]*by+m[1][2]*0+m[1][3]*1)*boow;
-		float bz_ = (m[2][0]*bx+ m[2][1]*by+m[2][2]*0+m[2][3]*1)*aoow;
+		float bz_ = (m[2][0]*bx+ m[2][1]*by+m[2][2]*0+m[2][3]*1)*boow;
 		
 		float coow = 1f/(m[3][0]* cx+ m[3][1]*cy + m[3][2] * 0 + m[3][3] *1 );
 		float cx_ = (m[0][0]*cx+ m[0][1]*cy+m[0][2]*0+m[0][3]*1)*coow;
 		float cy_ = (m[1][0]*cx+ m[1][1]*cy+m[1][2]*0+m[1][3]*1)*coow;
-		float cz_ = (m[2][0]*cx+ m[2][1]*cy+m[2][2]*0+m[2][3]*1)*aoow;
+		float cz_ = (m[2][0]*cx+ m[2][1]*cy+m[2][2]*0+m[2][3]*1)*coow;
 		
 		float doow = 1f/(m[3][0]* dx+ m[3][1]*dy + m[3][2] * 0 + m[3][3] *1 );
 		float dx_ = (m[0][0]*dx+ m[0][1]*dy+m[0][2]*0+m[0][3]*1)*doow;
 		float dy_ = (m[1][0]*dx+ m[1][1]*dy+m[1][2]*0+m[1][3]*1)*doow;
-		float dz_ = (m[2][0]*dx+ m[2][1]*dy+m[2][2]*0+m[2][3]*1)*aoow;
+		float dz_ = (m[2][0]*dx+ m[2][1]*dy+m[2][2]*0+m[2][3]*1)*doow;
 		
 		
 		float tileW = (x2-x1), tileH = (y2-y1), error = 0;

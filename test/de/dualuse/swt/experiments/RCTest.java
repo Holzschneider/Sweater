@@ -114,7 +114,7 @@ public class RCTest {
 //			rc.fill(new Rectangle2D.Double(0,0,id.width,id.height));
 
 
-//			rc.drawImage(im, 0, 0);
+			rc.drawImage(im, 0, 0);
 			rc.popTransform();
 			
 
