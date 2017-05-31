@@ -35,7 +35,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	public ZoomCanvas(Composite parent, int style) {
 		super(parent, style);
 
-		canvasTransform = new Transform(getDisplay());
+		zoomTransform = new Transform(getDisplay());
 		
 //		super.addListener(Paint, this);
 //		super.addListener(MouseWheel, this);
@@ -79,14 +79,20 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			scrollBarY = currentY;
 		}
 		
-		canvasTransform.translate(canvasX, canvasY);
-		setLayerTransform(canvasTransform);
+		zoomTransform.translate(canvasX, canvasY);
+		setCanvasTransform(zoomTransform);
 		
 		// USE .scroll instead -> so repaint will be clipped to the area that's new
 		
 		Point size = getSize();
 		this.scroll(screenX, screenY, 0, 0, size.x, size.y, false);
 //		redraw();
+	}
+	
+	@Override
+	public void onDispose(Event event) {
+		super.onDispose(event);
+		zoomTransform.dispose();
 	}
 	
 	@Override
@@ -138,7 +144,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		gc.getTransform(bt);
 		
 		gc.getTransform(at);
-		at.multiply(canvasTransform);
+		at.multiply(zoomTransform);
 		
 		if (flipY) {
 			at.translate(0, getBounds().height);
@@ -149,7 +155,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		
 		// XXX stroke size? only int, no subpixel precision...
 		if (normalizeStrokeSize) {
-			canvasTransform.getElements(elements);
+			zoomTransform.getElements(elements);
 			float scaleX = elements[0];
 			gc.setLineWidth((int)(1f/scaleX));
 		}
@@ -219,7 +225,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	public boolean zoomX = true;
 	public boolean zoomY = true;
 	
-	private Transform canvasTransform;
+	private Transform zoomTransform = new Transform(getDisplay());
 	
 	private Rectangle lastSize = null;
 	
@@ -259,7 +265,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	
 	private float[] inverseTransform(float[] p) {
 		try {
-			canvasTransform.getElements(elements);
+			zoomTransform.getElements(elements);
 			inverseTransform.setElements(elements[0], elements[1], elements[2], elements[3], elements[4], elements[5]);
 			inverseTransform.invert();
 			inverseTransform.transform(p);
@@ -298,13 +304,13 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 				at.translate(-cx, 0);
 			}
 			
-			canvasTransform.multiply(at);
+			zoomTransform.multiply(at);
 //			fireStateChanged();
 		}
 		
 		
 		respectCanvasBoundsAndUpdateScrollbars();
-		setLayerTransform(canvasTransform);
+		setCanvasTransform(zoomTransform);
 
 			
 		lastSize = currentSize;
@@ -337,7 +343,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	private void mouseDragged(Event e) {
 		setLocation(q, e);
 		
-		canvasTransform.getElements(elements);
+		zoomTransform.getElements(elements);
 		float scx = elements[0];
 		float scy = elements[3];
 		float shy = elements[1];
@@ -351,11 +357,11 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		float zx = (float)Math.hypot(scx, shy);
 		float zy = (float)Math.hypot(scy, shx);
 		
-		canvasTransform.translate( deltaX / zx, deltaY / zy );
+		zoomTransform.translate( deltaX / zx, deltaY / zy );
 		respectCanvasBoundsAndUpdateScrollbars();
-		setLayerTransform(canvasTransform);
+		setCanvasTransform(zoomTransform);
 
-		canvasTransform.getElements(elements);
+		zoomTransform.getElements(elements);
 		float tx_ = elements[4], ty_ = elements[5];
 		
 		int dx = (int)(tx_-tx);
@@ -374,16 +380,16 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			return;
 		
 		inverseTransform(q);
-		canvasTransform.translate(q[0], q[1]);
+		zoomTransform.translate(q[0], q[1]);
 		
 		double scaleIncrementPerTick = 1.0337;
 		float sx = (float)Math.pow(scaleIncrementPerTick, e.count * (zoomX?1:0));
 		float sy = (float)Math.pow(scaleIncrementPerTick, e.count * (zoomY?1:0));
 		
-		canvasTransform.scale(sx, sy);
-		canvasTransform.translate(-q[0],  -q[1]);
+		zoomTransform.scale(sx, sy);
+		zoomTransform.translate(-q[0],  -q[1]);
 		respectCanvasBoundsAndUpdateScrollbars();
-		setLayerTransform(canvasTransform);
+		setCanvasTransform(zoomTransform);
 		
 		redraw();
 	}
@@ -436,7 +442,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			if (bottom<transformedClipping[3])
 				constrainY = (bottom-transformedClipping[3]);
 			
-			canvasTransform.translate(-constrainX, -constrainY);
+			zoomTransform.translate(-constrainX, -constrainY);
 		}		
 		/////////////
 		

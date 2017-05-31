@@ -1,15 +1,6 @@
 package de.dualuse.swt.widgets;
 
-import static org.eclipse.swt.SWT.Dispose;
-
-import static org.eclipse.swt.SWT.MouseDoubleClick;
-import static org.eclipse.swt.SWT.MouseDown;
-import static org.eclipse.swt.SWT.MouseMove;
-import static org.eclipse.swt.SWT.MouseUp;
-import static org.eclipse.swt.SWT.MouseWheel;
-
-import static org.eclipse.swt.SWT.NONE;
-import static org.eclipse.swt.SWT.Paint;
+import static org.eclipse.swt.SWT.*;
 
 import java.util.Arrays;
 
@@ -104,16 +95,16 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	private Layer captive = null;
 	private float[] backup = new float[6];
-	
+
 	@Override public void handleEvent(Event event) {
 		updateSnapshot();
-		
 		switch (event.type) {
 			case Paint:
 				canvasTransform.getElements(backup);
 				event.gc.setLineAttributes(new LineAttributes(1));
 				paint(event.gc.getClipping(), canvasTransform, event);
 				canvasTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
+				dirty.clear();
 				break;
 				
 			case MouseDown:
@@ -152,6 +143,9 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 //==[ Rendering ]===================================================================================
 	
+	Bounds dirty = new Bounds();
+	Rectangle dirtyRect = new Rectangle(0, 0, 0, 0); 
+	
 	final protected void paint(Rectangle clip, Transform t, Event c) {
 		paintBackground(clip, t, c);
 		for (int I=0,i=snapshot.length-1; I<=i; I++)
@@ -171,6 +165,27 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		this.redraw((int)x, (int)y, (int)width, (int)height, all);
 	}
 
+	@Override
+	public void redraw() {
+		if (dirty.isEmpty() || dirty.isFinite())
+			super.redraw();
+		
+		dirty.setExtents(-1f/0, -1f/0, +1f/0f, +1f/0f);
+	}
+
+	@Override public void redraw(int x, int y, int width, int height, boolean all) {
+		if (dirty.isEmpty())
+			super.redraw(x, y, width, height, all);
+		else {
+			dirty.getBounds(dirtyRect);
+			if (!dirtyRect.contains(x, y) ||
+				!dirtyRect.contains(x+width-1,y) ||
+				!dirtyRect.contains(x+width-1,y+height-1) ||
+				!dirtyRect.contains(x,y+height-1))
+				super.redraw(x, y, width, height, all);
+		}
+	}
+	
 //==[ CanvasTransform ]=============================================================================
 	
 	public void setCanvasTransform(Transform matrix) {
