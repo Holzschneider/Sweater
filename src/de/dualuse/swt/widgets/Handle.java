@@ -71,7 +71,7 @@ public class Handle extends Gizmo<Handle> {
 
 //==[ Event Handling ]==============================================================================
 
-	protected float dx = 0, dy = 0;
+	protected float downx = 0, downy = 0;
 	protected boolean drag;
 
 	@Override protected boolean isMouseHandler() {
@@ -87,8 +87,8 @@ public class Handle extends Gizmo<Handle> {
 		if (e.button==1) {
 			moveTop();
 			drag = true;
-			dx = x;
-			dy = y;
+			downx = x;
+			downy = y;
 		}
 		
 		fireOnMouseDown(x, y, e);
@@ -111,15 +111,19 @@ public class Handle extends Gizmo<Handle> {
 		}
 
 		float fromX = centerX, fromY = centerY;
-		float deltaX = x-dx, deltaY = y-dy;
-		translate(deltaX, deltaY);
+		float deltaX = x-downx, deltaY = y-downy;
+
+		if (deltaX!=0 || deltaY!=0) {
 			
-		if (deltaX!=0 || deltaY!=0)
-			onHandleDragged(fromX, fromY, fromX+deltaX, fromY+deltaY, e);
+			translate(deltaX, deltaY);
 			
-		getParent().redraw();
-		for (LayerContainer lc: consumers)
-			lc.redraw();
+			onHandleDragged(fromX, fromY, centerX, centerY, e);
+			
+			getParent().redraw();
+			for (LayerContainer lc: consumers)
+				lc.redraw();
+		}
+		
 	}
 
 	// Hit detection (round handle with radius S)
