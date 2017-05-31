@@ -27,10 +27,34 @@ import org.eclipse.swt.widgets.ScrollBar;
 
 
 public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, ControlListener {
+	
 	private ArrayList<Listener> listeners = new ArrayList<Listener>();
 	private ArrayList<PaintListener> paintListeners = new ArrayList<PaintListener>(); 
 	
 	private ScrollBar horizontal, vertical;
+
+	// Canvas Bounds
+	private float top = -1.0f/0.0f;
+	private float bottom = 1.0f/0.0f;
+	private float left = -1.0f/0.0f;
+	private float right = 1.0f/0.0f;
+	
+	public boolean relative = true;
+	public boolean widthPinned = true;
+
+	public boolean normalizeStrokeSize = false;
+	public boolean flipY = false;
+	
+	public boolean scrollX = true;
+	public boolean scrollY = true;
+	public boolean zoomX = true;
+	public boolean zoomY = true;
+	
+	private Transform zoomTransform = new Transform(getDisplay());
+	
+	private Rectangle lastSize = null;
+
+//==[ Constructor ]=================================================================================
 	
 	public ZoomCanvas(Composite parent, int style) {
 		super(parent, style);
@@ -59,8 +83,105 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			vertical.setIncrement(16);
 		}
 	}
+
+	@Override protected void onDispose(Event event) {
+		super.onDispose(event);
+		zoomTransform.dispose();
+		at.dispose();
+		bt.dispose();
+	}
 	
+//==[ Setter/Getter ]===============================================================================
+
+	public void setRelative(boolean relative) {
+		this.relative = relative;
+	}
 	
+	public boolean isRelative() {
+		return relative;
+	}
+	
+	public void setWidthPinned(boolean widthPinned) {
+		this.widthPinned = widthPinned;
+	}
+	
+	public boolean isWidthPinned() {
+		return widthPinned;
+	}
+
+	public void setCanvasBounds(float left, float top, float right, float bottom) {
+		this.top = top;
+		this.left = left;
+		this.right = right;
+		this.bottom = bottom;
+	}
+	
+//==[ Manage PaintListeners ]=======================================================================
+	
+	@Override public void addListener(int eventType, Listener listener) {
+		if (eventType == Paint)
+			listeners.add(listener);
+		else
+			super.addListener(eventType, listener);
+	}
+	
+	@Override public void removeListener(int eventType, Listener listener) {
+		if (eventType == Paint)
+			listeners.remove(listener);
+		else
+			super.removeListener(eventType, listener);
+	}
+	
+	@Override public void addPaintListener(PaintListener listener) {
+		paintListeners.add(listener);
+	}
+	
+	@Override public void removePaintListener(PaintListener listener) {
+		paintListeners.remove(listener);
+	}
+
+//==[ Event Handling ]==============================================================================
+
+	@Override final public void handleEvent(Event event) {
+		
+		if (event.type==Paint)
+			for (Listener l: listeners)
+				if (event.doit)
+					l.handleEvent(event);
+				
+		super.handleEvent(event);
+		
+		switch (event.type) {
+			
+			case MouseMove:
+				if (event.doit)
+					mouseMove(event);
+				break;
+	
+			case MouseDown:
+				if (event.doit)
+					mouseDown(event);
+				break;
+				
+			case MouseUp:
+				if (event.doit)
+					mouseUp(event);
+				break;
+				
+			case MouseWheel:
+				if (event.doit)
+					mouseScrolled(event);
+				event.doit = !zoomX && !zoomY; 
+				//prevent scrolling from happening when zooming should happen instead 
+				break;
+				
+			case Selection:
+				scrollbarScrolled(event);
+		}
+	}
+
+//==[ Events: Scrollbars Manipulated ]==============================================================
+		
 	private void scrollbarScrolled(Event event) {
 		float canvasX = 0, canvasY = 0;
 		int screenX = 0, screenY = 0;
@@ -88,200 +209,12 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		this.scroll(screenX, screenY, 0, 0, size.x, size.y, false);
 //		redraw();
 	}
-	
-	@Override
-	public void onDispose(Event event) {
-		super.onDispose(event);
-		zoomTransform.dispose();
-	}
-	
-	@Override
-	final public void handleEvent(Event event) {
-		
-		if (event.type==Paint)
-			for (Listener l: listeners)
-				if (event.doit)
-					l.handleEvent(event);
-				
-		super.handleEvent(event);
-		
-		switch (event.type) {
-			
-		case MouseMove:
-			if (event.doit)
-				mouseMove(event);
-			break;
 
-		case MouseDown:
-			if (event.doit)
-				mouseDown(event);
-			break;
-			
-		case MouseUp:
-			if (event.doit)
-				mouseUp(event);
-			break;
-			
-		case MouseWheel:
-			if (event.doit)
-				mouseScrolled(event);
-			event.doit = !zoomX && !zoomY; 
-			//prevent scrolling from happening when zooming should happen instead 
-			break;
-			
-		case Selection:
-			scrollbarScrolled(event);
-		}
-	}
+//==[ Events: Control Resized ]=====================================================================
+	
+	@Override final public void controlMoved(ControlEvent e) { }
 
-	Transform bt = new Transform(getDisplay());
-	Transform at = new Transform(getDisplay());
-
-	@Override
-	final public void paintControl(PaintEvent e) {
-		GC gc = e.gc;
-	
-		gc.getTransform(bt);
-		
-		gc.getTransform(at);
-		at.multiply(zoomTransform);
-		
-		if (flipY) {
-			at.translate(0, getBounds().height);
-			at.scale(1,  -1);
-		}
-		
-		gc.setTransform(at);
-		
-		// XXX stroke size? only int, no subpixel precision...
-		if (normalizeStrokeSize) {
-			zoomTransform.getElements(elements);
-			float scaleX = elements[0];
-			gc.setLineWidth((int)(1f/scaleX));
-		}
-		
-		paintCanvas(e);
-		for (PaintListener pl: paintListeners)
-			pl.paintControl(e);
-		
-		gc.setTransform(bt);
-	}
-	
-	protected void paintCanvas(PaintEvent e) {
-		// do nothing
-	}
-	
-	@Override
-	public void addListener(int eventType, Listener listener) {
-		if (eventType == Paint)
-			listeners.add(listener);
-		else
-			super.addListener(eventType, listener);
-	}
-	
-	@Override
-	public void removeListener(int eventType, Listener listener) {
-		if (eventType == Paint)
-			listeners.remove(listener);
-		else
-			super.removeListener(eventType, listener);
-	}
-	
-	@Override
-	public void addPaintListener(PaintListener listener) {
-		paintListeners.add(listener);
-	}
-	
-	@Override
-	public void removePaintListener(PaintListener listener) {
-		paintListeners.remove(listener);
-	}
-	
-	
-	////////////////////
-	
-	
-	private float top = -1.0f/0.0f;
-	private float bottom = 1.0f/0.0f;
-	private float left = -1.0f/0.0f;
-	private float right = 1.0f/0.0f;
-	
-	public void setCanvasBounds(float left, float top, float right, float bottom) {
-		this.top = top;
-		this.left = left;
-		this.right = right;
-		this.bottom = bottom;
-	}
-	
-	
-	public boolean relative = true;
-	public boolean widthPinned = true;
-
-	public boolean normalizeStrokeSize = false;
-	public boolean flipY = false;
-	
-	public boolean scrollX = true;
-	public boolean scrollY = true;
-	public boolean zoomX = true;
-	public boolean zoomY = true;
-	
-	private Transform zoomTransform = new Transform(getDisplay());
-	
-	private Rectangle lastSize = null;
-	
-
-
-
-//==[ Setter/Getter ]===============================================================================
-	
-	public void setRelative(boolean relative) {
-		this.relative = relative;
-	}
-	public boolean isRelative() {
-		return relative;
-	}
-	
-	public void setWidthPinned(boolean widthPinned) {
-		this.widthPinned = widthPinned;
-	}
-	
-	public boolean isWidthPinned() {
-		return widthPinned;
-	}
-	
-//==[ Canvas Transform ]============================================================================
-
-	// Internal Work Variables
-	private float[] elements = new float[6];
-	private Transform inverseTransform = new Transform(getDisplay());
-	
-	final public float[] getPointOnCanvas(float[] onComponent) {
-		float[] onCanvas = new float[2];
-		onCanvas[0] = onComponent[0];
-		onCanvas[1] = onComponent[1];
-		inverseTransform(onCanvas);
-		return onCanvas;
-	}
-	
-	private float[] inverseTransform(float[] p) {
-		try {
-			zoomTransform.getElements(elements);
-			inverseTransform.setElements(elements[0], elements[1], elements[2], elements[3], elements[4], elements[5]);
-			inverseTransform.invert();
-			inverseTransform.transform(p);
-		} catch (SWTException ex) {
-			ex.printStackTrace();
-		}
-		return p;
-	}
-
-	
-//==[ Resize-Listener ]=============================================================================
-	@Override
-	final public void controlMoved(ControlEvent e) { }
-
-	@Override
-	final public void controlResized(ControlEvent e) {
+	@Override final public void controlResized(ControlEvent e) {
 		Rectangle currentSize = ZoomCanvas.this.getBounds();
 		
 		if (lastSize!=null && isRelative()) {
@@ -315,9 +248,9 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			
 		lastSize = currentSize;
 	}
+
+//==[ Events: Input Events to Control the Viewport ]================================================
 	
-	
-//==[ Viewport Controller ]=========================================================================
 	private float[] p = new float[2];
 	private float[] q = new float[2];
 	
@@ -404,7 +337,72 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		to[1] = from[1];
 	}
 
+//==[ Rendering ]===================================================================================
 	
+	Transform bt = new Transform(getDisplay());
+	Transform at = new Transform(getDisplay());
+
+	@Override final public void paintControl(PaintEvent e) {
+		GC gc = e.gc;
+	
+		gc.getTransform(bt);
+		
+		gc.getTransform(at);
+		at.multiply(zoomTransform);
+		
+		if (flipY) {
+			at.translate(0, getBounds().height);
+			at.scale(1,  -1);
+		}
+		
+		gc.setTransform(at);
+		
+		// XXX stroke size? only int, no subpixel precision...
+		if (normalizeStrokeSize) {
+			zoomTransform.getElements(elements);
+			float scaleX = elements[0];
+			gc.setLineWidth((int)(1f/scaleX));
+		}
+		
+		paintCanvas(e);
+		for (PaintListener pl: paintListeners)
+			pl.paintControl(e);
+		
+		gc.setTransform(bt);
+	}
+	
+	protected void paintCanvas(PaintEvent e) {
+		// do nothing
+	}
+	
+//==[ Canvas Transform ]============================================================================
+
+	// Internal Work Variables
+	private float[] elements = new float[6];
+	private Transform inverseTransform = new Transform(getDisplay());
+	
+	final public float[] getPointOnCanvas(float[] onComponent) {
+		float[] onCanvas = new float[2];
+		onCanvas[0] = onComponent[0];
+		onCanvas[1] = onComponent[1];
+		inverseTransform(onCanvas);
+		return onCanvas;
+	}
+	
+	private float[] inverseTransform(float[] p) {
+		try {
+			zoomTransform.getElements(elements);
+			inverseTransform.setElements(elements[0], elements[1], elements[2], elements[3], elements[4], elements[5]);
+			inverseTransform.invert();
+			inverseTransform.transform(p);
+		} catch (SWTException ex) {
+			ex.printStackTrace();
+		}
+		return p;
+	}
+	
+//==[ Viewport ]====================================================================================
+
 	private float transformedClipping[] = {0,0, 0,0};
 	private Rectangle clipping = getClientArea();
 	private int scrollBarX = 0, scrollBarY = 0; 
@@ -490,6 +488,4 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		}
 	}
 	
-	
-
 }
