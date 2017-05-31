@@ -148,7 +148,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			for (Listener l: listeners)
 				if (event.doit)
 					l.handleEvent(event);
-				
+		
 		super.handleEvent(event);
 		
 		switch (event.type) {
@@ -157,7 +157,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 				if (event.doit)
 					mouseMove(event);
 				break;
-	
+
 			case MouseDown:
 				if (event.doit)
 					mouseDown(event);
