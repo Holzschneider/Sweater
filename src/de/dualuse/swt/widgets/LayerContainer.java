@@ -26,6 +26,7 @@ public interface LayerContainer {
 
 	///// Given layer captures events
 	
+	public void resetCaptive();
 	public void capture(Layer c);
 
 	////// Redraw container (region)

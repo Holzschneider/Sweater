@@ -125,6 +125,16 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 				r.point(e);
 		}
 	}
+
+	// Used by Handle.startDrag() which programmatically starts a dragging operation to reset the last captive
+	@Override public void resetCaptive() {
+		Layer cap = captive;
+		if (cap != null)
+			while (cap.getCaptive() != null && cap.getCaptive()!=cap)
+				cap = cap.getCaptive();
+		if (cap!=null)
+			cap.capture(null);
+	}
 	
 	@Override public void capture(Layer c) {
 		captive = c;

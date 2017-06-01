@@ -5,6 +5,7 @@ import static org.eclipse.swt.SWT.COLOR_WHITE;
 
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.LineAttributes;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 
 public class Handle extends Gizmo<Handle> {
@@ -84,12 +85,8 @@ public class Handle extends Gizmo<Handle> {
 			return;
 		}
 
-		if (e.button==1) {
-			moveTop();
-			drag = true;
-			downx = x;
-			downy = y;
-		}
+		if (e.button==1)
+			initDrag(x, y);
 		
 		fireOnMouseDown(x, y, e);
 	}
@@ -129,6 +126,35 @@ public class Handle extends Gizmo<Handle> {
 	// Hit detection (round handle with radius S)
 	@Override protected boolean hit(float x, float y) {
 		return (x*x + y*y) <= S*S;
+	}
+	
+	private void initDrag(float x, float y) {
+		moveTop();
+		drag = true;
+		downx = x;
+		downy = y;
+	}
+
+//==[ Start Drag programmatically ]=================================================================
+	
+	// Allow external class to trigger a drag operation programmatically
+	public void startDrag() {
+		startDrag(0,0);
+	}
+	
+	public void startDrag(float x, float y) {
+		// Automatically trigger dragging the handle
+		Display.getCurrent().asyncExec(() -> {
+			// init drag with the specified coordinates
+			initDrag(x, y);
+
+			// Reset previous captive (follows the captive chain to the last captive leaf,
+			// then nulls all captive references with capture(null))
+			getParent().resetCaptive();
+			
+			// Start capturing events
+			capture(this);
+		});
 	}
 
 //==[ Handler ]=====================================================================================
@@ -175,7 +201,6 @@ public class Handle extends Gizmo<Handle> {
 		if (Math.hypot(x-centerX, y-centerY)<1e-4) 
 			return this;
 		else {
-			System.out.println(centerX+", "+centerY+" -> "+x+", "+y);
 			return identity().translate(x, y);
 		}
 	}
