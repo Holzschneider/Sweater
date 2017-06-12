@@ -5,6 +5,10 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Shell;
 
+
+
+///XXX TODO Ableitbar machen und eine generic mainMethod bauen, sodass man kein new Application().loop() braucht
+
 public class Application extends Display implements AutoMenuBar {
 
 	//support for splash-windows / start-wizards
