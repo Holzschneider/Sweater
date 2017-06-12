@@ -76,6 +76,8 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	boolean isDisposed;
 	
 	final public void dispose() {
+		if (isDisposed) return;
+		
 		updateSnapshot();
 		for (Layer child : snapshot)
 			child.dispose();
