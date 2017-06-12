@@ -75,7 +75,7 @@ public class DocumentMenu extends Menu {
 		if (appMenu)
 			cascadeFileMenu.setText("&App");
 		else
-			cascadeFileMenu.setText("&Window");
+			cascadeFileMenu.setText("&File");
 		
 		Menu fileMenu = new Menu(cascadeFileMenu);
 		cascadeFileMenu.setMenu(fileMenu);
@@ -85,12 +85,14 @@ public class DocumentMenu extends Menu {
 		newDocumentMenuItem.setText(NEW_DOCUMENT);
 		newDocumentMenuItem.setAccelerator(SWT.MOD1 | 'N');
 		newDocumentMenuItem.addListener(SWT.Selection, (e) -> application.createNewDocument());
+		newDocumentMenuItem.setEnabled(application.canCreate());
 		
 		// Open Document
 		openDocumentMenuItem = new MenuItem(fileMenu, SWT.PUSH);
 		openDocumentMenuItem.setText(OPEN_DOCUMENT);
 		openDocumentMenuItem.setAccelerator(SWT.MOD1 | 'O');
 		openDocumentMenuItem.addListener(SWT.Selection, (e) -> application.openDocument());
+		openDocumentMenuItem.setEnabled(application.canOpen());
 		
 		new MenuItem(fileMenu, SWT.SEPARATOR);
 		
