@@ -13,6 +13,7 @@ import java.util.Arrays;
 
 public class Primitive implements Shape, Cloneable {
 //	private static final long serialVersionUID = 1L;
+
 	
 	private int n = 0;
 	private float[] vertices;

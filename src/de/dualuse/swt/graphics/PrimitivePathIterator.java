@@ -2,7 +2,7 @@ package de.dualuse.swt.graphics;
 
 import java.awt.geom.AffineTransform;
 import java.awt.geom.PathIterator;
-import java.util.Random;
+import java.util.Arrays;
 
 
 class PrimitivePathIterator implements PathIterator {
@@ -12,17 +12,30 @@ class PrimitivePathIterator implements PathIterator {
 	final float[][] m;
 	final int type;
 	
+	final public static int POINTS = 1;
 	final public static int LINES = 2;
 	final public static int TRIANGLES = 3;
 	final public static int QUADS = 4;
+	final public static int TRIANGLE_FAN = 5;
 	
 	final public static int LINE_STRIP= 10000-1;
 	final public static int LINE_LOOP = 10000;
 	
-	Random r = new Random(0);
 	public PrimitivePathIterator(float vertices[], int count, int type, AffineTransform at, float[][] m) {
 		this.vertices = vertices;
-		this.n = count+(type>2?count/type:0)+(type==LINE_LOOP?1:0);
+		
+		int n = 0;
+		switch(type) {
+		case POINTS: n = count*4; break;
+		case LINES: n = count; break;
+		case TRIANGLES:
+		case QUADS: n = count+count/type; break;
+		case LINE_STRIP: n = count; break;
+		case LINE_LOOP: n = count+1; break;
+		case TRIANGLE_FAN: n = (count-1)*4; break;
+		}
+		
+		this.n = n;
 		
 		this.at = at;
 		this.m = m;
@@ -36,30 +49,70 @@ class PrimitivePathIterator implements PathIterator {
 	public boolean isDone() { return i>=n; }
 	public void next() { i++; }
 
+	final static float P = 1;
 	private float lx = 0, ly=0, lz=0, lw = 0;
 	public int currentSegment(float[] coords) {
-		int mode = i%(this.type+(type>2?1:0));
-		
-		int seg = mode==0?SEG_MOVETO: SEG_LINETO;
-
-		int o = i*3;
+		float sx = 0, sy = 0;
+		int offset=0, seg=0;
 		switch (type) {
-		case TRIANGLES: o = (i/4*3+i%3)*3;break;
-		case QUADS: o = (i/5*4+i%4)*3;break;
-		case LINE_LOOP: o = i%(n-1); break;
+		case POINTS: 
+			offset = (i/4)*3;
+			switch (i%4) {
+				case 0: sx=sy=-P; seg = SEG_MOVETO; break;
+				case 1: sy=sx=P;seg = SEG_LINETO; break;
+				case 2: sy=-(sx=P);seg = SEG_MOVETO; break;
+				case 3: sx=-(sy=P);seg = SEG_LINETO; break;
+			}
+		break;
+		case LINES:
+			offset = i*3;
+			seg = i%2==0?SEG_MOVETO:SEG_LINETO;
+		break;
+		case TRIANGLES: 
+			offset = (i/4*3+i%3)*3;
+			seg = i%4==0?SEG_MOVETO:SEG_LINETO;
+		break;
+		case QUADS: 
+			offset = (i/5*4+i%4)*3;
+			seg = i%5==0?SEG_MOVETO:SEG_LINETO;
+			break;
+		case LINE_STRIP:
+			offset = i*3;
+			seg = i==0?SEG_MOVETO:SEG_LINETO;
+			break;
+		case LINE_LOOP: 
+			offset = (i%(n-1))*3;
+			seg = i==0?SEG_MOVETO:SEG_LINETO;
+		case TRIANGLE_FAN:
+			int j = 0;
+			switch (i%4) {
+			case 0: j = 0; seg = SEG_MOVETO; break;
+			case 1: j = i/4; seg = SEG_LINETO; break;
+			case 2: j = i/4+1; seg = SEG_LINETO; break;
+			case 3: j = 0; seg = SEG_CLOSE; break;
+			}
+			offset = j*3;
+		break;
 		}
-		
-		float vecx = vertices[o++];
-		float vecy = vertices[o++];
-		float vecz = vertices[o++];
+
+//		if (seg == SEG_CLOSE)
+//			lx=ly=lz=lw=0;
+			
+		float vecx = vertices[offset+0];
+		float vecy = vertices[offset+1];
+		float vecz = vertices[offset+2];
 		float vecw = 1;
 
 		float x = m[0][0] * vecx + m[0][1] * vecy + m[0][2] * vecz + m[0][3] * vecw;
 		float y = m[1][0] * vecx + m[1][1] * vecy + m[1][2] * vecz + m[1][3] * vecw;
 		float z = m[2][0] * vecx + m[2][1] * vecy + m[2][2] * vecz + m[2][3] * vecw;
 		float w = m[3][0] * vecx + m[3][1] * vecy + m[3][2] * vecz + m[3][3] * vecw;	
+
 		
-		if (lz>-1 && z<-1 || lz<-1 && z>-1) {
+		if (type == POINTS && z<-1) 
+			return SEG_MOVETO;
+			
+		if (lz>-1 && z<-1 || lz<-1 && z>-1 && type!=POINTS && type!=TRIANGLE_FAN) {
 			float dx = x-lx, dy = y-ly, dz = z-lz, dw = w-lw;
 			float t = pdIntersection(0, 0, -1, 0, 0, -1, lx, ly, lz, dx, dy, dz);
 			
@@ -71,13 +124,12 @@ class PrimitivePathIterator implements PathIterator {
 			i--;
 		}
 		
-		
 		final float ooW = 1f/w;
 		float x_ = x*ooW;
 		float y_ = y*ooW;
 		
-		coords[0] = x_;
-		coords[1] = y_;
+		coords[0] = x_+sx;
+		coords[1] = y_+sy;
 		
 		if (at!=null)
 			at.transform(coords, 0, coords, 0, 1);

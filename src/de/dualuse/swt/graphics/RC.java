@@ -1,8 +1,15 @@
 package de.dualuse.swt.graphics;
 
 
-import static java.lang.Math.*;
-import static org.eclipse.swt.SWT.*;
+import static java.lang.Math.cos;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.lang.Math.sin;
+import static java.lang.Math.sqrt;
+import static org.eclipse.swt.SWT.DRAW_DELIMITER;
+import static org.eclipse.swt.SWT.DRAW_TAB;
+import static org.eclipse.swt.SWT.DRAW_TRANSPARENT;
+import static org.eclipse.swt.SWT.FILL_WINDING;
 
 import java.awt.BasicStroke;
 import java.awt.Shape;
@@ -11,7 +18,16 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Device;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.LineAttributes;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Transform;
 
 public class RC implements Closeable {
 	
@@ -51,8 +67,6 @@ public class RC implements Closeable {
 			backgroundCreated.dispose();
 			backgroundCreated = null;
 		}
-		
-		
 	}
 	
 	@Override
@@ -355,6 +369,9 @@ public class RC implements Closeable {
 				       0,        0,      0,   1);
 		return this;
 	}
+	
+
+	public RC scale(double s) { return scale(s,s,s); }
 	
 	public RC scale(double sx, double sy, double sz) {
 		concat(modelViewProjection,
@@ -721,8 +738,10 @@ public class RC implements Closeable {
 	
 //==[ Rendering: OpenGL Primitives ]================================================================
 	
+	public static final int POINTS = PrimitivePathIterator.POINTS;
 	public static final int LINES = PrimitivePathIterator.LINES;
 	public static final int TRIANGLES = PrimitivePathIterator.TRIANGLES;
+	public static final int TRIANGLE_FAN = PrimitivePathIterator.TRIANGLE_FAN;
 	public static final int QUADS = PrimitivePathIterator.QUADS;
 	public static final int LINE_STRIP = PrimitivePathIterator.LINE_STRIP;
 	public static final int LINE_LOOP = PrimitivePathIterator.LINE_LOOP;
@@ -765,21 +784,28 @@ public class RC implements Closeable {
 		return this;
 	}
 
-	public RC vertex(int x, int y) { p.addVertex(x, y, 0f); return this; }
-	public RC vertex(float x, float y) { p.addVertex(x, y, 0f); return this; }
-	public RC vertex(double x, double y) { p.addVertex((float)x, (float)y, 0f); return this;  }
 	
-	public RC vertex(int x, int y, int z) { p.addVertex(x, y, z); return this;  }
-	public RC vertex(float x, float y, float z) { p.addVertex(x, y, z); return this;  }
-	public RC vertex(double x, double y, double z) { p.addVertex((float)x, (float)y, (float)z); return this; }
+	public RC vertex(int x, int y) { addVertex(x, y, 0f); return this; }
+	public RC vertex(float x, float y) { addVertex(x, y, 0f); return this; }
+	public RC vertex(double x, double y) { addVertex((float)x, (float)y, 0f); return this;  }
 	
-	
-	
+	public RC vertex(int x, int y, int z) { addVertex(x, y, z); return this;  }
+	public RC vertex(float x, float y, float z) { addVertex(x, y, z); return this;  }
+	public RC vertex(double x, double y, double z) { addVertex((float)x, (float)y, (float)z); return this; }
+
+	private RC addVertex(float x, float y, float z) {
+		p.addVertex(x, y, z); 
+		return this; 
+	}
+
 	
 	public RC end() {
 		boolean strokeSet = stroke!=NULL_STROKE;
 		
 		switch (p.getType()) {
+		case POINTS:
+			drawPlain(p);
+			break;
 		case LINES:
 		case LINE_STRIP:
 		case LINE_LOOP:
@@ -788,8 +814,9 @@ public class RC implements Closeable {
 			else 
 				drawPlain(p);
 			
+
 			break;
-			
+		case TRIANGLE_FAN:
 		case POLYGON:
 		case TRIANGLES:
 		case QUADS:
