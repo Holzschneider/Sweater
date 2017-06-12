@@ -33,8 +33,6 @@ public class TextApplication extends MultiDocumentApplication {
 	@Override protected DocumentWindow newDocument() {
 		TextShell shell = new TextShell(this);
 		shell.setText("New Document");
-		
-		this.isDisposed();
 		return shell;
 	}
 

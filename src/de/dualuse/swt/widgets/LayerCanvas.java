@@ -3,12 +3,15 @@ package de.dualuse.swt.widgets;
 import static org.eclipse.swt.SWT.*;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 
@@ -46,6 +49,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			child.dispose();
 		
 		canvasTransform.dispose();
+		originalTransform.dispose();
 	}
 	
 //==[ Child Layers ]================================================================================
@@ -96,14 +100,23 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	private Layer captive = null;
 	private float[] backup = new float[6];
 
+	Transform originalTransform = new Transform(Display.getCurrent());
+	
 	@Override public void handleEvent(Event event) {
 		updateSnapshot();
 		switch (event.type) {
 			case Paint:
+				
+				event.gc.getTransform(originalTransform);
+				
 				canvasTransform.getElements(backup);
 				event.gc.setLineAttributes(new LineAttributes(1));
 				paint(event.gc.getClipping(), canvasTransform, event);
 				canvasTransform.setElements(backup[0], backup[1], backup[2], backup[3], backup[4], backup[5]);
+				
+				event.gc.setTransform(originalTransform);
+				paintOverlay(event.gc.getClipping(), null, event);
+				
 				dirty.clear();
 				break;
 				
@@ -158,9 +171,10 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	final protected void paint(Rectangle clip, Transform t, Event c) {
 		paintBackground(clip, t, c);
+		
 		for (int I=0,i=snapshot.length-1; I<=i; I++)
 			snapshot[I].paint(clip,t,c);
-		paintOverlay(clip, t, c);
+		// paintOverlay(clip, t, c);
 	}
 
 	protected void paintBackground(Rectangle clip, Transform t, Event c) {

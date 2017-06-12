@@ -66,9 +66,9 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 //		super.addListener(MouseMove, this);
 //		super.addListener(MouseDown, this);
 //		super.addListener(MouseUp, this);
-		super.addPaintListener(this);
 		
-		this.addControlListener(this);
+		addPaintListener(this);
+		addControlListener(this);
 		
 		
 		if ((style&H_SCROLL)==H_SCROLL) {
@@ -214,7 +214,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	
 	@Override final public void controlMoved(ControlEvent e) { }
 
-	@Override final public void controlResized(ControlEvent e) {
+	@Override public void controlResized(ControlEvent e) {
 		Rectangle currentSize = ZoomCanvas.this.getBounds();
 		
 		if (lastSize!=null && isRelative()) {
@@ -267,10 +267,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	private void mouseDown(Event e) {
 		
 		if (e.button==2 && e.count>=2) {
-			zoomTransform.identity();
-			setCanvasTransform(zoomTransform);
-			respectCanvasBoundsAndUpdateScrollbars();
-			redraw();
+			reset();
 			return;
 		}
 		
@@ -351,7 +348,9 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	Transform bt = new Transform(getDisplay());
 	Transform at = new Transform(getDisplay());
 
+	// PaintListener
 	@Override final public void paintControl(PaintEvent e) {
+		
 		GC gc = e.gc;
 	
 		gc.getTransform(bt);
@@ -408,6 +407,13 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			ex.printStackTrace();
 		}
 		return p;
+	}
+	
+	public void reset() {
+		zoomTransform.identity();
+		setCanvasTransform(zoomTransform);
+		respectCanvasBoundsAndUpdateScrollbars();
+		redraw();
 	}
 	
 //==[ Viewport ]====================================================================================
