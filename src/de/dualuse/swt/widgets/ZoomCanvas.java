@@ -267,10 +267,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 	private void mouseDown(Event e) {
 		
 		if (e.button==2 && e.count>=2) {
-			zoomTransform.identity();
-			setCanvasTransform(zoomTransform);
-			respectCanvasBoundsAndUpdateScrollbars();
-			redraw();
+			reset();
 			return;
 		}
 		
@@ -408,6 +405,13 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 			ex.printStackTrace();
 		}
 		return p;
+	}
+	
+	public void reset() {
+		zoomTransform.identity();
+		setCanvasTransform(zoomTransform);
+		respectCanvasBoundsAndUpdateScrollbars();
+		redraw();
 	}
 	
 //==[ Viewport ]====================================================================================
