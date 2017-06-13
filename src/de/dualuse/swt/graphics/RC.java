@@ -30,14 +30,20 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Transform;
 
 public class RC implements Closeable {
-	
+
 	public final GC gc;
 	public final Device device;
 	private Transform s, t;
+	private boolean disposeOnDispose = false;
 
 	private float[][] modelViewProjection = new float[4][4];
 	
 //==[ Constructor ]=================================================================================
+	
+	public RC(Image im) {
+		this(new GC(im));
+		disposeOnDispose = true;
+	}
 	
 	public RC(GC gc) {
 		
@@ -67,6 +73,9 @@ public class RC implements Closeable {
 			backgroundCreated.dispose();
 			backgroundCreated = null;
 		}
+		
+		if (disposeOnDispose)
+			gc.dispose();
 	}
 	
 	@Override
