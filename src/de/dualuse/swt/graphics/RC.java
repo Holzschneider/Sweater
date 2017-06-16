@@ -6,6 +6,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
+import static java.lang.Math.tan;
 import static org.eclipse.swt.SWT.DRAW_DELIMITER;
 import static org.eclipse.swt.SWT.DRAW_TAB;
 import static org.eclipse.swt.SWT.DRAW_TRANSPARENT;
@@ -16,6 +17,7 @@ import java.awt.Shape;
 import java.io.Closeable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.swt.graphics.Color;
@@ -280,6 +282,43 @@ public class RC implements Closeable {
 		return m;
 	}
 
+	
+	public static interface MatrixValues {
+		double element(int row, int col); 
+	}
+	
+	public RC multMatrix( MatrixValues v ) {
+		float[][] m = modelViewProjection;
+		setToConcatenation(	
+					m[0][0], m[1][0], m[2][0], m[3][0],				
+					m[0][1], m[1][1], m[2][1], m[3][1],				
+					m[0][2], m[1][2], m[2][2], m[3][2],				
+					m[0][3], m[1][3], m[2][3], m[3][3],				
+				
+					(float)v.element(0,0), (float)v.element(1,0), (float)v.element(2,0), (float)v.element(3,0),				
+					(float)v.element(0,1), (float)v.element(1,1), (float)v.element(2,1), (float)v.element(3,1),				
+					(float)v.element(0,2), (float)v.element(1,2), (float)v.element(2,2), (float)v.element(3,2),				
+					(float)v.element(0,3), (float)v.element(1,3), (float)v.element(2,3), (float)v.element(3,3)				
+				);
+		return this;
+	}
+	
+	public RC multMatrix( double[][] n ) {
+		float[][] m = modelViewProjection;
+		setToConcatenation(	
+					m[0][0], m[1][0], m[2][0], m[3][0],				
+					m[0][1], m[1][1], m[2][1], m[3][1],				
+					m[0][2], m[1][2], m[2][2], m[3][2],				
+					m[0][3], m[1][3], m[2][3], m[3][3],				
+				
+					(float)n[0][0], (float)n[1][0], (float)n[2][0], (float)n[3][0],				
+					(float)n[0][1], (float)n[1][1], (float)n[2][1], (float)n[3][1],				
+					(float)n[0][2], (float)n[1][2], (float)n[2][2], (float)n[3][2],				
+					(float)n[0][3], (float)n[1][3], (float)n[2][3], (float)n[3][3]				
+				);
+		return this;
+	}
+	
 	/**
 	 * multMatrix multiplies the current matrix with the one specified using m, and replaces the current matrix 
 	 * with the product.
@@ -416,14 +455,65 @@ public class RC implements Closeable {
 		return this;
 	}
 	
+	public RC camera(float fx, float fy, float cx, float cy) {
+		concat(modelViewProjection,new float[][] {
+					{ fx,  0, cx,  0 },
+					{  0, fy, cy,  0 },
+					{  0,  0,  0,  1 },
+					{  0,  0,  1,  0 },
+				});
+		
+		return this;
+	}
+	
+	public RC ortho(double left, double right, double bottom, double top, double near, double far) {
+		float tx = (float) (-(right+left)/(right-left));
+		float ty = (float) (-(top+bottom)/(top-bottom));
+		float tz = (float) (-(far+near)/(far-near));
+		
+		concat(modelViewProjection, 
+				new float[][] {
+					{ 2/(float)(left-right), 0,0, tx },
+					{ 0, 2/(float)(top-bottom), 0,0, ty},
+					{ 0, 0, 2/(float)(top-bottom), 0, tz},
+					{ 0, 0, 0, 1} 
+				});
+		
+		return this;
+	}
+	
+//	public RC perspective(double fovy, double aspect, double near, double far) {
+//		float f = (float)(1/tan(fovy/2)), a = (float) aspect;
+//		float c = (float)((far+near)/(near-far));
+//		float d = (float)(2*far*near/(near-far));
+//		float[][] m;
+//		concat(modelViewProjection, m = new float[][] {
+//			{ f/a, 0, 0, 0 },
+//			{   0, f, 0, 0 },
+//			{   0, 0, c, d },
+//			{   0, 0,-1, 0 }
+//		});
+//		
+//		for (int r=0;r<4;r++)
+//			System.out.println(Arrays.toString(m[r]));
+//			
+//		return this;
+//	}
+	
 	public RC frustum(double left, double right, double bottom, double top, double nearVal, double farVal ) {
+		final float[][] m;
 		concat(modelViewProjection,
-				createMatrixWithFrustum(
+				m = createMatrixWithFrustum(
 						(float)left, (float)right, 
 						(float)bottom, (float)top, 
 						(float)nearVal, (float)farVal
 				)
 		);
+		
+		System.out.println("-------");
+		for (int r=0;r<4;r++)
+			System.out.println(Arrays.toString(m[r]));
+		
 		return this;
 	}
 	
