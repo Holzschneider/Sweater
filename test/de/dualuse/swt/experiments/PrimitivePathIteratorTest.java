@@ -62,7 +62,7 @@ public class PrimitivePathIteratorTest {
 					r.vertex(220, 680);
 				r.end();
 					
-				r.begin(5);
+				r.begin(RC.TRIANGLE_FAN);
 					r.vertex(100, 610);
 					
 					r.vertex(210, 800);

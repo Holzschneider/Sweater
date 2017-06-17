@@ -29,7 +29,7 @@ public class PrimitivePathIterator implements PathIterator {
 		case POINTS: n = count*4; break;
 		case LINES: n = count; break;
 		case TRIANGLES:
-		case QUADS: n = count+count/p.type; break;
+		case QUADS: n = count+count/p.type.code; break;
 		case LINE_STRIP: n = count; break;
 		case LINE_LOOP: n = count+1; break;
 		case TRIANGLE_FAN: n = (count-1)*4; break;
@@ -116,7 +116,7 @@ public class PrimitivePathIterator implements PathIterator {
 		boolean clipZ = z<-w || z>w, clipX = x<-w|| x>w, clipY = y<-w || y>w;
 		boolean clip = clipZ|((clipX|clipY)&p.v.viewportClipping);
 		
-		if (p.type == POINTS && clip) {
+		if (p.type == VertexMode.POINTS && clip) {
 			i++; //also skip next point
 			return SEG_MOVETO;
 		}

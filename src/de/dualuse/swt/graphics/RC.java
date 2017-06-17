@@ -832,14 +832,13 @@ public class RC implements Closeable {
 	
 //==[ Rendering: OpenGL Primitives ]================================================================
 	
-	public static final int POINTS = PrimitivePathIterator.POINTS;
-	public static final int LINES = PrimitivePathIterator.LINES;
-	public static final int TRIANGLES = PrimitivePathIterator.TRIANGLES;
-	public static final int TRIANGLE_FAN = PrimitivePathIterator.TRIANGLE_FAN;
-	public static final int QUADS = PrimitivePathIterator.QUADS;
-	public static final int LINE_STRIP = PrimitivePathIterator.LINE_STRIP;
-	public static final int LINE_LOOP = PrimitivePathIterator.LINE_LOOP;
-	public static final int POLYGON = -PrimitivePathIterator.LINE_LOOP;
+	public static final VertexMode POINTS = VertexMode.POINTS;
+	public static final VertexMode LINES = VertexMode.LINES;
+	public static final VertexMode TRIANGLES = VertexMode.TRIANGLES;
+	public static final VertexMode TRIANGLE_FAN = VertexMode.TRIANGLE_FAN;
+	public static final VertexMode QUADS = VertexMode.QUADS;
+	public static final VertexMode LINE_STRIP = VertexMode.LINE_STRIP;
+	public static final VertexMode LINE_LOOP = VertexMode.LINE_LOOP;
 	
 	public static final int FRONT = 1;
 	public static final int BACK = 2;
@@ -879,7 +878,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC begin(int type) {
+	public RC begin(VertexMode type) {
 		p = cached.reset(viewport, modelViewProjection, type, pointSize);
 		return this;
 	}
@@ -902,7 +901,7 @@ public class RC implements Closeable {
 	public RC end() {
 		boolean strokeSet = stroke!=NULL_STROKE;
 		
-		switch (p.getType()) {
+		switch (p.type) {
 		case POINTS:
 			drawPlain(p);
 			break;
@@ -917,7 +916,7 @@ public class RC implements Closeable {
 
 			break;
 		case TRIANGLE_FAN:
-		case POLYGON:
+//		case POLYGON:
 		case TRIANGLES:
 		case QUADS:
 			if (frontPolygonMode==FILL)

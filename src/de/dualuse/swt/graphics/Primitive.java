@@ -18,15 +18,11 @@ public class Primitive implements Shape, Cloneable {
 	int n = 0;
 	float[] vertices;
 	
-	int type;
+	VertexMode type;
 	final float[][] m;
 	Viewport v;
 	float pointSize;
 
-	public int getType() {
-		return type;
-	}
-	
 	public Primitive() {
 		this.m = new float[4][4];
 		this.vertices = new float[12*4];
@@ -42,7 +38,7 @@ public class Primitive implements Shape, Cloneable {
 		vertices[n++] = z;
 	}
 	
-	public Primitive reset(Viewport v, float[][] m, int type, double pointSize) {
+	public Primitive reset(Viewport v, float[][] m, VertexMode type, double pointSize) {
 		RC.copy(m, this.m);
 		this.type = type;
 		this.n = 0;
