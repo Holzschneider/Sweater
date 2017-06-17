@@ -20,30 +20,32 @@ public class Primitive implements Shape, Cloneable {
 	
 	private int type;
 	private final float[][] m;
-
-	public Primitive() {
-		this.m = new float[4][4];
-		this.vertices = new float[12*4];
-	}
+	private Viewport v;
+	private double pointSize;
 
 	public int getType() {
 		return type;
 	}
 	
-	public Primitive(float[][] t, int type) {
+	public Primitive() {
 		this.m = new float[4][4];
-		RC.copy(t,m);
-		this.type = type;
 		this.vertices = new float[12*4];
 	}
+
 	
-	public Primitive(float[][] t, int type, float vertices[], int n) {
-		this.m = new float[4][4];
-		RC.copy(t,m);
-		this.type = type;
-		this.vertices = Arrays.copyOf(vertices, n);
-		this.n = n;
-	}
+//	public Primitive(float[][] t, int type) {
+//		this.m = new float[4][4];
+//		RC.copy(t,m);
+//		this.type = type;
+//		this.vertices = new float[12*4];
+//	}
+//	public Primitive(float[][] t, int type, float vertices[], int n) {
+//		this.m = new float[4][4];
+//		RC.copy(t,m);
+//		this.type = type;
+//		this.vertices = Arrays.copyOf(vertices, n);
+//		this.n = n;
+//	}
 	
 	public void addVertex(float x, float y, float z) {
 		if (n>=vertices.length)
@@ -54,17 +56,19 @@ public class Primitive implements Shape, Cloneable {
 		vertices[n++] = z;
 	}
 	
-	public Primitive reset(float[][] m, int type) {
+	public Primitive reset(Viewport v, float[][] m, int type, double pointSize) {
 		RC.copy(m, this.m);
 		this.type = type;
 		this.n = 0;
+		this.v = v;
+		this.pointSize = pointSize;
 		
 		return this;
 	}
 
-	public Primitive clone() {
-		return new Primitive(m, type, vertices, n);
-	}
+//	public Primitive clone() {
+//		return new Primitive(m, type, vertices, n);
+//	}
 	
 	
 	public Rectangle getBounds() { return getBounds2D().getBounds(); }
@@ -79,11 +83,11 @@ public class Primitive implements Shape, Cloneable {
 	
 	
 	public PathIterator getPathIterator(AffineTransform at) {
-		return new PrimitivePathIterator(vertices, n/3, type, at, m);
+		return new PrimitivePathIterator(vertices, n/3, type, at, v, m, (float) pointSize);
 	}
 
 	public PathIterator getPathIterator(final AffineTransform at, final double flatness) {
-		return new PrimitivePathIterator(vertices, n/3, type, at, m);
+		return new PrimitivePathIterator(vertices, n/3, type, at, v, m, (float) pointSize);
 	}
 	
 }

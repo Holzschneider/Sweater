@@ -117,9 +117,7 @@ public class RCTest {
 			rc.drawImage(im, 0, 0);
 			rc.popTransform();
 			
-
 			rc.setAlpha(50);			
-			
 			rc.drawString("hallo", -10, -5, true);
 			
 

@@ -7,12 +7,14 @@ class TransformedPathIterator implements PathIterator {
 
 	final PathIterator w;
 	final AffineTransform at;
+	final Viewport v;
 	final float[][] m;
 	final float[] floatCoords = { 0,0,0,0,0,0};
 
-	public TransformedPathIterator(PathIterator w, AffineTransform at, float[][] m) {
+	public TransformedPathIterator(PathIterator w, AffineTransform at, Viewport v, float[][] m) {
 		this.w=w;
 		this.at=at;
+		this.v=v;
 		this.m=m;
 	}
 	
@@ -52,8 +54,10 @@ class TransformedPathIterator implements PathIterator {
 			
 			coords[i+0] = x;
 			coords[i+1] = y;
+			
 		}
 		
+		v.transform(coords, 0, size);
 		if (at!=null)
 			at.transform(coords, 0, coords, 0, size);
 		

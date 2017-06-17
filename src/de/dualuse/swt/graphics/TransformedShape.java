@@ -10,11 +10,13 @@ import java.awt.geom.Rectangle2D;
 
 class TransformedShape implements Shape {
 	final Shape s;
+	final Viewport v;
 	final float[][] m;
 
-	public TransformedShape(float[][] t, Shape s) {
-		this.s = s;
+	public TransformedShape(Viewport v, float[][] t, Shape s) {
+		this.v = v;
 		this.m = t;
+		this.s = s;
 	}
 
 	public Rectangle getBounds() { return getBounds2D().getBounds(); }
@@ -28,10 +30,10 @@ class TransformedShape implements Shape {
 	public boolean contains(Rectangle2D r) { return true; }
 	
 	public PathIterator getPathIterator(AffineTransform at) {
-		return new FlatteningPathIterator(new TransformedPathIterator(s.getPathIterator(null), at, m),.2,14);
+		return new FlatteningPathIterator(new TransformedPathIterator(s.getPathIterator(null), at, v, m),.2,14);
 	}
 
 	public PathIterator getPathIterator(final AffineTransform at, final double flatness) {
-		return new TransformedPathIterator(s.getPathIterator(null, flatness), at, m);
+		return new TransformedPathIterator(s.getPathIterator(null, flatness), at, v, m);
 	}
 }

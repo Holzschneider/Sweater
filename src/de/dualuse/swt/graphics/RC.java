@@ -1,35 +1,17 @@
 package de.dualuse.swt.graphics;
 
 
-import static java.lang.Math.cos;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.lang.Math.sin;
-import static java.lang.Math.sqrt;
-import static java.lang.Math.tan;
-import static org.eclipse.swt.SWT.DRAW_DELIMITER;
-import static org.eclipse.swt.SWT.DRAW_TAB;
-import static org.eclipse.swt.SWT.DRAW_TRANSPARENT;
-import static org.eclipse.swt.SWT.FILL_WINDING;
+import static java.lang.Math.*;
+import static org.eclipse.swt.SWT.*;
 
 import java.awt.BasicStroke;
 import java.awt.Shape;
 import java.io.Closeable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Device;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.LineAttributes;
-import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.graphics.Transform;
+import org.eclipse.swt.graphics.*;
 
 public class RC implements Closeable {
 
@@ -39,6 +21,7 @@ public class RC implements Closeable {
 	private boolean disposeOnDispose = false;
 
 	private float[][] modelViewProjection = new float[4][4];
+	private Viewport viewport = new Viewport();
 	
 //==[ Constructor ]=================================================================================
 	
@@ -57,7 +40,6 @@ public class RC implements Closeable {
 
 		initState();
 		identity(modelViewProjection);
-		
 	}
 	
 //==[ Free Resources ]==============================================================================
@@ -87,26 +69,36 @@ public class RC implements Closeable {
 	
 //==[ Matrix Stack ]================================================================================
 	
-	private ArrayDeque<float[][]> pushed = new ArrayDeque<float[][]>();
-	private ArrayDeque<float[][]> free = new ArrayDeque<float[][]>();
+	private ArrayDeque<float[][]> pushedTransforms = new ArrayDeque<float[][]>();
+	private ArrayDeque<float[][]> freeTransforms = new ArrayDeque<float[][]>();
+
+	private ArrayDeque<Viewport> pushedViewports = new ArrayDeque<Viewport>();
+	private ArrayDeque<Viewport> freeViewports = new ArrayDeque<Viewport>();
 	
 	public RC pushTransform() {
-		float[][] m = free.poll();
+		float[][] m = freeTransforms.poll();
+		Viewport w = freeViewports.poll();
 		
-		if (m==null)
-			m = new float[4][4];
+		if (m==null) m = new float[4][4];
+		if (w==null) w = new Viewport(viewport);
 
 		copy(modelViewProjection, m);
 		
-		pushed.push(m);
+		pushedViewports.push(w);
+		pushedTransforms.push(m);
 		return this;
 	}
 	
 	
 	public RC popTransform() {
-		float[][] m = pushed.poll();
+		float[][] m = pushedTransforms.poll();
 		copy(m, modelViewProjection);
-		free.push(m);
+		freeTransforms.push(m);
+		
+		Viewport w = pushedViewports.poll();
+		freeViewports.push(w);
+		viewport.set(w);
+		
 		return this;
 	}
 	
@@ -202,9 +194,9 @@ public class RC implements Closeable {
 
 		float[] vp = { x,y,0,1 }, vx = {x+1,y,0,1}, vy = {x,y+1,0,1};
 		
-		project(modelViewProjection, vp);
-		project(modelViewProjection, vx);
-		project(modelViewProjection, vy);
+		project(viewport, modelViewProjection, vp);
+		project(viewport, modelViewProjection, vx);
+		project(viewport, modelViewProjection, vy);
 		
 		float dx = vx[0]-vp[0], dy = vx[1]-vp[1];
 		float cx = vy[0]-vp[0], cy = vy[1]-vp[1];
@@ -234,7 +226,6 @@ public class RC implements Closeable {
 		float m[][] = new float[4][4];
 		
 		identity(m);
-		
 		concat(m, 
 				1,0,0,x,
 				0,1,0,y,
@@ -261,8 +252,6 @@ public class RC implements Closeable {
 				0,0,1,0,
 				0,0,0,1);
 
-		
-		
 		return m;
 	}
 	
@@ -449,9 +438,8 @@ public class RC implements Closeable {
 	}
 
 
-	
 	public RC viewport(int x, int y, int width, int height) {
-		concat(modelViewProjection,createMatrixWithViewport(x, y, width, height));
+		this.viewport.set(x, y, width, height);
 		return this;
 	}
 	
@@ -467,38 +455,21 @@ public class RC implements Closeable {
 	}
 	
 	public RC ortho(double left, double right, double bottom, double top, double near, double far) {
-		float tx = (float) (-(right+left)/(right-left));
-		float ty = (float) (-(top+bottom)/(top-bottom));
-		float tz = (float) (-(far+near)/(far-near));
+        float tx = (float) (- (right + left) / (right - left));
+        float ty = (float) (- (top + bottom) / (top - bottom));
+		float tz = (float) (- (far + near) / (far - near));
 		
-		concat(modelViewProjection, 
-				new float[][] {
-					{ 2/(float)(left-right), 0,0, tx },
-					{ 0, 2/(float)(top-bottom), 0,0, ty},
-					{ 0, 0, 2/(float)(top-bottom), 0, tz},
-					{ 0, 0, 0, 1} 
-				});
+		float[][] m = new float[][] {
+			{ 2/(float)(right-left), 0,0, tx },
+			{ 0, 2/(float)(top-bottom), 0, ty},
+			{ 0, 0, -2/(float)(far-near), 0, tz},
+			{ 0, 0, 0, 1} 
+		};
+
+		concat(modelViewProjection, m);
 		
 		return this;
 	}
-	
-//	public RC perspective(double fovy, double aspect, double near, double far) {
-//		float f = (float)(1/tan(fovy/2)), a = (float) aspect;
-//		float c = (float)((far+near)/(near-far));
-//		float d = (float)(2*far*near/(near-far));
-//		float[][] m;
-//		concat(modelViewProjection, m = new float[][] {
-//			{ f/a, 0, 0, 0 },
-//			{   0, f, 0, 0 },
-//			{   0, 0, c, d },
-//			{   0, 0,-1, 0 }
-//		});
-//		
-//		for (int r=0;r<4;r++)
-//			System.out.println(Arrays.toString(m[r]));
-//			
-//		return this;
-//	}
 	
 	public RC frustum(double left, double right, double bottom, double top, double nearVal, double farVal ) {
 		final float[][] m;
@@ -510,14 +481,9 @@ public class RC implements Closeable {
 				)
 		);
 		
-		System.out.println("-------");
-		for (int r=0;r<4;r++)
-			System.out.println(Arrays.toString(m[r]));
-		
 		return this;
 	}
 	
-
 	public RC translate(double tx, double ty) { translate(tx, ty, 0); return this;}
 	public RC rotate(double theta) { rotate(0,0,1,theta); return this;}
 	public RC rotate(double theta, double x, double y) { translate(x,y);rotate(theta);translate(-x,-y); return this;}
@@ -533,7 +499,7 @@ public class RC implements Closeable {
 //==[ Rendering: Shapes ]===========================================================================
 	
 	public RC draw(Shape s) {
-		Shape ts = new TransformedShape(modelViewProjection, s);
+		Shape ts = new TransformedShape(viewport, modelViewProjection, s);
 		
 		if (stroke!=NULL_STROKE) 
 			drawStroked(ts);
@@ -544,7 +510,7 @@ public class RC implements Closeable {
 	
 	public RC fill(Shape s) {
 		applyState();
-		PathShape ps = new PathShape(device, new TransformedShape(modelViewProjection, s));
+		PathShape ps = new PathShape(device, new TransformedShape(viewport, modelViewProjection, s));
 		
 		int fillRule = gc.getFillRule();
 		gc.fillPath(ps);
@@ -602,7 +568,7 @@ public class RC implements Closeable {
 		t.getElements(at);
 		
 		tiles.clear();
-		drawImageTiled(im, W,H, modelViewProjection, at, bt, 0, 0, W, H, tiles);
+		drawImageTiled(im, W,H, viewport, modelViewProjection, at, bt, 0, 0, W, H, tiles);
 		
 		if (tiles.size()>0)
 			quicksort(tiles);
@@ -691,7 +657,7 @@ public class RC implements Closeable {
 	int recursions = 0;
 	
 	float SKIRT = 1, MAX_PERSPECTIVE_DEVIATION = 1.337f, MAX_PERSPECTIVE_ERROR = MAX_PERSPECTIVE_DEVIATION*MAX_PERSPECTIVE_DEVIATION;
-	private void drawImageTiled(Image im, int width, int height, float[][] m, float[] at, float[] bt, int x1, int y1, int x2, int y2, ArrayList<ImageTile> tiles) {
+	private void drawImageTiled(Image im, int width, int height, Viewport v, float[][] m, float[] at, float[] bt, int x1, int y1, int x2, int y2, ArrayList<ImageTile> tiles) {
 		if (x1==x2 || y1==y2)
 			return;
 
@@ -701,24 +667,24 @@ public class RC implements Closeable {
 		float ax = x1, ay = y1, bx = x2, by = y1, cx = x2, cy = y2, dx = x1, dy = y2;
 		
 		float aoow = 1f/(m[3][0]* ax+ m[3][1]*ay + m[3][2] * 0 + m[3][3] *1 );
-		float ax_ = (m[0][0]*ax+ m[0][1]*ay+m[0][2]*0+m[0][3]*1)*aoow;
-		float ay_ = (m[1][0]*ax+ m[1][1]*ay+m[1][2]*0+m[1][3]*1)*aoow;
-		float az_ = (m[2][0]*ax+ m[2][1]*ay+m[2][2]*0+m[2][3]*1)*aoow;
+		float ax_ = v.transformX((m[0][0]*ax+ m[0][1]*ay+m[0][2]*0+m[0][3]*1)*aoow);
+		float ay_ = v.transformY((m[1][0]*ax+ m[1][1]*ay+m[1][2]*0+m[1][3]*1)*aoow);
+		float az_ = v.transformZ((m[2][0]*ax+ m[2][1]*ay+m[2][2]*0+m[2][3]*1)*aoow);
 		
 		float boow = 1f/(m[3][0]* bx+ m[3][1]*by + m[3][2] * 0 + m[3][3] *1 );
-		float bx_ = (m[0][0]*bx+ m[0][1]*by+m[0][2]*0+m[0][3]*1)*boow;
-		float by_ = (m[1][0]*bx+ m[1][1]*by+m[1][2]*0+m[1][3]*1)*boow;
-		float bz_ = (m[2][0]*bx+ m[2][1]*by+m[2][2]*0+m[2][3]*1)*boow;
+		float bx_ = v.transformX((m[0][0]*bx+ m[0][1]*by+m[0][2]*0+m[0][3]*1)*boow);
+		float by_ = v.transformY((m[1][0]*bx+ m[1][1]*by+m[1][2]*0+m[1][3]*1)*boow);
+		float bz_ = v.transformZ((m[2][0]*bx+ m[2][1]*by+m[2][2]*0+m[2][3]*1)*boow);
 		
 		float coow = 1f/(m[3][0]* cx+ m[3][1]*cy + m[3][2] * 0 + m[3][3] *1 );
-		float cx_ = (m[0][0]*cx+ m[0][1]*cy+m[0][2]*0+m[0][3]*1)*coow;
-		float cy_ = (m[1][0]*cx+ m[1][1]*cy+m[1][2]*0+m[1][3]*1)*coow;
-		float cz_ = (m[2][0]*cx+ m[2][1]*cy+m[2][2]*0+m[2][3]*1)*coow;
+		float cx_ = v.transformX((m[0][0]*cx+ m[0][1]*cy+m[0][2]*0+m[0][3]*1)*coow);
+		float cy_ = v.transformY((m[1][0]*cx+ m[1][1]*cy+m[1][2]*0+m[1][3]*1)*coow);
+		float cz_ = v.transformZ((m[2][0]*cx+ m[2][1]*cy+m[2][2]*0+m[2][3]*1)*coow);
 		
 		float doow = 1f/(m[3][0]* dx+ m[3][1]*dy + m[3][2] * 0 + m[3][3] *1 );
-		float dx_ = (m[0][0]*dx+ m[0][1]*dy+m[0][2]*0+m[0][3]*1)*doow;
-		float dy_ = (m[1][0]*dx+ m[1][1]*dy+m[1][2]*0+m[1][3]*1)*doow;
-		float dz_ = (m[2][0]*dx+ m[2][1]*dy+m[2][2]*0+m[2][3]*1)*doow;
+		float dx_ = v.transformX((m[0][0]*dx+ m[0][1]*dy+m[0][2]*0+m[0][3]*1)*doow);
+		float dy_ = v.transformY((m[1][0]*dx+ m[1][1]*dy+m[1][2]*0+m[1][3]*1)*doow);
+		float dz_ = v.transformZ((m[2][0]*dx+ m[2][1]*dy+m[2][2]*0+m[2][3]*1)*doow);
 		
 		
 		float tileW = (x2-x1), tileH = (y2-y1), error = 0;
@@ -785,10 +751,10 @@ public class RC implements Closeable {
 			if (recursions<6) { //Hacky safety measure
 				recursions++;
 				int mx = (int)((x1+x2)/2), my = (int)((y1+y2)/2);
-				drawImageTiled(im, width, height, m, at, bt, x1, y1, mx, my, tiles );
-				drawImageTiled(im, width, height, m, at, bt, mx, y1, x2, my, tiles);
-				drawImageTiled(im, width, height, m, at, bt, mx, my, x2, y2, tiles );
-				drawImageTiled(im, width, height, m, at, bt, x1, my, mx, y2, tiles );
+				drawImageTiled(im, width, height, v, m, at, bt, x1, y1, mx, my, tiles );
+				drawImageTiled(im, width, height, v, m, at, bt, mx, y1, x2, my, tiles);
+				drawImageTiled(im, width, height, v, m, at, bt, mx, my, x2, y2, tiles );
+				drawImageTiled(im, width, height, v, m, at, bt, x1, my, mx, y2, tiles );
 				recursions--;
 			}
 		}
@@ -878,6 +844,12 @@ public class RC implements Closeable {
 	private int backPolygonMode = LINE;
 	private int frontPolygonMode = LINE;
 	
+	private double pointSize = 1;
+	public RC pointSize(double size) {
+		this.pointSize = size;
+		return this;
+	}
+	
 	public RC polygonMode(int mode) {
 		polygonMode(FRONT_AND_BACK, mode);
 		
@@ -895,7 +867,7 @@ public class RC implements Closeable {
 	}
 	
 	public RC begin(int type) {
-		p = cached.reset(modelViewProjection, type);
+		p = cached.reset(viewport, modelViewProjection, type, pointSize);
 		return this;
 	}
 
@@ -1005,9 +977,10 @@ public class RC implements Closeable {
 		v[3] = m30*x+m31*y+m32*z+m33*w;
 	}
 
-	static void project( float[][] m, float[] v ) {
+	static void project( Viewport p, float[][] m, float[] v ) {
 		transform(m,v);
 		scale(v,1/v[3]);
+		p.transform(v, 0, 1);
 	}
 	
 	static void scale( float[] v, double s ) {
