@@ -31,7 +31,6 @@ public class RC implements Closeable {
 	}
 	
 	public RC(GC gc) {
-		
 		this.gc = gc;
 		this.device = gc.getDevice();
 		
@@ -40,6 +39,21 @@ public class RC implements Closeable {
 
 		initState();
 		identity(modelViewProjection);
+	}
+	
+	public RC(RC rc) {
+		this.gc = rc.gc;
+		this.device = rc.device;
+		
+		this.t = new Transform(device);
+		this.s = new Transform(device);
+
+		copy(rc.modelViewProjection, modelViewProjection);
+		viewport.set(rc.viewport);
+		
+		backPolygonMode = rc.frontPolygonMode;
+		frontPolygonMode = rc.backPolygonMode;
+		copyState(rc);
 	}
 	
 //==[ Free Resources ]==============================================================================
@@ -472,9 +486,8 @@ public class RC implements Closeable {
 	}
 	
 	public RC frustum(double left, double right, double bottom, double top, double nearVal, double farVal ) {
-		final float[][] m;
 		concat(modelViewProjection,
-				m = createMatrixWithFrustum(
+				createMatrixWithFrustum(
 						(float)left, (float)right, 
 						(float)bottom, (float)top, 
 						(float)nearVal, (float)farVal
@@ -926,27 +939,23 @@ public class RC implements Closeable {
 	public static interface ScreenCoordinate<T> { T define(float x, float y); }
 	public<T> T project(double x, double y, double z, ScreenCoordinate<T> sc) {
 //		return project( x,y,z, (vx,vy,vz) -> sc.define(vx, vy));
-		return project(x, y, z, new ViewportCoordinate<T>() {
-			public T define(float x, float y, float z) {
-				return sc.define(x, y);
-			}
-		});
+		return transform(x, y, z, (X,Y,Z,W) -> sc.define(viewport.transformX(X/W), viewport.transformY(Y/W)));
 	}
 	
-	public static interface ViewportCoordinate<T> { T define(float x, float y, float z); }
-	public<T> T project(double x, double y, double z, ViewportCoordinate<T> sc) {
+	private static interface ClipCoordinate<T> { T define(float x, float y, float z, float w); }
+	public<T> T transform(double x, double y, double z, ClipCoordinate<T> sc) {
 		float[][] m = modelViewProjection;
 		final float m00 = m[0][0], m01 = m[0][1], m02 = m[0][2], m03 = m[0][3];
 		final float m10 = m[1][0], m11 = m[1][1], m12 = m[1][2], m13 = m[1][3];
 		final float m20 = m[2][0], m21 = m[2][1], m22 = m[2][2], m23 = m[2][3];
 		final float m30 = m[3][0], m31 = m[3][1], m32 = m[3][2], m33 = m[3][3];
 
-		final double vw = m30*x+m31*y+m32*z+m33;
-		final double vx = (m00*x+m01*y+m02*z+m03)/vw; 
-		final double vy = (m10*x+m11*y+m12*z+m13)/vw; 
-		final double vz = (m20*x+m21*y+m22*z+m23)/vw; 
+		final double vx = (m00*x+m01*y+m02*z+m03); 
+		final double vy = (m10*x+m11*y+m12*z+m13); 
+		final double vz = (m20*x+m21*y+m22*z+m23); 
+		final double vw = (m30*x+m31*y+m32*z+m33);
 		
-		return sc.define((float)vx, (float)vy, (float)vz);
+		return sc.define((float)vx, (float)vy, (float)vz, (float)vw);
 	}
 	
 	
@@ -1048,12 +1057,22 @@ public class RC implements Closeable {
 //		lineAttributes = gc.getLineAttributes();
 	}
 	
+	private void copyState(RC rc) {
+		this.font = rc.font;
+		this.alpha = rc.alpha;
+		this.fillRule = rc.fillRule;
+		this.foreground = rc.foreground;
+		this.background = rc.background;
+		this.lineAttributes = rc.lineAttributes;
+	}
+	
 	
 	Font font, fontSaved;
 	Integer alpha, alphaSaved;
 	Integer fillRule, fillRuleSaved;
 	Color foreground, foregroundSaved, foregroundCreated;
 	Color background, backgroundSaved, backgroundCreated;
+	LineAttributes lineAttributes, lineAttributesSaved;
 
 	final static private BasicStroke NULL_STROKE = new BasicStroke(1);
 	BasicStroke stroke = NULL_STROKE;
@@ -1070,7 +1089,6 @@ public class RC implements Closeable {
 		return stroke;
 	}
 	
-	LineAttributes lineAttributes, lineAttributesSaved;
 	public RC setLineAttributes(LineAttributes lineAttributes) {
 		this.stroke = NULL_STROKE;
 		this.lineAttributes = lineAttributes;

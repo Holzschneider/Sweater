@@ -1,5 +1,7 @@
 package de.dualuse.swt.graphics;
 
+import static java.lang.Math.*;
+
 import java.awt.Rectangle;
 
 import java.awt.Shape;
@@ -13,15 +15,13 @@ import java.util.Arrays;
 
 public class Primitive implements Shape, Cloneable {
 //	private static final long serialVersionUID = 1L;
-
+	int n = 0;
+	float[] vertices;
 	
-	private int n = 0;
-	private float[] vertices;
-	
-	private int type;
-	private final float[][] m;
-	private Viewport v;
-	private double pointSize;
+	int type;
+	final float[][] m;
+	Viewport v;
+	float pointSize;
 
 	public int getType() {
 		return type;
@@ -32,20 +32,6 @@ public class Primitive implements Shape, Cloneable {
 		this.vertices = new float[12*4];
 	}
 
-	
-//	public Primitive(float[][] t, int type) {
-//		this.m = new float[4][4];
-//		RC.copy(t,m);
-//		this.type = type;
-//		this.vertices = new float[12*4];
-//	}
-//	public Primitive(float[][] t, int type, float vertices[], int n) {
-//		this.m = new float[4][4];
-//		RC.copy(t,m);
-//		this.type = type;
-//		this.vertices = Arrays.copyOf(vertices, n);
-//		this.n = n;
-//	}
 	
 	public void addVertex(float x, float y, float z) {
 		if (n>=vertices.length)
@@ -61,7 +47,7 @@ public class Primitive implements Shape, Cloneable {
 		this.type = type;
 		this.n = 0;
 		this.v = v;
-		this.pointSize = pointSize;
+		this.pointSize = max(1,(float)pointSize/2f);
 		
 		return this;
 	}
@@ -83,11 +69,11 @@ public class Primitive implements Shape, Cloneable {
 	
 	
 	public PathIterator getPathIterator(AffineTransform at) {
-		return new PrimitivePathIterator(vertices, n/3, type, at, v, m, (float) pointSize);
+		return new PrimitivePathIterator(this, at);
 	}
 
 	public PathIterator getPathIterator(final AffineTransform at, final double flatness) {
-		return new PrimitivePathIterator(vertices, n/3, type, at, v, m, (float) pointSize);
+		return new PrimitivePathIterator(this, at);
 	}
 	
 }

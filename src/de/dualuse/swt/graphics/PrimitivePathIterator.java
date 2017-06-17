@@ -8,11 +8,8 @@ import java.awt.geom.PathIterator;
 
 public class PrimitivePathIterator implements PathIterator {
 	final AffineTransform at;
-	final Viewport v;
-	final float[][] m;
-	final float[] vertices;
-	final int type;
 	final int n;
+	final Primitive p;
 	
 	final public static int POINTS = 1;
 	final public static int LINES = 2;
@@ -24,27 +21,22 @@ public class PrimitivePathIterator implements PathIterator {
 	final public static int LINE_LOOP = 10000;
 	
 	//XXX acutally hand over Primitive here! in a private constructor
-	public PrimitivePathIterator(float vertices[], int count, int type, AffineTransform at, Viewport v, float[][] m, float pointSize) {
-		this.vertices = vertices;
-		this.P = max(1,pointSize/2);
+	public PrimitivePathIterator(Primitive p,  AffineTransform at ) {
+		this.p = p;
 		
-		int n = 0;
-		switch(type) {
+		int n = 0, count = p.n/3;
+		switch(p.type) {
 		case POINTS: n = count*4; break;
 		case LINES: n = count; break;
 		case TRIANGLES:
-		case QUADS: n = count+count/type; break;
+		case QUADS: n = count+count/p.type; break;
 		case LINE_STRIP: n = count; break;
 		case LINE_LOOP: n = count+1; break;
 		case TRIANGLE_FAN: n = (count-1)*4; break;
 		}
 		
 		this.n = n;
-		
 		this.at = at;
-		this.v = v;
-		this.m = m;
-		this.type = type;
 	}
 	
 	public int getWindingRule() { return PathIterator.WIND_NON_ZERO; }
@@ -54,7 +46,6 @@ public class PrimitivePathIterator implements PathIterator {
 	public void next() { i++; }
 
 	public static boolean debug = false;
-	public float P = 1;
 	
 	private float lx = 0, ly=0, lz=0, lw = -1;
 	private float lx_ = 0, ly_=0, lz_=0;
@@ -63,14 +54,15 @@ public class PrimitivePathIterator implements PathIterator {
 	public int currentSegment(float[] coords) {
 		float sx = 0, sy = 0;
 		int offset=0, seg=0;
-		switch (type) {
+		
+		switch (p.type) {
 		case POINTS: 
 			offset = (i/4)*3;
 			switch (i%4) {
-				case 0: sx=sy=-P; seg = SEG_MOVETO; break;
-				case 1: sy=sx=P;seg = SEG_LINETO; break;
-				case 2: sy=-(sx=P);seg = SEG_MOVETO; break;
-				case 3: sx=-(sy=P);seg = SEG_LINETO; break;
+				case 0: sx=sy=-p.pointSize; seg = SEG_MOVETO; break;
+				case 1: sy=sx=p.pointSize;seg = SEG_LINETO; break;
+				case 2: sy=-(sx=p.pointSize);seg = SEG_MOVETO; break;
+				case 3: sx=-(sy=p.pointSize);seg = SEG_LINETO; break;
 			}
 		break;
 		case LINES:
@@ -107,27 +99,27 @@ public class PrimitivePathIterator implements PathIterator {
 //		if (seg == SEG_CLOSE)
 //			lx=ly=lz=lw=0;
 		
-		if (debug)
-			System.out.println("blah");
-			
-		float vecx = vertices[offset+0];
-		float vecy = vertices[offset+1];
-		float vecz = vertices[offset+2];
+		float vecx = p.vertices[offset+0];
+		float vecy = p.vertices[offset+1];
+		float vecz = p.vertices[offset+2];
 		float vecw = 1;
 
 		//Transform Model Coordinates to Clip Coordinates: 
-		float x = m[0][0] * vecx + m[0][1] * vecy + m[0][2] * vecz + m[0][3] * vecw;
-		float y = m[1][0] * vecx + m[1][1] * vecy + m[1][2] * vecz + m[1][3] * vecw;
-		float z = m[2][0] * vecx + m[2][1] * vecy + m[2][2] * vecz + m[2][3] * vecw;
-		float w = m[3][0] * vecx + m[3][1] * vecy + m[3][2] * vecz + m[3][3] * vecw;	
+		float x = p.m[0][0] * vecx + p.m[0][1] * vecy + p.m[0][2] * vecz + p.m[0][3] * vecw;
+		float y = p.m[1][0] * vecx + p.m[1][1] * vecy + p.m[1][2] * vecz + p.m[1][3] * vecw;
+		float z = p.m[2][0] * vecx + p.m[2][1] * vecy + p.m[2][2] * vecz + p.m[2][3] * vecw;
+		float w = p.m[3][0] * vecx + p.m[3][1] * vecy + p.m[3][2] * vecz + p.m[3][3] * vecw;	
 
-		final float invW = 1f/w;
-		float x_ = x*invW;
-		float y_ = y*invW;
-		float z_ = z*invW;
+		final float x_ = x/w, y_ = y/w, z_ = z/w;
 		
-		if (type == POINTS && (z<-w || z>w)) 
+		
+		boolean clipZ = z<-w || z>w, clipX = x<-w|| x>w, clipY = y<-w || y>w;
+		boolean clip = clipZ|((clipX|clipY)&p.v.viewportClipping);
+		
+		if (p.type == POINTS && clip) {
+			i++; //also skip next point
 			return SEG_MOVETO;
+		}
 		
 //		if (lz>-1 && z<-1 || lz<-1 && z>-1) {
 
@@ -145,7 +137,7 @@ public class PrimitivePathIterator implements PathIterator {
 		
 		coords[0] = x_;
 		coords[1] = y_;
-		v.transform(coords, 0, 1);
+		p.v.transform(coords, 0, 1);
 		coords[0]+=sx;
 		coords[1]+=sy;
 		

@@ -2,27 +2,19 @@ package de.dualuse.swt.graphics;
 
 class Viewport {
 	public int x=+1, y=-1, width=2, height=-2;
+	public boolean viewportClipping = false;
 	
 	public Viewport() {	}
-	public Viewport(Viewport that) { 
-		this.x = that.x;
-		this.y = that.x;
-		this.width = that.width;
-		this.height = that.height;
-	}
-	
-	public void set(Viewport that) {
-		this.x = that.x;
-		this.y = that.x;
-		this.width = that.width;
-		this.height = that.height;
-	}
+	public Viewport(Viewport that) { set(that.x,that.y,that.width,that.height); }
+	public void set(Viewport that) { set(that.x,that.y,that.width,that.height); }
 	
 	public void set(int x, int y, int width, int height) {
 		this.x = x;
 		this.y = y;
 		this.width = width;
 		this.height = height;
+		
+		viewportClipping = !(x==1 && y==-1 && width==2 && height==-2);
 	}
 
 	public void transform(double[] coords, int offset, int count) {
