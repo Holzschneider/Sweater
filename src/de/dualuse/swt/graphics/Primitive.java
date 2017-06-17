@@ -15,7 +15,7 @@ import java.util.Arrays;
 
 public class Primitive implements Shape, Cloneable {
 //	private static final long serialVersionUID = 1L;
-	int n = 0;
+	int n = 0,o=0;
 	float[] vertices;
 	
 	VertexMode type;
@@ -29,18 +29,21 @@ public class Primitive implements Shape, Cloneable {
 	}
 
 	
-	public void addVertex(float x, float y, float z) {
-		if (n>=vertices.length)
-			vertices = Arrays.copyOf(vertices, (vertices.length*3/2)/3*3);
+	public void addVertex(float x, float y, float z, float w) {
+		if (o>=vertices.length)
+			vertices = Arrays.copyOf(vertices, (vertices.length*3/2)/4*4);
 
-		vertices[n++] = x;
-		vertices[n++] = y;
-		vertices[n++] = z;
+		n++;
+		vertices[o++] = x;
+		vertices[o++] = y;
+		vertices[o++] = z;
+		vertices[o++] = w;
 	}
 	
 	public Primitive reset(Viewport v, float[][] m, VertexMode type, double pointSize) {
 		RC.copy(m, this.m);
 		this.type = type;
+		this.o = 0;
 		this.n = 0;
 		this.v = v;
 		this.pointSize = max(1,(float)pointSize/2f);

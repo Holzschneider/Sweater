@@ -24,7 +24,7 @@ public class PrimitivePathIterator implements PathIterator {
 	public PrimitivePathIterator(Primitive p,  AffineTransform at ) {
 		this.p = p;
 		
-		int n = 0, count = p.n/3;
+		int n = 0, count = p.n;
 		switch(p.type) {
 		case POINTS: n = count*4; break;
 		case LINES: n = count; break;
@@ -49,7 +49,7 @@ public class PrimitivePathIterator implements PathIterator {
 	
 	private float lx = 0, ly=0, lz=0, lw = -1;
 	private float lx_ = 0, ly_=0, lz_=0;
-	
+	private final int D = 4;
 			
 	public int currentSegment(float[] coords) {
 		float sx = 0, sy = 0;
@@ -57,7 +57,7 @@ public class PrimitivePathIterator implements PathIterator {
 		
 		switch (p.type) {
 		case POINTS: 
-			offset = (i/4)*3;
+			offset = (i/4)*D;
 			switch (i%4) {
 				case 0: sx=sy=-p.pointSize; seg = SEG_MOVETO; break;
 				case 1: sy=sx=p.pointSize;seg = SEG_LINETO; break;
@@ -66,23 +66,23 @@ public class PrimitivePathIterator implements PathIterator {
 			}
 		break;
 		case LINES:
-			offset = i*3;
+			offset = i*D;
 			seg = i%2==0?SEG_MOVETO:SEG_LINETO;
 		break;
 		case TRIANGLES: 
-			offset = (i/4*3+i%3)*3;
+			offset = (i/4*3+i%3)*D;
 			seg = i%4==0?SEG_MOVETO:SEG_LINETO;
 		break;
 		case QUADS: 
-			offset = (i/5*4+i%4)*3;
+			offset = (i/5*4+i%4)*D;
 			seg = i%5==0?SEG_MOVETO:SEG_LINETO;
 			break;
 		case LINE_STRIP:
-			offset = i*3;
+			offset = i*D;
 			seg = i==0?SEG_MOVETO:SEG_LINETO;
 			break;
 		case LINE_LOOP: 
-			offset = (i%(n-1))*3;
+			offset = (i%(n-1))*D;
 			seg = i==0?SEG_MOVETO:SEG_LINETO;
 		case TRIANGLE_FAN:
 			int j = 0;
@@ -92,7 +92,7 @@ public class PrimitivePathIterator implements PathIterator {
 			case 2: j = i/4+1; seg = SEG_LINETO; break;
 			case 3: j = 0; seg = SEG_CLOSE; break;
 			}
-			offset = j*3;
+			offset = j*D;
 		break;
 		}
 
@@ -102,7 +102,7 @@ public class PrimitivePathIterator implements PathIterator {
 		float vecx = p.vertices[offset+0];
 		float vecy = p.vertices[offset+1];
 		float vecz = p.vertices[offset+2];
-		float vecw = 1;
+		float vecw = p.vertices[offset+3];
 
 		//Transform Model Coordinates to Clip Coordinates: 
 		float x = p.m[0][0] * vecx + p.m[0][1] * vecy + p.m[0][2] * vecz + p.m[0][3] * vecw;

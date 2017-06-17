@@ -884,16 +884,20 @@ public class RC implements Closeable {
 	}
 
 	
-	public RC vertex(int x, int y) { addVertex(x, y, 0f); return this; }
-	public RC vertex(float x, float y) { addVertex(x, y, 0f); return this; }
-	public RC vertex(double x, double y) { addVertex((float)x, (float)y, 0f); return this;  }
+	public RC vertex(int x, int y) { return addVertex(x, y, 0f, 1); }
+	public RC vertex(float x, float y) { return addVertex(x, y, 0f, 1); }
+	public RC vertex(double x, double y) { return addVertex((float)x, (float)y, 0f, 1); }
 	
-	public RC vertex(int x, int y, int z) { addVertex(x, y, z); return this;  }
-	public RC vertex(float x, float y, float z) { addVertex(x, y, z); return this;  }
-	public RC vertex(double x, double y, double z) { addVertex((float)x, (float)y, (float)z); return this; }
+	public RC vertex(int x, int y, int z) { return addVertex(x, y, z, 1); }
+	public RC vertex(float x, float y, float z) { return addVertex(x, y, z, 1); }
+	public RC vertex(double x, double y, double z) { return addVertex((float)x, (float)y, (float)z, 1); }
 
-	private RC addVertex(float x, float y, float z) {
-		p.addVertex(x, y, z); 
+	public RC vertex(int x, int y, int z, int w ) { return addVertex(x, y, z, w); }
+	public RC vertex(float x, float y, float z, float w) { return addVertex(x, y, z, w); }
+	public RC vertex(double x, double y, double z, double w) { return addVertex((float)x, (float)y, (float)z, (float)w); }
+
+	private RC addVertex(float x, float y, float z, float w) {
+		p.addVertex(x, y, z, w); 
 		return this; 
 	}
 
