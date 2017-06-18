@@ -1,13 +1,6 @@
 package de.dualuse.swt.widgets;
 
-import static org.eclipse.swt.SWT.H_SCROLL;
-import static org.eclipse.swt.SWT.MouseDown;
-import static org.eclipse.swt.SWT.MouseMove;
-import static org.eclipse.swt.SWT.MouseUp;
-import static org.eclipse.swt.SWT.MouseWheel;
-import static org.eclipse.swt.SWT.Paint;
-import static org.eclipse.swt.SWT.Selection;
-import static org.eclipse.swt.SWT.V_SCROLL;
+import static org.eclipse.swt.SWT.*;
 
 import java.util.ArrayList;
 
@@ -56,6 +49,10 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 
 //==[ Constructor ]=================================================================================
 	
+	public ZoomCanvas(Composite parent) {
+		this(parent,NONE);
+	}
+			
 	public ZoomCanvas(Composite parent, int style) {
 		super(parent, style);
 
