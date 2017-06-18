@@ -476,7 +476,7 @@ public class RC implements Closeable {
 		float[][] m = new float[][] {
 			{ 2/(float)(right-left), 0,0, tx },
 			{ 0, 2/(float)(top-bottom), 0, ty},
-			{ 0, 0, -2/(float)(far-near), 0, tz},
+			{ 0, 0, -2/(float)(far-near), tz},
 			{ 0, 0, 0, 1} 
 		};
 
