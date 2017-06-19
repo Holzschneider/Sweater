@@ -122,7 +122,9 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public static interface ModelViewProjection<T> {
+	
+	
+	public static interface ModelViewProjectionViewport<T> {
 		T define(
 				double m00, double m01, double m02, double m03,
 				double m10, double m11, double m12, double m13,
@@ -131,13 +133,18 @@ public class RC implements Closeable {
 				);
 	}
 	
-	public<T> T getTransform(ModelViewProjection<T> mvp) {
+	public<T> T getTransform(ModelViewProjectionViewport<T> mvp) {
 		final float[][] m = modelViewProjection;
+		
+		final float[][] n = new float[4][4];
+		copy(m, n);
+		transform(createMatrixWithViewport(viewport.x, viewport.y, viewport.width, viewport.height),n);
+		
 		return mvp.define( 
-				m[0][0], m[0][1], m[0][2], m[0][3], 
-				m[1][0], m[1][1], m[1][2], m[1][3], 
-				m[2][0], m[2][1], m[2][2], m[2][3], 
-				m[3][0], m[3][1], m[3][2], m[3][3] 
+				n[0][0], n[0][1], n[0][2], n[0][3], 
+				n[1][0], n[1][1], n[1][2], n[1][3], 
+				n[2][0], n[2][1], n[2][2], n[2][3], 
+				n[3][0], n[3][1], n[3][2], n[3][3] 
 			);
 	}
 	
@@ -1046,6 +1053,49 @@ public class RC implements Closeable {
 		m[3][2] = m30*n02+m31*n12+m32*n22+m33*n32;
 		m[3][3] = m30*n03+m31*n13+m32*n23+m33*n33;
 	}
+	
+	static void transform( float[][] m, float[][] n) {
+		final float m00 = m[0][0], m01 = m[0][1], m02 = m[0][2], m03 = m[0][3];
+		final float m10 = m[1][0], m11 = m[1][1], m12 = m[1][2], m13 = m[1][3];
+		final float m20 = m[2][0], m21 = m[2][1], m22 = m[2][2], m23 = m[2][3];
+		final float m30 = m[3][0], m31 = m[3][1], m32 = m[3][2], m33 = m[3][3];
+		transform(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, n);
+	}
+	
+	static void transform( 
+			float m00, float m01, float m02, float m03,
+			float m10, float m11, float m12, float m13,
+			float m20, float m21, float m22, float m23,
+			float m30, float m31, float m32, float m33,
+			float[][] n
+			) {
+		
+		final float n00 = n[0][0], n01 = n[0][1], n02 = n[0][2], n03 = n[0][3];
+		final float n10 = n[1][0], n11 = n[1][1], n12 = n[1][2], n13 = n[1][3];
+		final float n20 = n[2][0], n21 = n[2][1], n22 = n[2][2], n23 = n[2][3];
+		final float n30 = n[3][0], n31 = n[3][1], n32 = n[3][2], n33 = n[3][3];
+
+		n[0][0] = m00*n00+m01*n10+m02*n20+m03*n30;
+		n[0][1] = m00*n01+m01*n11+m02*n21+m03*n31;
+		n[0][2] = m00*n02+m01*n12+m02*n22+m03*n32;
+		n[0][3] = m00*n03+m01*n13+m02*n23+m03*n33;
+		
+		n[1][0] = m10*n00+m11*n10+m12*n20+m13*n30;
+		n[1][1] = m10*n01+m11*n11+m12*n21+m13*n31;
+		n[1][2] = m10*n02+m11*n12+m12*n22+m13*n32;
+		n[1][3] = m10*n03+m11*n13+m12*n23+m13*n33;
+		
+		n[2][0] = m20*n00+m21*n10+m22*n20+m23*n30;
+		n[2][1] = m20*n01+m21*n11+m22*n21+m23*n31;
+		n[2][2] = m20*n02+m21*n12+m22*n22+m23*n32;
+		n[2][3] = m20*n03+m21*n13+m22*n23+m23*n33;
+	
+		n[3][0] = m30*n00+m31*n10+m32*n20+m33*n30;
+		n[3][1] = m30*n01+m31*n11+m32*n21+m33*n31;
+		n[3][2] = m30*n02+m31*n12+m32*n22+m33*n32;
+		n[3][3] = m30*n03+m31*n13+m32*n23+m33*n33;
+	}
+
 
 //==[ Shadow State ]================================================================================
 	
