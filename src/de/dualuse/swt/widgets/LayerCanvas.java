@@ -3,8 +3,6 @@ package de.dualuse.swt.widgets;
 import static org.eclipse.swt.SWT.*;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Rectangle;
@@ -143,14 +141,18 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	@Override public void resetCaptive() {
 		Layer cap = captive;
 		if (cap != null)
-			while (cap.getCaptive() != null && cap.getCaptive()!=cap)
-				cap = cap.getCaptive();
+			while (cap.captive() != null && cap.captive()!=cap)
+				cap = cap.captive();
 		if (cap!=null)
 			cap.capture(null);
 	}
 	
 	@Override public void capture(Layer c) {
 		captive = c;
+	}
+	
+	@Override public Layer captive() {
+		return captive;
 	}
 	
 	private void updateSnapshot() {

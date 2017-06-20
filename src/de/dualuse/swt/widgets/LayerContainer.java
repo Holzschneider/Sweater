@@ -26,6 +26,7 @@ public interface LayerContainer {
 
 	///// Given layer captures events
 	
+	public Layer captive();
 	public void resetCaptive();
 	public void capture(Layer c);
 
@@ -39,4 +40,34 @@ public interface LayerContainer {
 	public<T> T transform(double x, double y, TransformedCoordinate<T> i);
 	public<T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i);
 
+	///// Debug Methods
+
+	public default void printLayerTree() {
+		printLayerTree(this);
+	}
+	
+	public static void printLayerTree(LayerContainer container) {
+		printLayerTree(container, "", 1);
+	}
+	
+	public static void printLayerTree(LayerContainer container, String indent, int num) {
+		Layer captive = container.captive();
+		Layer[] children = container.getLayers();
+		
+		int index = -1; // no captive
+		for (int i=0, I=children.length; i<I; i++) {
+			if (children[i]==captive) {
+				index = i;
+				break;
+			}
+		}
+
+		System.out.println(indent + num + ": " + container.getClass() + " (captive: " + index + ")");
+		
+		index = 1;
+		for (LayerContainer child : container.getLayers()) {
+			printLayerTree(child, indent + "    ", index++);
+		}
+	}
+	
 }

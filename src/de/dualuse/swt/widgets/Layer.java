@@ -813,10 +813,6 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	private Layer captive = null;
 	private int downX, downY, downT;
 	
-	public Layer getCaptive() {
-		return captive;
-	}
-	
 	// Used by Handle.startDrag() which programmatically starts a dragging operation to reset the last captive
 	@Override public void resetCaptive() {
 		Layer cap = captive;
@@ -833,7 +829,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			getParent().capture(c);
 	}
 	
-	public Layer captive() {
+	@Override public Layer captive() {
 		return captive;
 	}
 	
