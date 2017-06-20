@@ -20,4 +20,8 @@ public class SimpleFuture<I> {
 			wait();
 		return value;
 	}
+	
+	public synchronized I peek() {
+		return value;
+	}
 }

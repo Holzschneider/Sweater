@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.DeviceData;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Shell;
@@ -40,15 +41,27 @@ public abstract class MultiDocumentApplication extends Application {
 //==[ Constructor ]=================================================================================
 	
 	public MultiDocumentApplication(String name, String version) {
+		this(null, name, version, DEFAULT_DOCTYPE, true, true);
+	}
+	
+	public MultiDocumentApplication(DeviceData data, String name, String version) {
 		this(name, version, DEFAULT_DOCTYPE, true, true);
 	}
 	
 	public MultiDocumentApplication(String name, String version, String docType) {
-		this(name, version, docType, true, true);
+		this(null, name, version, docType, true, true);
+	}
+	
+	public MultiDocumentApplication(DeviceData data, String name, String version, String docType) {
+		this(data, name, version, docType, true, true);
 	}
 	
 	public MultiDocumentApplication(String name, String version, String docType, boolean canCreate, boolean canOpen) {
-		super(name, version);
+		this(null, name, version, docType, canCreate, canOpen);
+	}
+	
+	public MultiDocumentApplication(DeviceData data, String name, String version, String docType, boolean canCreate, boolean canOpen) {
+		super(data, name, version);
 		
 		this.canCreate = canCreate;
 		this.canOpen = canOpen;

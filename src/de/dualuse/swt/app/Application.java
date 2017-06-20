@@ -14,37 +14,65 @@ public class Application extends Display implements AutoMenuBar {
 	//support for splash-windows / start-wizards
 	
 //==[ Constructor ]=================================================================================
+	
 	public Application() {
 		this(deriveAppName());
+	}
+	
+	public Application(DeviceData data) {
+		this(data, deriveAppName());
 	}
 	
 	public Application(String title) {
 		super(setAppNameVersion(title));
 	}
 	
+	public Application(DeviceData data, String title) {
+		super(setAppNameVersion(data,title));
+	}
+	
 	public Application(String title, String version) {
 		super(setAppNameVersion(title, version));
 	}
+	
+	public Application(DeviceData data, String title, String version) {
+		super(setAppNameVersion(data, title, version));
+	}
+	
+	/////
 	
 	private static String deriveAppName() {
 		StackTraceElement ste[] = new Throwable().getStackTrace();
 		String className = ste[ste.length-1].getClassName();
 		String simpleName = className.replaceAll("^.+\\.", "");
 		String appName = simpleName.replaceAll("((\\p{javaLowerCase})(\\p{javaUpperCase}))", "$2 $3");
-		
 		return appName;
 	}
-	
+
 	// setAppName() and setAppVersion must be called before Display() Object is intialized
+	private static DeviceData setAppNameVersion(DeviceData data, String title) {
+		if (data==null) data = new DeviceData();
+		Display.setAppName(title);
+		return data;
+	}
+	
 	private static DeviceData setAppNameVersion(String title) {
 		Display.setAppName(title);
 		return new DeviceData();
 	}
 	
-	private static DeviceData setAppNameVersion(String title, String version) {
+	private static DeviceData setAppNameVersion(DeviceData data, String title, String version) {
+		if (data==null) data = new DeviceData();
 		Display.setAppName(title);
 		Display.setAppVersion(version);
-		return new DeviceData();
+		return data;
+	}
+	
+	private static DeviceData setAppNameVersion(String title, String version) {
+		DeviceData data = new DeviceData();
+		Display.setAppName(title);
+		Display.setAppVersion(version);
+		return data;
 	}
 	
 	// Overriden to silence SWTException that is otherwise thrown because of subclassing
