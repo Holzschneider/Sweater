@@ -62,7 +62,8 @@ public interface LayerContainer {
 			}
 		}
 
-		System.out.println(indent + num + ": " + container.getClass() + " (captive: " + index + ")");
+		String captiveString = container.captive()==null ? "null" : container.captive().getClass().toString();
+		System.out.println(indent + num + ": " + container.getClass() + " (captive: " + index + ", " + captiveString + ")");
 		
 		index = 1;
 		for (LayerContainer child : container.getLayers()) {
