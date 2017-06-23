@@ -1,5 +1,8 @@
 package de.dualuse.swt.app;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.swt.graphics.DeviceData;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
@@ -127,7 +130,48 @@ public class Application extends Display implements AutoMenuBar {
 		}
 	}
 	
+//==[ Event Loop that allows execution immediately after the processing for the current event finishes ]==
+	
+	List<Runnable> runAfter = new ArrayList<>();
+	
+	public void taskLoop() {
+		checkDevice();
+		
+		try {
+			
+			while (!isDisposed()) {
+				boolean moreWork = false;
+				
+				do {
+					
+					// Process delayed jobs that are supposed to run after the event handling of the last event was done
+					// (could in turn add more events that need to be processed)
+					while (!runAfter.isEmpty()) {
+						Runnable task = runAfter.remove(runAfter.size()-1);
+						task.run();
+					}
+					
+					// Process event
+					// (event handling code could add more runnables that need to be processed)
+					moreWork = !isDisposed() ? readAndDispatch() : false;
+					
+				} while (!runAfter.isEmpty() || moreWork);
+				
+				if (!isDisposed())
+					sleep();
+				
+			}
+			
+		} finally {
+			onDisposed();
+		}
+	}
 
+	public void runAfterEvent(Runnable run) {
+		checkDevice();
+		runAfter.add(run);
+	}
+	
 //==[ Resource Management ]=========================================================================
 	
 	protected void onDisposed() { }
