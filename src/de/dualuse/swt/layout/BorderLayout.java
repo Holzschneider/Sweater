@@ -57,7 +57,7 @@ public class BorderLayout extends Layout {
 	}
 	
 	@Override protected Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache) {
-		System.out.println("computeSize(" + composite + ", " + wHint + ", " + hHint + ", " + flushCache + ")");
+//		System.out.println("computeSize(" + composite + ", " + wHint + ", " + hHint + ", " + flushCache + ")");
 		
 		if (wHint != SWT.DEFAULT && hHint != SWT.DEFAULT)
 			return new Point(wHint, hHint);
