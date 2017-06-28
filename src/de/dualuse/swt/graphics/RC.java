@@ -1191,7 +1191,7 @@ public class RC implements Closeable {
 	}
 	
 	public RC setForeground(Color foreground) {
-		if (foregroundCreated!=foreground) {
+		if (foregroundCreated!=foreground && foregroundCreated!=null) {
 			foregroundCreated.dispose();
 			foregroundCreated = null;
 		}
