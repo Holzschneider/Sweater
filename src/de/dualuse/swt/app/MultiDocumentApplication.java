@@ -149,10 +149,12 @@ public abstract class MultiDocumentApplication extends Application {
 				lastDir = chosenFile.getParentFile().getAbsolutePath();
 				
 				DocumentWindow openedShell = openDocument(chosenFile);
-				
-				openedShell.open();
-				
-				addDocumentWindow(openedShell);
+				if (openedShell != null) {
+					
+					openedShell.open();
+					addDocumentWindow(openedShell);
+					
+				}
 
 			} else {
 
