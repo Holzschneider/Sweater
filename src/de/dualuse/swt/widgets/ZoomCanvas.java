@@ -64,7 +64,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 //		super.addListener(MouseDown, this);
 //		super.addListener(MouseUp, this);
 		
-		addPaintListener(this);
+		super.addPaintListener(this);
 		addControlListener(this);
 		
 		
