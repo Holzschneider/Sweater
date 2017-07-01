@@ -417,17 +417,18 @@ public class RC implements Closeable {
 	
 	public RC quaternion(double qx, double qy, double qz, double qw) {
 		float x = (float) qx, y = (float) qy, z = (float) qz, w = (float) qw;
-		
+
 		final float ww = w*w, xx = x*x, yy= y*y, zz = z*z;
-		final float xy = x*x, xz = x*z, xw = x*w;
+		final float xy = x*y, xz = x*z, xw = x*w;
 		final float yz = y*z, yw = y*w, zw = z*w; 
 		
 		concat(modelViewProjection,
-				ww+xx-yy-zz, 2*xy-2*zw, 2*xz+2*yw, 0f,
-				2*xy+2*zw, ww-xx+yy-zz, 2*yz-2*xw, 0f,						
-				2*xz-2*yw, 2*yz+2*xw, ww-xx-yy+zz, 0f,
-				0f, 0f, 0f, 	ww+xx+yy+zz);
-
+			ww+xx-yy-zz, 2*xy-2*zw, 2*xz+2*yw, 0f,
+			2*xy+2*zw, ww-xx+yy-zz, 2*yz-2*xw, 0f,						
+			2*xz-2*yw, 2*yz+2*xw, ww-xx-yy+zz, 0f,
+			0.0f, 0.0f, 0.0f, 	ww+xx+yy+zz
+		);
+				
 		return this;
 	}
 	
