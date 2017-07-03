@@ -25,13 +25,14 @@ public class Window extends Shell implements AutoMenuBar {
 	}
 	
 	
-	@Override public void layout() { 
+	@Override public void layout() {
 		if (getLayout()!=layoutDelegate) 
 			super.layout();
 		else
 			for (Control c: getChildren())
-				c.setSize(this.getSize());
+				c.setBounds(getClientArea());
 	}
+	
 	private Layout layoutDelegate = new LayoutDelegate().computeSize(this::computeSize).layout(this::layout);
 	private Point computeSize(Composite c, int wHint, int hHint, boolean flush) { return computeSize(wHint, hHint); }
 	private void layout(Composite c, boolean flushCache) { this.layout(); }
