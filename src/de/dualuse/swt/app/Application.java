@@ -94,7 +94,7 @@ public class Application extends Display implements AutoMenuBar {
 	
 
 //==[ Event Loop ]==================================================================================
-	
+	//TODO add the the option to supply an Exception Handler that catches & handles RuntimeExceptions, that have been caused by events 
 	public void loop() {
 		checkDevice();
 		
@@ -129,6 +129,15 @@ public class Application extends Display implements AutoMenuBar {
 			onDisposed();
 		}
 	}
+	
+//	XXX Device.Dispose 
+//	@Override
+//	public boolean readAndDispatch() {
+//		if (!this.isDisposed())
+//			return super.readAndDispatch();
+//		else
+//			return false;
+//	}
 	
 //==[ Event Loop that allows execution immediately after the processing for the current event finishes ]==
 	
