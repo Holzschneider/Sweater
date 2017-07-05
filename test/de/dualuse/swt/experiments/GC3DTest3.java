@@ -15,12 +15,12 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
-import de.dualuse.swt.graphics.RC;
+import de.dualuse.swt.graphics.GC3D;
 
-public class RCTest3 {
+public class GC3DTest3 {
 	public static void main(String[] args) {
 		
-		ImageData data = new ImageData(RCTest3.class.getResourceAsStream("generic-cat.jpeg"));
+		ImageData data = new ImageData(GC3DTest3.class.getResourceAsStream("generic-cat.jpeg"));
 		
 		Application app = new Application();
 		Shell sh = new Shell(app);
@@ -30,7 +30,7 @@ public class RCTest3 {
 		c.addPaintListener(new PaintListener() {
 			public void paintControl(PaintEvent e) {
 				Point size = c.getSize();
-				try (RC rc = new RC(e.gc)) {
+				try (GC3D rc = new GC3D(e.gc)) {
 					
 //					double s = min(size.x*1.0/data.width,size.y*1.0/data.height);
 //					rc.viewport(0, 0, size.x, size.y);
@@ -49,7 +49,7 @@ public class RCTest3 {
 //					rc.ortho(0, data.width, 0, data.width, -1, 1);
 					rc.ortho(0, 1, 0, 1, -1, 1);
 					
-					rc.begin(RC.LINES);
+					rc.begin(GC3D.LINES);
 //					rc.vertex(-1,-1);
 //					rc.vertex(+1,+1);
 //					rc.vertex(+1,-1);

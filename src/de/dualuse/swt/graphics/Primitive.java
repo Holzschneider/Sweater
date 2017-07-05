@@ -41,7 +41,7 @@ public class Primitive implements Shape, Cloneable {
 	}
 	
 	public Primitive reset(Viewport v, float[][] m, VertexMode type, double pointSize) {
-		RC.copy(m, this.m);
+		GC3D.copy(m, this.m);
 		this.type = type;
 		this.o = 0;
 		this.n = 0;

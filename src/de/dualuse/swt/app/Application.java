@@ -114,6 +114,7 @@ public class Application extends Display implements AutoMenuBar {
 	 * @param applicationWindow
 	 */
 	
+	//TODO maybe also support multiple windows that close the app
 	public void loop(Shell applicationWindow) {
 		checkDevice();
 		

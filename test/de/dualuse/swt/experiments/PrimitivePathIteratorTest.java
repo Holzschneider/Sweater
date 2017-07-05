@@ -7,7 +7,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
-import de.dualuse.swt.graphics.RC;
+import de.dualuse.swt.graphics.GC3D;
 
 public class PrimitivePathIteratorTest {
 	public static void main(String[] args) {
@@ -19,8 +19,8 @@ public class PrimitivePathIteratorTest {
 		Canvas ca = new Canvas(sh, NONE);
 
 		ca.addPaintListener( (e) -> {
-			try (RC r = new RC(e.gc)) {
-				r.begin(RC.LINES);
+			try (GC3D r = new GC3D(e.gc)) {
+				r.begin(GC3D.LINES);
 					r.vertex(10, 10);
 					r.vertex(100, 100);
 					
@@ -28,7 +28,7 @@ public class PrimitivePathIteratorTest {
 					r.vertex(220, 120);
 				r.end();
 				
-				r.begin(RC.TRIANGLES);
+				r.begin(GC3D.TRIANGLES);
 					r.vertex(400, 10);
 					r.vertex(510, 200);
 					r.vertex(320, 220);
@@ -38,7 +38,7 @@ public class PrimitivePathIteratorTest {
 					r.vertex(520, 320);
 				r.end();
 				
-				r.begin(RC.QUADS);
+				r.begin(GC3D.QUADS);
 					r.vertex(500, 310);
 					r.vertex(610, 500);
 					r.vertex(400, 520);
@@ -50,7 +50,7 @@ public class PrimitivePathIteratorTest {
 					r.vertex(620, 680);
 				r.end();
 				
-				r.begin(RC.LINE_STRIP);
+				r.begin(GC3D.LINE_STRIP);
 					r.vertex(100, 310);
 					r.vertex(210, 500);
 					r.vertex(100, 520);
@@ -62,7 +62,7 @@ public class PrimitivePathIteratorTest {
 					r.vertex(220, 680);
 				r.end();
 					
-				r.begin(RC.TRIANGLE_FAN);
+				r.begin(GC3D.TRIANGLE_FAN);
 					r.vertex(100, 610);
 					
 					r.vertex(210, 800);

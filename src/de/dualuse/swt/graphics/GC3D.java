@@ -13,7 +13,7 @@ import java.util.List;
 
 import org.eclipse.swt.graphics.*;
 
-public class RC implements Closeable {
+public class GC3D implements Closeable {
 
 	public final GC gc;
 	public final Device device;
@@ -25,12 +25,12 @@ public class RC implements Closeable {
 	
 //==[ Constructor ]=================================================================================
 	
-	public RC(Image im) {
+	public GC3D(Image im) {
 		this(new GC(im));
 		disposeOnDispose = true;
 	}
 	
-	public RC(GC gc) {
+	public GC3D(GC gc) {
 		this.gc = gc;
 		this.device = gc.getDevice();
 		
@@ -41,7 +41,7 @@ public class RC implements Closeable {
 		identity(modelViewProjection);
 	}
 	
-	public RC(RC rc) {
+	public GC3D(GC3D rc) {
 		this.gc = rc.gc;
 		this.device = rc.device;
 		
@@ -89,7 +89,7 @@ public class RC implements Closeable {
 	private ArrayDeque<Viewport> pushedViewports = new ArrayDeque<Viewport>();
 	private ArrayDeque<Viewport> freeViewports = new ArrayDeque<Viewport>();
 	
-	public RC pushTransform() {
+	public GC3D pushTransform() {
 		float[][] m = freeTransforms.poll();
 		Viewport w = freeViewports.poll();
 		
@@ -104,7 +104,7 @@ public class RC implements Closeable {
 	}
 	
 	
-	public RC popTransform() {
+	public GC3D popTransform() {
 		float[][] m = pushedTransforms.poll();
 		copy(m, modelViewProjection);
 		freeTransforms.push(m);
@@ -117,7 +117,7 @@ public class RC implements Closeable {
 	}
 	
 	
-	public RC loadIdentity() {
+	public GC3D loadIdentity() {
 		identity(modelViewProjection);
 		return this;
 	}
@@ -212,7 +212,6 @@ public class RC implements Closeable {
 
 	
 	private Transform approximateTransform(float x, float y, Transform t) {
-
 		float[] vp = { x,y,0,1 }, vx = {x+1,y,0,1}, vy = {x,y+1,0,1};
 		
 		project(viewport, modelViewProjection, vp);
@@ -223,6 +222,7 @@ public class RC implements Closeable {
 		float cx = vy[0]-vp[0], cy = vy[1]-vp[1];
 		
 		t.setElements(dx,dy,cx,cy, vp[0], vp[1] );
+		
 		return t;
 	}
 
@@ -297,7 +297,7 @@ public class RC implements Closeable {
 		double element(int row, int col); 
 	}
 	
-	public RC multMatrix( MatrixValues v ) {
+	public GC3D multMatrix( MatrixValues v ) {
 		float[][] m = modelViewProjection;
 		setToConcatenation(	
 					m[0][0], m[1][0], m[2][0], m[3][0],				
@@ -313,7 +313,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC multMatrix( double[][] n ) {
+	public GC3D multMatrix( double[][] n ) {
 		float[][] m = modelViewProjection;
 		setToConcatenation(	
 					m[0][0], m[1][0], m[2][0], m[3][0],				
@@ -353,7 +353,7 @@ public class RC implements Closeable {
 	 * Where 'X' denotes matrix multiplication, and v is represented as a 4 X 1 matrix.
 	 * @param n
 	 */
-	public RC multMatrix( double[] n ) {
+	public GC3D multMatrix( double[] n ) {
 		float[][] m = modelViewProjection;
 		setToConcatenation(	
 					m[0][0], m[1][0], m[2][0], m[3][0],				
@@ -406,7 +406,7 @@ public class RC implements Closeable {
 		
 	}
 	
-	public RC translate(double tx, double ty, double tz) {
+	public GC3D translate(double tx, double ty, double tz) {
 		concat( modelViewProjection,
 				1,0,0,(float)tx,
 				0,1,0,(float)ty,
@@ -415,7 +415,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC quaternion(double qx, double qy, double qz, double qw) {
+	public GC3D quaternion(double qx, double qy, double qz, double qw) {
 		float x = (float) qx, y = (float) qy, z = (float) qz, w = (float) qw;
 
 		final float ww = w*w, xx = x*x, yy= y*y, zz = z*z;
@@ -432,7 +432,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC rotate(double theta, double ax, double ay, double az) {
+	public GC3D rotate(double theta, double ax, double ay, double az) {
 		final float s = (float) sin(theta), c = (float) cos(theta), t = 1-c, l = (float) sqrt(ax*ax+ay*ay+az*az);
 		final float x = (float) (ax/l), y = (float) (ay/l), z= (float) (az/l);
 		final float xz = x*z, xy = x*y, yz = y*z, xx=x*x, yy=y*y, zz=z*z;
@@ -446,9 +446,9 @@ public class RC implements Closeable {
 	}
 	
 
-	public RC scale(double s) { return scale(s,s,s); }
+	public GC3D scale(double s) { return scale(s,s,s); }
 	
-	public RC scale(double sx, double sy, double sz) {
+	public GC3D scale(double sx, double sy, double sz) {
 		concat(modelViewProjection,
 				(float)sx,0,0,0,
 				0,(float)sy,0,0,
@@ -460,12 +460,12 @@ public class RC implements Closeable {
 	}
 
 
-	public RC viewport(int x, int y, int width, int height) {
+	public GC3D viewport(int x, int y, int width, int height) {
 		this.viewport.set(x, y, width, height);
 		return this;
 	}
 	
-	public RC camera(float fx, float fy, float cx, float cy) {
+	public GC3D camera(float fx, float fy, float cx, float cy) {
 		concat(modelViewProjection,new float[][] {
 					{ fx,  0, cx,  0 },
 					{  0, fy, cy,  0 },
@@ -476,7 +476,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC ortho(double left, double right, double bottom, double top, double near, double far) {
+	public GC3D ortho(double left, double right, double bottom, double top, double near, double far) {
         float tx = (float) (- (right + left) / (right - left));
         float ty = (float) (- (top + bottom) / (top - bottom));
 		float tz = (float) (- (far + near) / (far - near));
@@ -493,7 +493,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC frustum(double left, double right, double bottom, double top, double nearVal, double farVal ) {
+	public GC3D frustum(double left, double right, double bottom, double top, double nearVal, double farVal ) {
 		concat(modelViewProjection,
 				createMatrixWithFrustum(
 						(float)left, (float)right, 
@@ -505,10 +505,10 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC translate(double tx, double ty) { translate(tx, ty, 0); return this;}
-	public RC rotate(double theta) { rotate(0,0,1,theta); return this;}
-	public RC rotate(double theta, double x, double y) { translate(x,y);rotate(theta);translate(-x,-y); return this;}
-	public RC scale(double sx, double sy) { scale(sx,sy,1); return this; }
+	public GC3D translate(double tx, double ty) { translate(tx, ty, 0); return this;}
+	public GC3D rotate(double theta) { rotate(0,0,1,theta); return this;}
+	public GC3D rotate(double theta, double x, double y) { translate(x,y);rotate(theta);translate(-x,-y); return this;}
+	public GC3D scale(double sx, double sy) { scale(sx,sy,1); return this; }
 	
 //	public RC shear(double shx, double shy) { modelviewprojection.mul(createMatrixWithTransform(AffineTransform.getRotateInstance(shx, shy))); }
 //	public RC transform(AffineTransform Tx) { modelviewprojection.mul(createMatrixWithTransform(Tx)); }
@@ -519,7 +519,7 @@ public class RC implements Closeable {
 
 //==[ Rendering: Shapes ]===========================================================================
 	
-	public RC draw(Shape s) {
+	public GC3D draw(Shape s) {
 		Shape ts = new TransformedShape(viewport, modelViewProjection, s);
 		
 		if (stroke!=NULL_STROKE) 
@@ -529,7 +529,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC fill(Shape s) {
+	public GC3D fill(Shape s) {
 		applyState();
 		PathShape ps = new PathShape(device, new TransformedShape(viewport, modelViewProjection, s));
 		
@@ -577,7 +577,7 @@ public class RC implements Closeable {
 //==[ Rendering: Images ]===========================================================================
 
 	final static float EPSILON = 0.005f; 
-	public boolean drawImage(Image im, int x, int y) {
+	public GC3D drawImage(Image im, int x, int y) {
 		applyState();
 		ImageData id = im.getImageData();
 		int W = id.width, H = id.height;
@@ -587,29 +587,54 @@ public class RC implements Closeable {
 		gc.getTransform(t);
 		t.getElements(bt);
 		t.getElements(at);
-		
-		tiles.clear();
-		drawImageTiled(im, W,H, viewport, modelViewProjection, at, bt, 0, 0, W, H, tiles);
-		
-		if (tiles.size()>0)
-			quicksort(tiles);
-	
-		gc.setLineAttributes(new LineAttributes(1));
-		for (ImageTile s: tiles) {
-			t.setElements(s.n00, s.n10, s.n01, s.n11, s.n02, s.n12);
-			gc.setTransform(t);
-			gc.drawImage(im, s.sourceX, s.sourceY, s.width, s.height, s.destX, s.destY, s.width, s.height);
-//			gc.fillRectangle(s.destX, s.destY, s.width, s.height);
-//			gc.drawRectangle(s.destX, s.destY, s.width, s.height);
-		}
-		
-		t.setElements(bt[0], bt[1], bt[2], bt[3], bt[4], bt[5]);
-		gc.setTransform(t);
-		
-		restoreState();
-		return false;
-	}
 
+		
+		if (!isPerspective()) {
+			gc.getTransform(t);
+			t.multiply(approximateTransform(x, y, s));
+
+			gc.getTransform(s);
+			gc.setTransform(t);
+			
+			gc.drawImage(im, x, y);
+			
+			gc.setTransform(s);
+		} else {
+			tiles.clear();
+			drawImageTiled(im, W,H, viewport, modelViewProjection, at, bt, 0, 0, W, H, tiles);
+			
+			if (tiles.size()>0)
+				quicksort(tiles);
+		
+			gc.setLineAttributes(new LineAttributes(1));
+			for (ImageTile s: tiles) {
+				t.setElements(s.n00, s.n10, s.n01, s.n11, s.n02, s.n12);
+				gc.setTransform(t);
+				gc.drawImage(im, s.sourceX, s.sourceY, s.width, s.height, s.destX, s.destY, s.width, s.height);
+	//			gc.fillRectangle(s.destX, s.destY, s.width, s.height);
+	//			gc.drawRectangle(s.destX, s.destY, s.width, s.height);
+			}
+			
+			t.setElements(bt[0], bt[1], bt[2], bt[3], bt[4], bt[5]);
+			gc.setTransform(t);
+		}
+			
+		restoreState();
+		return this;
+	}
+	
+	
+	public boolean isPerspective() {
+		double EPSILON = 0.001; 
+		double m30 = modelViewProjection[3][0];
+		double m31 = modelViewProjection[3][1];
+		double m32 = modelViewProjection[3][2];
+		double m33 = modelViewProjection[3][3];
+		
+		return abs(m30/m33)>EPSILON || abs(m31/m33)>EPSILON || abs(m32/m33)>EPSILON;
+	}
+	
+	
 	private ArrayList<ImageTile> tiles = new ArrayList<ImageTile>();
 	
 	
@@ -784,17 +809,17 @@ public class RC implements Closeable {
 	
 //==[ Rendering: Text ]=============================================================================
 	
-	public RC drawText(String str, int x, int y) {
+	public GC3D drawText(String str, int x, int y) {
 		this.drawText(str, x, y, false);
 		return this;
 	}	
 	
-	public RC drawText(String str, int x, int y, boolean transparent) {
+	public GC3D drawText(String str, int x, int y, boolean transparent) {
 		drawText(str, x, y, DRAW_DELIMITER|DRAW_TAB|DRAW_TRANSPARENT);
 		return this;
 	}
 	
-	public RC drawText(String str, int x, int y, int flags) {
+	public GC3D drawText(String str, int x, int y, int flags) {
 		gc.getTransform(t);
 		t.multiply(approximateTransform(x, y, s));
 
@@ -820,7 +845,7 @@ public class RC implements Closeable {
 		return gc.getAdvanceWidth(ch);
 	}
 	
-	public RC drawString(String str, int x, int y, boolean transparent) {
+	public GC3D drawString(String str, int x, int y, boolean transparent) {
 		gc.getTransform(t);
 		t.multiply(approximateTransform(x, y, s));
 
@@ -833,7 +858,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC drawString(String str, int x, int y) {
+	public GC3D drawString(String str, int x, int y) {
 		this.drawString(str, x, y, false);
 		return this;
 	}	
@@ -865,18 +890,18 @@ public class RC implements Closeable {
 	private int frontPolygonMode = LINE;
 	
 	private double pointSize = 1;
-	public RC pointSize(double size) {
+	public GC3D pointSize(double size) {
 		this.pointSize = size;
 		return this;
 	}
 	
-	public RC polygonMode(int mode) {
+	public GC3D polygonMode(int mode) {
 		polygonMode(FRONT_AND_BACK, mode);
 		
 		return this;
 	}
 	
-	private RC polygonMode(int face, int mode) {
+	private GC3D polygonMode(int face, int mode) {
 		if ((face&FRONT)!=0)
 			frontPolygonMode = mode;
 		
@@ -886,31 +911,31 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC begin(VertexMode type) {
+	public GC3D begin(VertexMode type) {
 		p = cached.reset(viewport, modelViewProjection, type, pointSize);
 		return this;
 	}
 
 	
-	public RC vertex(int x, int y) { return addVertex(x, y, 0f, 1); }
-	public RC vertex(float x, float y) { return addVertex(x, y, 0f, 1); }
-	public RC vertex(double x, double y) { return addVertex((float)x, (float)y, 0f, 1); }
+	public GC3D vertex(int x, int y) { return addVertex(x, y, 0f, 1); }
+	public GC3D vertex(float x, float y) { return addVertex(x, y, 0f, 1); }
+	public GC3D vertex(double x, double y) { return addVertex((float)x, (float)y, 0f, 1); }
 	
-	public RC vertex(int x, int y, int z) { return addVertex(x, y, z, 1); }
-	public RC vertex(float x, float y, float z) { return addVertex(x, y, z, 1); }
-	public RC vertex(double x, double y, double z) { return addVertex((float)x, (float)y, (float)z, 1); }
+	public GC3D vertex(int x, int y, int z) { return addVertex(x, y, z, 1); }
+	public GC3D vertex(float x, float y, float z) { return addVertex(x, y, z, 1); }
+	public GC3D vertex(double x, double y, double z) { return addVertex((float)x, (float)y, (float)z, 1); }
 
-	public RC vertex(int x, int y, int z, int w ) { return addVertex(x, y, z, w); }
-	public RC vertex(float x, float y, float z, float w) { return addVertex(x, y, z, w); }
-	public RC vertex(double x, double y, double z, double w) { return addVertex((float)x, (float)y, (float)z, (float)w); }
+	public GC3D vertex(int x, int y, int z, int w ) { return addVertex(x, y, z, w); }
+	public GC3D vertex(float x, float y, float z, float w) { return addVertex(x, y, z, w); }
+	public GC3D vertex(double x, double y, double z, double w) { return addVertex((float)x, (float)y, (float)z, (float)w); }
 
-	private RC addVertex(float x, float y, float z, float w) {
+	private GC3D addVertex(float x, float y, float z, float w) {
 		p.addVertex(x, y, z, w); 
 		return this; 
 	}
 
 	
-	public RC end() {
+	public GC3D end() {
 		boolean strokeSet = stroke!=NULL_STROKE;
 		
 		switch (p.type) {
@@ -1111,7 +1136,7 @@ public class RC implements Closeable {
 //		lineAttributes = gc.getLineAttributes();
 	}
 	
-	private void copyState(RC rc) {
+	private void copyState(GC3D rc) {
 		this.font = rc.font;
 		this.alpha = rc.alpha;
 		this.fillRule = rc.fillRule;
@@ -1131,7 +1156,7 @@ public class RC implements Closeable {
 	final static private BasicStroke NULL_STROKE = new BasicStroke(1);
 	BasicStroke stroke = NULL_STROKE;
 	
-	public RC setStroke(BasicStroke stroke) {
+	public GC3D setStroke(BasicStroke stroke) {
 		if (stroke!=null)
 			this.stroke = stroke;
 		else
@@ -1143,7 +1168,7 @@ public class RC implements Closeable {
 		return stroke;
 	}
 	
-	public RC setLineAttributes(LineAttributes lineAttributes) {
+	public GC3D setLineAttributes(LineAttributes lineAttributes) {
 		this.stroke = NULL_STROKE;
 		this.lineAttributes = lineAttributes;
 		return this;
@@ -1154,7 +1179,7 @@ public class RC implements Closeable {
 	}
 	
 	
-	public RC setFont(Font font) {
+	public GC3D setFont(Font font) {
 		this.font = font;
 		return this;
 	}
@@ -1163,7 +1188,7 @@ public class RC implements Closeable {
 		return font;
 	}
 	
-	public RC setFillRule(int fillRule) {
+	public GC3D setFillRule(int fillRule) {
 		this.fillRule = fillRule;
 		return this;
 	}
@@ -1173,7 +1198,7 @@ public class RC implements Closeable {
 	}
 	
 	
-	public RC setAlpha(int alpha) {
+	public GC3D setAlpha(int alpha) {
 		this.alpha = alpha;
 		return this;
 	}
@@ -1182,7 +1207,7 @@ public class RC implements Closeable {
 		return alpha;
 	}
 	
-	public RC setForeground(RGB color) {
+	public GC3D setForeground(RGB color) {
 		if (foregroundCreated!=null)
 			foregroundCreated.dispose();
 		
@@ -1191,7 +1216,7 @@ public class RC implements Closeable {
 		return this;
 	}
 	
-	public RC setForeground(Color foreground) {
+	public GC3D setForeground(Color foreground) {
 		if (foregroundCreated!=foreground && foregroundCreated!=null) {
 			foregroundCreated.dispose();
 			foregroundCreated = null;
@@ -1206,7 +1231,7 @@ public class RC implements Closeable {
 	}
 	
 
-	public RC setBackground(RGB color) {
+	public GC3D setBackground(RGB color) {
 		if (backgroundCreated!=null)
 			backgroundCreated.dispose();
 		
@@ -1216,7 +1241,7 @@ public class RC implements Closeable {
 	}
 
 	
-	public RC setBackground(Color background) {
+	public GC3D setBackground(Color background) {
 		if (backgroundCreated!=background) {
 			backgroundCreated.dispose();
 			backgroundCreated = null;

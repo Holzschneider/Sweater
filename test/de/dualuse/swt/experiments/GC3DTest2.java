@@ -9,9 +9,9 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
-import de.dualuse.swt.graphics.RC;
+import de.dualuse.swt.graphics.GC3D;
 
-public class RCTest2 {
+public class GC3DTest2 {
 	public static void main(String[] args) {
 		
 		Application app = new Application();
@@ -25,7 +25,7 @@ public class RCTest2 {
 				long now = System.nanoTime();
 				
 				Point size = c.getSize();
-				try (RC rc = new RC(e.gc)) {
+				try (GC3D rc = new GC3D(e.gc)) {
 					
 					double a = size.y*1d/size.x, s = 1;
 					rc.viewport(0, 0, size.x, size.y);
@@ -38,7 +38,7 @@ public class RCTest2 {
 					rc.rotate( (now-start)/1e9, 1,0,0);
 					
 					rc.translate(-0.5,-0.5,-0.5);
-					rc.begin(RC.QUADS);
+					rc.begin(GC3D.QUADS);
 						for (int i=0;i<8;i++)
 							rc.vertex(-i>>1&1, +i>>1&1, +i>>2&1);
 					rc.end();

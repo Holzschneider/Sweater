@@ -12,11 +12,12 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.app.Application;
-import de.dualuse.swt.graphics.RC;
+import de.dualuse.swt.graphics.GC3D;
 
-public class RCTest {
+public class GC3DTest {
 
 	public static void main(String[] args) {
+		
 		
 		Application app = new Application();
 		Shell sh = new Shell(app);
@@ -31,7 +32,7 @@ public class RCTest {
 		BasicStroke bs = new BasicStroke(20f,BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1, new float[] { 50f}, 0);
 		BasicStroke cs = new BasicStroke(10f,BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 1, new float[] { 20f}, 0);
 		
-		Image im = new Image(app, RCTest.class.getResourceAsStream("vorfahrt.png"));
+		Image im = new Image(app, GC3DTest.class.getResourceAsStream("vorfahrt.png"));
 //		Image im = new Image(app, RCTest.class.getResourceAsStream("generic-cat.jpeg"));
 		ImageData id = im.getImageData();
 		
@@ -48,7 +49,7 @@ public class RCTest {
 			e.gc.setInterpolation(ON);
 //			e.gc.setTextAntialias(ON);
 			
-			RC rc = new RC(e.gc);
+			GC3D rc = new GC3D(e.gc);
 			
 			Point size = c.getSize();
 			rc.viewport(0, 0, size.x, size.y);
@@ -71,7 +72,7 @@ public class RCTest {
 
 			rc.setStroke(cs);
 			
-			rc.begin(RC.QUADS);
+			rc.begin(GC3D.QUADS);
 				rc.vertex(-1, -1, -1);
 				rc.vertex(-1, +1, -1);
 				rc.vertex(-1, +1, +1);
@@ -82,7 +83,7 @@ public class RCTest {
 				rc.vertex(+1, +1, +1);
 				rc.vertex(+1, -1, +1);
 			rc.end();
-
+			
 			
 			rc.setStroke(bs);
 //			Color col = new Color(e.display, 100, 0, 200);
@@ -124,9 +125,7 @@ public class RCTest {
 //			col.dispose();
 			rc.dispose();
 
-			
-			
-			c.redraw();
+			app.asyncExec(c::redraw);
 		});
 		
 		
