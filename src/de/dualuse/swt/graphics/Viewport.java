@@ -1,7 +1,9 @@
 package de.dualuse.swt.graphics;
 
+import java.util.Arrays;
+
 class Viewport {
-	public int x=+1, y=-1, width=2, height=-2;
+	public int x=-1, y=1, width=2, height=-2;
 	public boolean viewportClipping = false;
 	
 	public Viewport() {	}
@@ -14,7 +16,7 @@ class Viewport {
 		this.width = width;
 		this.height = height;
 		
-		viewportClipping = !(x==1 && y==-1 && width==2 && height==-2);
+		viewportClipping = !(x==-1 && y==1 && width==2 && height==-2);
 	}
 
 	public void transform(double[] coords, int offset, int count) {
@@ -40,8 +42,8 @@ class Viewport {
 			final float ynd = coords[o++];
 			
 			// see 'man glViewport' 
-			final float xw = (+xnd+1)*(width/2)+x;
-			final float yw = (-ynd+1)*(height/2)+y;
+			final float xw = (+xnd+1)*(width/2.0f)+x;
+			final float yw = (-ynd+1)*(height/2.0f)+y;
 			
 			coords[p++] = xw;
 			coords[p++] = yw;
@@ -57,15 +59,20 @@ class Viewport {
 	public float transformY( float ynd ) { return (-ynd+1)*(height/2)+y; } 
 	public float transformZ( float znd ) { return znd; }
 	
-//	public static void main(String[] args) {
-//		Viewport v = new Viewport();
-//		
+	public static void main(String[] args) {
+		Viewport v = new Viewport();
+		
 //		v.set(100, 100, 300, 400);
-//		
+		
 //		double coords[] = { -1,-1,   1,-1, -1,1, 1,1 };
 //		v.transform(coords, 0, 4);
-//		
-//		System.out.println(Arrays.toString(coords));
-//		
-//	}
+		
+		double coords[] = { 0,0, 200,300 };
+		v.transform(coords, 0, 2);
+		
+		
+		
+		System.out.println(Arrays.toString(coords));
+		
+	}
 }
