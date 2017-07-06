@@ -415,24 +415,14 @@ public class GC3D implements Closeable {
 		return this;
 	}
 	
-	public GC3D quaternion(double qx, double qy, double qz, double qw) {
-		float x = (float) qx, y = (float) qy, z = (float) qz, w = (float) qw;
-
-		final float ww = w*w, xx = x*x, yy= y*y, zz = z*z;
-		final float xy = x*y, xz = x*z, xw = x*w;
-		final float yz = y*z, yw = y*w, zw = z*w; 
-		
-		concat(modelViewProjection,
-			ww+xx-yy-zz, 2*xy-2*zw, 2*xz+2*yw, 0f,
-			2*xy+2*zw, ww-xx+yy-zz, 2*yz-2*xw, 0f,						
-			2*xz-2*yw, 2*yz+2*xw, ww-xx-yy+zz, 0f,
-			0.0f, 0.0f, 0.0f, 	ww+xx+yy+zz
-		);
-				
-		return this;
+	
+	public GC3D rotateRadians(double radians, double ax, double ay, double az) {
+		return rotate(radians*180/PI, ax, ay, az);
 	}
 	
-	public GC3D rotate(double theta, double ax, double ay, double az) {
+	public GC3D rotate(double degrees, double ax, double ay, double az) {
+		double theta = degrees*PI/180;
+		
 		final float s = (float) sin(theta), c = (float) cos(theta), t = 1-c, l = (float) sqrt(ax*ax+ay*ay+az*az);
 		final float x = (float) (ax/l), y = (float) (ay/l), z= (float) (az/l);
 		final float xz = x*z, xy = x*y, yz = y*z, xx=x*x, yy=y*y, zz=z*z;
@@ -506,16 +496,10 @@ public class GC3D implements Closeable {
 	}
 	
 	public GC3D translate(double tx, double ty) { translate(tx, ty, 0); return this;}
-	public GC3D rotate(double theta) { rotate(0,0,1,theta); return this;}
-	public GC3D rotate(double theta, double x, double y) { translate(x,y);rotate(theta);translate(-x,-y); return this;}
+	public GC3D rotate(double degrees) { rotate(degrees, 0,0,1); return this;}
+	public GC3D rotate(double degrees, double x, double y) { translate(x,y);rotate(degrees,0,0,1);translate(-x,-y); return this;}
 	public GC3D scale(double sx, double sy) { scale(sx,sy,1); return this; }
 	
-//	public RC shear(double shx, double shy) { modelviewprojection.mul(createMatrixWithTransform(AffineTransform.getRotateInstance(shx, shy))); }
-//	public RC transform(AffineTransform Tx) { modelviewprojection.mul(createMatrixWithTransform(Tx)); }
-//	public RC transform(ProjectiveTransform Tx) { modelviewprojection.mul(Tx.getMatrix(new Matrix4f())); }
-//	public RC setTransform(AffineTransform Tx) { modelviewprojection.set(createMatrixWithTransform(Tx)); }
-//	public RC setTransform(ProjectiveTransform Tx) { modelviewprojection.set(Tx.getMatrix()); }
-//	public ProjectiveTransform getTransform() { return new ProjectiveTransform(modelviewprojection); 
 
 //==[ Rendering: Shapes ]===========================================================================
 	

@@ -62,7 +62,7 @@ public class GC3DTest {
 			rc.translate(0, 0, -5);
 			
 			
-			double t = (System.nanoTime()-start)/1e9;
+			double t = (System.nanoTime()-start)/1e8;
 			rc.rotate( 1.0, 1,0,0 );
 			rc.rotate(10.2, 0,1,0 );
 			rc.rotate( t, 0,0,1);

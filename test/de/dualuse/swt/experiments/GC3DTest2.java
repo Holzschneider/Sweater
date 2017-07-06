@@ -34,8 +34,8 @@ public class GC3DTest2 {
 					
 					rc.translate(0, 0,-5);
 
-					rc.rotate( (now-start)/1e9, 0,0,1);
-					rc.rotate( (now-start)/1e9, 1,0,0);
+					rc.rotate( (now-start)/1e8, 0,0,1);
+					rc.rotate( (now-start)/1e8, 1,0,0);
 					
 					rc.translate(-0.5,-0.5,-0.5);
 					rc.begin(GC3D.QUADS);
@@ -44,8 +44,9 @@ public class GC3DTest2 {
 					rc.end();
 					
 				}
+
 				
-				c.redraw();
+				e.display.asyncExec( c::redraw );
 			}
 		});
 		
