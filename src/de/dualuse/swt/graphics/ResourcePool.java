@@ -33,9 +33,11 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Widget;
 
+import de.dualuse.util.logging.Silenced;
 
 
-public class ResourcePool implements Closeable, DisposeListener, Listener {
+
+public class ResourcePool implements Closeable, DisposeListener, Listener, Silenced {
 	static private class SharedResourceHolder {
 		private Object key;
 		private Resource reference;
@@ -70,6 +72,7 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 				new HashMap<Device, HashMap<Object, SharedResourceHolder>> ();
 	
 	private Display device;
+	private Widget owner;
 	private HashMap<Object, SharedResourceHolder> pool;
 	private ArrayList<SharedResourceHolder> shared;
 	private ArrayList<Resource> owned;
@@ -111,7 +114,10 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		
 		if (empty) {
 			this.device.removeListener(Dispose, this);
-			System.out.println("remove listener");
+			if (this.owner!=null)
+				this.owner.removeListener(Dispose, this);
+			
+			System.out.println("Remove ResourcePool Dispose Listener");
 		}
 
 		return this;
@@ -122,8 +128,13 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		this(Display.getCurrent()); 
 	}	
 	
-	public ResourcePool(Display d) { 
+	public ResourcePool(Display d) {
+		this(d,null);
+	}
+	
+	public ResourcePool(Display d, Widget w) { 
 		this.device = d; 
+		this.owner = w;
 		
 		synchronized(global) {
 			if (!global.containsKey(d))
@@ -139,8 +150,7 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	}
 
 	public ResourcePool(Widget w) {
-		this(w.getDisplay());
-		//XXX LEAKAGE!!
+		this(w.getDisplay(),w);
 	}
 	
 	//////
@@ -177,7 +187,11 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 	
 	@Override
 	protected void finalize() throws Throwable {
-		device.asyncExec(this::dispose);
+		device.asyncExec(new Runnable() {
+			public void run() {
+				dispose();
+			}
+		});
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -192,7 +206,10 @@ public class ResourcePool implements Closeable, DisposeListener, Listener {
 		
 		if (empty) {
 			this.device.addListener(Dispose, this);
-			System.out.println("Add Listener");
+			if (this.owner!=null)
+				this.owner.addListener(Dispose, this);
+			
+			System.out.println("Add ResourcePool Dispose Listener");
 		}
 		
 		empty = false;

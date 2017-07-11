@@ -6,13 +6,16 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.swt.SWT;
-
+import org.eclipse.swt.graphics.DeviceData;
+import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Shell;
 
 import de.dualuse.swt.widgets.AutoShell;
 
 public abstract class MultiDocumentApplication extends Application {
+	
+	static final String DEFAULT_DOCTYPE = "Document";
 	
 	public interface ApplicationListener {
 		
@@ -28,10 +31,41 @@ public abstract class MultiDocumentApplication extends Application {
 	List<DocumentWindow> openDocuments = new ArrayList<DocumentWindow>();
 	List<File> recentDocuments = new ArrayList<File>();
 	
+	boolean canCreate;			// can create new documents
+	boolean canOpen;			// can open documents
+	boolean directoryDocuments;	// can open directories as documents
+	
+	String lastDir;				// last directory
+	String docType;
+	
 //==[ Constructor ]=================================================================================
 	
 	public MultiDocumentApplication(String name, String version) {
-		super(name, version);
+		this(null, name, version, DEFAULT_DOCTYPE, true, true);
+	}
+	
+	public MultiDocumentApplication(DeviceData data, String name, String version) {
+		this(name, version, DEFAULT_DOCTYPE, true, true);
+	}
+	
+	public MultiDocumentApplication(String name, String version, String docType) {
+		this(null, name, version, docType, true, true);
+	}
+	
+	public MultiDocumentApplication(DeviceData data, String name, String version, String docType) {
+		this(data, name, version, docType, true, true);
+	}
+	
+	public MultiDocumentApplication(String name, String version, String docType, boolean canCreate, boolean canOpen) {
+		this(null, name, version, docType, canCreate, canOpen);
+	}
+	
+	public MultiDocumentApplication(DeviceData data, String name, String version, String docType, boolean canCreate, boolean canOpen) {
+		super(data, name, version);
+		
+		this.canCreate = canCreate;
+		this.canOpen = canOpen;
+		this.docType = docType;
 		
 		if (this.getMenuBar() == null) {
 			
@@ -47,7 +81,7 @@ public abstract class MultiDocumentApplication extends Application {
 		}
 	}
 	
-//==[ Getter ]======================================================================================
+//==[ Setter & Getter ]=============================================================================
 	
 	public List<DocumentWindow> getOpenWindows() {
 		checkDevice();
@@ -59,6 +93,30 @@ public abstract class MultiDocumentApplication extends Application {
 		return new ArrayList<File>(recentDocuments);
 	}
 	
+	public boolean canCreate() {
+		return canCreate;
+	}
+	
+	public boolean canOpen() {
+		return canOpen;
+	}
+	
+	public void setDirectoryDocuments(boolean directoryDocuments) {
+		this.directoryDocuments = directoryDocuments;
+	}
+	
+	public boolean isDirectoryDocuments() {
+		return this.directoryDocuments;
+	}
+	
+	public void setLastDirectory(String path) {
+		this.lastDir = path;
+	}
+	
+	public String getLastDirectory() {
+		return lastDir;
+	}
+	
 //==[ Application Actions ]=========================================================================
 	
 	// Create new document
@@ -66,7 +124,7 @@ public abstract class MultiDocumentApplication extends Application {
 		checkDevice();
 		
 		DocumentWindow newShell = newDocument();
-		// addDocumentWindow(newShell);
+
 		newShell.open();
 		
 		addDocumentWindow(newShell);
@@ -78,18 +136,45 @@ public abstract class MultiDocumentApplication extends Application {
 		
 		try (AutoShell hiddenShell = new AutoShell()){
 			
-			FileDialog dialog = new FileDialog(hiddenShell);
-			String result = dialog.open();
-			if (result==null) return;
-			
-			File chosenFile = new File(result);
-			
-			DocumentWindow openedShell = openDocument(chosenFile);
-			// addDocumentWindow(openedShell);
-			
-			openedShell.open();
-			
-			addDocumentWindow(openedShell);
+			if (directoryDocuments) {
+
+				DirectoryDialog dialog = new DirectoryDialog(hiddenShell);
+				dialog.setText("Open " + docType);
+				if (lastDir!=null) dialog.setFilterPath(lastDir);
+				
+				String result = dialog.open();
+				if (result==null) return;
+				
+				File chosenFile = new File(result);
+				lastDir = chosenFile.getParentFile().getAbsolutePath();
+				
+				DocumentWindow openedShell = openDocument(chosenFile);
+				if (openedShell != null) {
+					
+					openedShell.open();
+					addDocumentWindow(openedShell);
+					
+				}
+
+			} else {
+
+				FileDialog dialog = new FileDialog(hiddenShell);
+				dialog.setText("Open " + docType);
+				if (lastDir!=null) dialog.setFilterPath(lastDir);
+				
+				String result = dialog.open();
+				if (result==null) return;
+				
+				File chosenFile = new File(result);
+				lastDir = chosenFile.getParentFile().getAbsolutePath();
+				
+				DocumentWindow openedShell = openDocument(chosenFile);
+				
+				openedShell.open();
+				
+				addDocumentWindow(openedShell);
+				
+			}
 			
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -166,9 +251,9 @@ public abstract class MultiDocumentApplication extends Application {
 
 //==[ Test-Main ]===================================================================================
 	
-	public static void main_(String[] args) {
+	public static void main(String[] args) {
 
-		MultiDocumentApplication app = new MultiDocumentApplication("Example Application", "v1.1.45") {
+		MultiDocumentApplication app = new MultiDocumentApplication("Example Application", "v1.1.45", "Document") {
 
 			@Override protected DocumentWindow emptyWindow() {
 				return null;

@@ -57,7 +57,7 @@ public class BorderLayout extends Layout {
 	}
 	
 	@Override protected Point computeSize(Composite composite, int wHint, int hHint, boolean flushCache) {
-		System.out.println("computeSize(" + composite + ", " + wHint + ", " + hHint + ", " + flushCache + ")");
+//		System.out.println("computeSize(" + composite + ", " + wHint + ", " + hHint + ", " + flushCache + ")");
 		
 		if (wHint != SWT.DEFAULT && hHint != SWT.DEFAULT)
 			return new Point(wHint, hHint);
@@ -123,13 +123,13 @@ public class BorderLayout extends Layout {
 		if (hHint == SWT.DEFAULT)
 			height = Math.max(Math.max(eh, ch), wh) + nh + sh;
 		
-		System.out.println("\t -> computed prefSize: " + width + ", " + height);
+//		System.out.println("\t -> computed prefSize: " + width + ", " + height);
 		
 		return new Point(width, height);	
 	}
 	
 	@Override protected void layout(Composite composite, boolean flushCache) {
-		System.out.println("layout(" + composite + ", " + flushCache + ")");
+//		System.out.println("layout(" + composite + ", " + flushCache + ")");
 		
 		flushCache = true; // XXX resizing the window doesn't flush the cache (linux/awesomewm)
 		if (flushCache)
@@ -138,7 +138,7 @@ public class BorderLayout extends Layout {
 		Rectangle bounds = composite.getBounds();
 		Control[] children = composite.getChildren();
 
-		System.out.println("layout: " + bounds + " (" + flushCache + ")");
+//		System.out.println("layout: " + bounds + " (" + flushCache + ")");
 		
 //		Control cCenter=null, cNorth=null, cEast=null, cSouth=null, cWest=null;
 //		
@@ -161,53 +161,69 @@ public class BorderLayout extends Layout {
 		Control cEast = findControl(children, EAST);
 		Control cSouth = findControl(children, SOUTH);
 		Control cWest = findControl(children, WEST);
+
+		// Clienat Area Info
+		Rectangle client = composite.getClientArea();
+		int x1 = client.x;
+		int x2 = client.x + client.width;
+		int y1 = client.y;
+		int y2 = client.y + client.height;
+		int w = x2 - x1;
+		int h = y2 - y1;
 		
 		int top = 0;
 		if (cNorth != null) {
 			Point prefSize = last[N]!=null ? pref[N] : cNorth.computeSize(bounds.width, SWT.DEFAULT);
-			if (prefSize.y > bounds.height) prefSize.y = bounds.height;
+			if (prefSize.y > bounds.height) prefSize.y = h; // bounds.height;
 			
 			cache(N, cNorth, prefSize);
 			
-			cNorth.setBounds(0, 0, prefSize.x, prefSize.y);
+			// cNorth.setBounds(0, 0, prefSize.x, prefSize.y); // ignores client-area
+			cNorth.setBounds(x1, y1, prefSize.x, prefSize.y);
 			top = prefSize.y;
 		}
 		
 		int bottom = 0;
 		if (cSouth != null) {
 			Point prefSize = last[S]!=null ? pref[S] : cSouth.computeSize(bounds.width, SWT.DEFAULT);
-			if (prefSize.y > bounds.height) prefSize.y = bounds.height;
+			if (prefSize.y > bounds.height) prefSize.y = h; // bounds.height;
 			
 			cache(S, cSouth, prefSize);
 			
-			cSouth.setBounds(0, bounds.height - prefSize.y, prefSize.x, prefSize.y);
+			// cSouth.setBounds(0, bounds.height - prefSize.y, prefSize.x, prefSize.y);  // ignores client-area
+			cSouth.setBounds(x1, y2 - prefSize.y, prefSize.x, prefSize.y);
 			bottom = prefSize.y;
 		}
 		
 		int left = 0;
 		if (cWest != null) {
 			Point prefSize = last[W]!=null ? pref[W] : cWest.computeSize(SWT.DEFAULT, bounds.height);
-			if (prefSize.x > bounds.width) prefSize.x = bounds.width;
+			if (prefSize.x > bounds.width) prefSize.x = w; // bounds.width;
 			
 			cache(W, cWest, prefSize);
 			
-			cWest.setBounds(0, 0, prefSize.x, bounds.height);
+			// cWest.setBounds(0, 0, prefSize.x, bounds.height); // ignores client-area
+			cWest.setBounds(x1, y1, prefSize.x, h);
 			left = prefSize.x;
 		}
 		
 		int right = 0;
 		if (cEast != null) {
 			Point prefSize = last[E]!=null ? pref[E] : cEast.computeSize(SWT.DEFAULT, bounds.height);
-			if (prefSize.x > bounds.width) prefSize.x = bounds.width;
+			if (prefSize.x > bounds.width) prefSize.x = w; // bounds.width;
 			
 			cache(E, cEast, prefSize);
 			
-			cEast.setBounds(bounds.width - prefSize.x, 0, prefSize.x, bounds.height);
+			// cEast.setBounds(bounds.width - prefSize.x, 0, prefSize.x, bounds.height); // ignores client-area
+			cEast.setBounds(x2 - prefSize.x, y1, prefSize.x, h);
 			right = prefSize.x;
 		}
 		
 		if (cCenter != null) {
-			cCenter.setBounds(left, top, bounds.width-left-right, bounds.height-top-bottom);
+			
+			// cCenter.setBounds(left, top, bounds.width-left-right, bounds.height-top-bottom); // ignores client-area
+			cCenter.setBounds(x1+left, y1+top, w-left-right, h-top-bottom);
+			
 		}
 		
 	}
