@@ -4,6 +4,8 @@ import static org.eclipse.swt.SWT.*;
 
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import org.eclipse.swt.SWT;
@@ -18,7 +20,6 @@ import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Pattern;
 import org.eclipse.swt.graphics.Transform;
-import org.eclipse.swt.internal.cocoa.OS;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
@@ -30,7 +31,7 @@ import org.eclipse.swt.widgets.Shell;
 public class DrawPerformanceTest {
 	static double scale = 1;
 	
-	static long setWantsLayer = OS.sel_registerName("setWantsLayer:");
+//	static long setWantsLayer = OS.sel_registerName("setWantsLayer:");
 //	static long layer = OS.sel_registerName("layer");
 //	static long setContents = OS.sel_registerName("setContents:");
 //	static long setBackgroundColor = OS.sel_registerName("setBackgroundColor");
@@ -42,38 +43,39 @@ public class DrawPerformanceTest {
 		sh.setLayout(new FillLayout());
 		
 		Canvas c = new Canvas(sh,NO_BACKGROUND);
-//		c.setRedraw(false);
-//		sh.setRedraw(false);
+		
+		//////////////////////
+		
+//		OS.objc_msgSend(c.view.id, OS.sel_registerName("setWantsLayer:"), true);
+		
+//		OS.objc_msgSend(id, sel, arg0)
+		try {
+						
+			Class<?> osClass = Class.forName("org.eclipse.swt.internal.cocoa.OS");
+			Method sel_registerNameMethod = osClass.getMethod("sel_registerName", String.class);
+			Method objc_msgSendMethod = osClass.getMethod("objc_msgSend", long.class, long.class, boolean.class);
+			Object setWantsLayerSelector = sel_registerNameMethod.invoke(osClass, "setWantsLayer:");
+			
+			Class<?> canvasClass = Canvas.class;
+			Field viewField = canvasClass.getField("view");
+			Object viewValue = viewField.get(c);
+			Class<?> viewClass = viewValue.getClass();
+			Field idField = viewClass.getField("id");
+			Object idValue = idField.get(viewValue);
+			
+			objc_msgSendMethod.invoke(osClass, idValue, setWantsLayerSelector, true);
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
+		
+//		org.eclipse.swt.internal.cocoa.OS
 		
 		
 		//////////////////////
 		
-		OS.objc_msgSend(c.view.id, OS.sel_registerName("setWantsLayer:"), true);
-//		long layer_id = OS.objc_msgSend(c.view.id, layer);
 		
-		
-		//////////////////////
-		
-		
-//		OS.objc_msgSend(this.id, OS.sel_addSubview_positioned_relativeTo_, aView != null ? aView.id : 0, place, otherView != null ? otherView.id : 0);
-//		OS.objc_msgSend(c.view.id, )
 		
 		Image im = new Image(d, new ImageData("/Library/Desktop Pictures/El Capitan.jpg"));
-		
-//		Image im = new Image(d,  1000,1000);
-//		im.handle.setCacheMode(0);
-//
-//		NSArray a = im.handle.representations();
-//		id obj = a.objectAtIndex(a.count()-1);
-//		NSBitmapImageRep bir = new NSBitmapImageRep(obj);
-//		
-//		NSString s = bir.description();
-//		
-////		NSString s = im.handle.representations().description();
-//		byte[] bytes = new byte[(int)s.length()];
-//		C.memmove( bytes, s.UTF8String(), s.length() );
-//		System.out.println( new String(bytes) );
-		
 		
 		AffineTransform at = new AffineTransform();
 		
