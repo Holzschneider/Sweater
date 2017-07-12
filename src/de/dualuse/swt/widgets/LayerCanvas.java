@@ -268,8 +268,8 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 			Object idValue = idField.get(viewValue);
 			
 			objc_msgSendMethod.invoke(osClass, idValue, setWantsLayerSelector, true);
-		} catch (Exception e1) {
-			e1.printStackTrace();
+		} catch (Exception e1) { // silent osx bob
+			// e1.printStackTrace();
 		}
 	}
 	
