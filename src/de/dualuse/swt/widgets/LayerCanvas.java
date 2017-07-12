@@ -2,6 +2,8 @@ package de.dualuse.swt.widgets;
 
 import static org.eclipse.swt.SWT.*;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 import org.eclipse.swt.graphics.LineAttributes;
@@ -28,6 +30,7 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	
 	public LayerCanvas(Composite parent, int style) {
 		super(parent, style);
+		enablePlatformTweaks();
 		
 		super.addListener(Paint, this); 
 		//XXX suggestion: add Layers as paint listeners upon addLayer and remove them upon removelayer, for paint order
@@ -235,6 +238,48 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	@Override public <T> T transform(double x, double y, Layer b, TransformedCoordinate<T> i) {
 		return b.invert(x, y, i);
 	}
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	private void enablePlatformTweaks() {
+		try {
+			
+			Class<?> osClass = Class.forName("org.eclipse.swt.internal.cocoa.OS");
+			Method sel_registerNameMethod = osClass.getMethod("sel_registerName", String.class);
+			Method objc_msgSendMethod = osClass.getMethod("objc_msgSend", long.class, long.class, boolean.class);
+			Object setWantsLayerSelector = sel_registerNameMethod.invoke(osClass, "setWantsLayer:");
+			
+			Class<?> canvasClass = Canvas.class;
+			Field viewField = canvasClass.getField("view");
+			Object viewValue = viewField.get(this);
+			Class<?> viewClass = viewValue.getClass();
+			Field idField = viewClass.getField("id");
+			Object idValue = idField.get(viewValue);
+			
+			objc_msgSendMethod.invoke(osClass, idValue, setWantsLayerSelector, true);
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	
 	
 }
 
