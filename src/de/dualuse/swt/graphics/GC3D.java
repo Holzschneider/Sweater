@@ -607,8 +607,14 @@ public class GC3D implements Closeable {
 		return this;
 	}
 	
-	
+	boolean forcePerspective = false;
+	public void setForcePerspective(boolean forcePerspective) {
+		this.forcePerspective = forcePerspective;
+	}
+	// XXX returns false despite the matrix having projective components 
 	public boolean isPerspective() {
+		if (forcePerspective) return true;
+		
 		double EPSILON = 0.001; 
 		double m30 = modelViewProjection[3][0];
 		double m31 = modelViewProjection[3][1];
