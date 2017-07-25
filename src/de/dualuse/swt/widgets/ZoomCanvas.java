@@ -54,7 +54,6 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	public boolean zoomY = true;
 	
 	private Transform zoomTransform = new Transform(getDisplay());
-	private Transform tmpTransform = new Transform(getDisplay());
 	
 	private Rectangle lastSize = null;
 
@@ -316,24 +315,21 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		float zx = (float)Math.hypot(scx, shy);
 		float zy = (float)Math.hypot(scy, shx);
 		
-		setTransform(tmpTransform, zoomTransform);
-		
-		tmpTransform.translate( deltaX / zx, deltaY / zy );
+		zoomTransform.translate( deltaX / zx, deltaY / zy );
 		respectCanvasBoundsAndUpdateScrollbars();
+		setCanvasTransform(zoomTransform);
 
-		tmpTransform.getElements(elements);
+		zoomTransform.getElements(elements);
 		float tx_ = elements[4], ty_ = elements[5];
 		
 		int dx = (int)((tx_-tx) / zx);
 		int dy = (int)((ty_-ty) / zy);
 		
+		setLocation(p, q);
+		
 		Point size = getSize();
 		System.out.println("scroll(" + dx + ", " + dy + ", 0, 0, " + size.x + ", " + size.y + ",false); (mouseDragged)");
 		this.scroll(dx, dy, 0, 0, size.x, size.y,false);
-
-		setLocation(p, q);
-		setTransform(zoomTransform, tmpTransform);
-		setCanvasTransform(zoomTransform);
 	}
 
 	private void mouseScrolled(Event e) {
@@ -365,12 +361,6 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	private static void setLocation(float[] to, float[] from) {
 		to[0] = from[0];
 		to[1] = from[1];
-	}
-	
-	static float[] tmpElements = new float[6];
-	private static void setTransform(Transform to, Transform from) {
-		from.getElements(tmpElements);
-		to.setElements(tmpElements[0], tmpElements[1], tmpElements[2], tmpElements[3], tmpElements[4], tmpElements[5]);
 	}
 
 //==[ Rendering ]===================================================================================
