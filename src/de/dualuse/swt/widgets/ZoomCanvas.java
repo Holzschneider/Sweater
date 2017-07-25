@@ -19,6 +19,15 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
 
+/*
+ * Under linux there always seems to be a full repaint.
+ * 
+ * Under OS X scroll() only redraws the newly uncovered regions, but recently:
+ * 		- the old regions are not updated/moved (parent LayerCanvas)
+ * or
+ * 		- the old regions are updated/moved, but if the movement is too fast there are gaps (parent Canvas)
+ * 
+ */
 
 public class ZoomCanvas extends Canvas implements PaintListener, Listener, ControlListener {
 	
@@ -45,6 +54,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	public boolean zoomY = true;
 	
 	private Transform zoomTransform = new Transform(getDisplay());
+	private Transform tmpTransform = new Transform(getDisplay());
 	
 	private Rectangle lastSize = null;
 
@@ -306,21 +316,24 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		float zx = (float)Math.hypot(scx, shy);
 		float zy = (float)Math.hypot(scy, shx);
 		
-		zoomTransform.translate( deltaX / zx, deltaY / zy );
+		setTransform(tmpTransform, zoomTransform);
+		
+		tmpTransform.translate( deltaX / zx, deltaY / zy );
 		respectCanvasBoundsAndUpdateScrollbars();
-		setCanvasTransform(zoomTransform);
 
-		zoomTransform.getElements(elements);
+		tmpTransform.getElements(elements);
 		float tx_ = elements[4], ty_ = elements[5];
 		
-		int dx = (int)(tx_-tx);
-		int dy = (int)(ty_-ty);
-		
-		setLocation(p, q);
+		int dx = (int)((tx_-tx) / zx);
+		int dy = (int)((ty_-ty) / zy);
 		
 		Point size = getSize();
 		System.out.println("scroll(" + dx + ", " + dy + ", 0, 0, " + size.x + ", " + size.y + ",false); (mouseDragged)");
 		this.scroll(dx, dy, 0, 0, size.x, size.y,false);
+
+		setLocation(p, q);
+		setTransform(zoomTransform, tmpTransform);
+		setCanvasTransform(zoomTransform);
 	}
 
 	private void mouseScrolled(Event e) {
@@ -344,14 +357,20 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		redraw();
 	}
 	
-	private void setLocation(float[] arr, Event src) {
+	private static void setLocation(float[] arr, Event src) {
 		arr[0] = src.x;
 		arr[1] = src.y;
 	}
 	
-	private void setLocation(float[] to, float[] from) {
+	private static void setLocation(float[] to, float[] from) {
 		to[0] = from[0];
 		to[1] = from[1];
+	}
+	
+	static float[] tmpElements = new float[6];
+	private static void setTransform(Transform to, Transform from) {
+		from.getElements(tmpElements);
+		to.setElements(tmpElements[0], tmpElements[1], tmpElements[2], tmpElements[3], tmpElements[4], tmpElements[5]);
 	}
 
 //==[ Rendering ]===================================================================================
