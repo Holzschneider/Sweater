@@ -34,7 +34,7 @@ public class ZoomCanvasTest {
 		ZoomCanvas zc = new ZoomCanvas(shell, NONE|H_SCROLL|V_SCROLL);
 		zc.addPaintListener((e) -> {
 			
-			System.out.println("Painting");
+			// System.out.println("Painting");
 			
 			e.gc.setAntialias(SWT.OFF);
 			e.gc.setInterpolation(SWT.NONE);

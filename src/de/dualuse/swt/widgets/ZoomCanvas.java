@@ -156,11 +156,12 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 
 //==[ Event Handling ]==============================================================================
 
+	// XXX on Linux at least a lot of paint calls get triggered that only update the scroll bar 
+	//	   region (after the viewport was moved) (caused by a OS dependent graphical effect for the scroll bar?)
+	
 	// Listener interface (only gets scroll events if parent is a plain canvas, as only added for scroll bar events),
 	// Gets more events when child of LayerCanvas, as LayerCanvas registers itself as listener for mouse&paint events as well
 	@Override final public void handleEvent(Event event) {
-		
-		System.out.println("handleEvent(event)");
 		
 		if (event.type==Paint)
 			for (Listener l: listeners)
@@ -297,7 +298,23 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	private void mouseUp(Event e) {
 		dragActive = false;
 	}
-		
+	
+	/*
+	 * XXX
+	 * scroll() processes all pending paint requests, so that the copied region is up to date.
+	 * Is the problem that these pending paint requests (for the "old" position) then use the new canvas transform?
+	 * as it was already modified before scroll() is called?)
+	 * 
+	 * But if we call "scroll()" first and only then update the canvas transform, when will the repaint listener be called?
+	 * After scroll is done or as part of the scroll() call as well? Because the repaint region should already use the new transform.
+	 * 
+	 * Calling 'update()', which also forces all pending paint requests to be processed, before setting the transform
+	 * reduces the visual glitches a lot (but minimal 1pixel displacements can still be seen at times with large movements).
+	 * It also probably reduces performance.
+	 * 
+	 * Test: Only compute 'dx' and 'dy' for scroll() and only update the zoom transform after the call to 'scroll()'.
+	 * 
+	 */
 	private void mouseDragged(Event e) {
 		setLocation(q, e);
 		
@@ -315,15 +332,20 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		float zx = (float)Math.hypot(scx, shy);
 		float zy = (float)Math.hypot(scy, shx);
 		
+		
 		zoomTransform.translate( deltaX / zx, deltaY / zy );
-		respectCanvasBoundsAndUpdateScrollbars();
-		setCanvasTransform(zoomTransform);
+		
+//		respectCanvasBoundsAndUpdateScrollbars();
+//		setCanvasTransform(zoomTransform);
 
 		zoomTransform.getElements(elements);
 		float tx_ = elements[4], ty_ = elements[5];
 		
-		int dx = (int)((tx_-tx) / zx);
-		int dy = (int)((ty_-ty) / zy);
+		int dx = (int)(tx_-tx);
+		int dy = (int)(ty_-ty);
+		
+		System.out.println("dx: " + dx);
+		System.out.println("deltaX/zx: " + (deltaX/zx));
 		
 		setLocation(p, q);
 		
