@@ -203,6 +203,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		// USE .scroll instead -> so repaint will be clipped to the area that's new
 		
 		Point size = getSize();
+		System.out.println("scroll(" + screenX + ", " + screenY + ", 0, 0, " + size.x + ", " + size.y + ",false);");
 		this.scroll(screenX, screenY, 0, 0, size.x, size.y, false);
 //		redraw();
 	}
@@ -306,6 +307,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		setLocation(p, q);
 		
 		Point size = getSize();
+		System.out.println("scroll(" + dx + ", " + dy + ", 0, 0, " + size.x + ", " + size.y + ",false);");
 		this.scroll(dx, dy, 0, 0, size.x, size.y,false);
 	}
 
