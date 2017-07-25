@@ -13,13 +13,14 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Transform;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
 
 
-public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, ControlListener {
+public class ZoomCanvas extends Canvas implements PaintListener, Listener, ControlListener {
 	
 	private ArrayList<Listener> listeners = new ArrayList<Listener>();
 	private ArrayList<PaintListener> paintListeners = new ArrayList<PaintListener>(); 
@@ -58,11 +59,14 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 
 		zoomTransform = new Transform(getDisplay());
 		
-//		super.addListener(Paint, this);
-//		super.addListener(MouseWheel, this);
-//		super.addListener(MouseMove, this);
-//		super.addListener(MouseDown, this);
-//		super.addListener(MouseUp, this);
+		///// XXX
+		// only if child class of plain canvas, not layer canvas?
+		super.addListener(Paint, this);
+		super.addListener(MouseWheel, this);
+		super.addListener(MouseMove, this);
+		super.addListener(MouseDown, this);
+		super.addListener(MouseUp, this);
+		/////
 		
 		super.addPaintListener(this);
 		addControlListener(this);
@@ -81,12 +85,16 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		}
 	}
 
-	@Override protected void onDispose(Event event) {
-		super.onDispose(event);
-		zoomTransform.dispose();
-		at.dispose();
-		bt.dispose();
-	}
+//	XXX
+//	@Override protected void onDispose(Event event) {
+//		super.onDispose(event);
+//		zoomTransform.dispose();
+//		at.dispose();
+//		bt.dispose();
+//	}
+	
+//	XXX
+	public void setCanvasTransform(Transform matrix) {}
 	
 //==[ Setter/Getter ]===============================================================================
 
@@ -139,14 +147,18 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 
 //==[ Event Handling ]==============================================================================
 
+	// Listener interface (only gets scroll events if parent is a plain canvas, as only added for scroll bar events),
+	// Gets more events when child of LayerCanvas, as LayerCanvas registers itself as listener for mouse&paint events as well
 	@Override final public void handleEvent(Event event) {
+		
+		System.out.println("handleEvent(event)");
 		
 		if (event.type==Paint)
 			for (Listener l: listeners)
 				if (event.doit)
 					l.handleEvent(event);
 		
-		super.handleEvent(event);
+//		super.handleEvent(event); XXX for super class LayerCanvas, causes painting
 		
 		switch (event.type) {
 			
@@ -176,7 +188,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 				scrollbarScrolled(event);
 		}
 	}
-
+	
 //==[ Events: Scrollbars Manipulated ]==============================================================
 		
 	private void scrollbarScrolled(Event event) {
@@ -203,7 +215,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		// USE .scroll instead -> so repaint will be clipped to the area that's new
 		
 		Point size = getSize();
-		System.out.println("scroll(" + screenX + ", " + screenY + ", 0, 0, " + size.x + ", " + size.y + ",false);");
+		System.out.println("scroll(" + screenX + ", " + screenY + ", 0, 0, " + size.x + ", " + size.y + ",false); (scrollbarScrolled)");
 		this.scroll(screenX, screenY, 0, 0, size.x, size.y, false);
 //		redraw();
 	}
@@ -307,7 +319,7 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		setLocation(p, q);
 		
 		Point size = getSize();
-		System.out.println("scroll(" + dx + ", " + dy + ", 0, 0, " + size.x + ", " + size.y + ",false);");
+		System.out.println("scroll(" + dx + ", " + dy + ", 0, 0, " + size.x + ", " + size.y + ",false); (mouseDragged)");
 		this.scroll(dx, dy, 0, 0, size.x, size.y,false);
 	}
 

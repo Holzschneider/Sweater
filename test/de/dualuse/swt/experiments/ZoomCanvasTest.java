@@ -30,8 +30,12 @@ public class ZoomCanvasTest {
 		System.out.println( image.getImageData().height );
 		
 		Random r = new Random(1337);
+		
 		ZoomCanvas zc = new ZoomCanvas(shell, NONE|H_SCROLL|V_SCROLL);
 		zc.addPaintListener((e) -> {
+			
+			System.out.println("Painting");
+			
 			e.gc.setAntialias(SWT.OFF);
 			e.gc.setInterpolation(SWT.NONE);
 			e.gc.setLineWidth(1);
@@ -43,7 +47,7 @@ public class ZoomCanvasTest {
 			e.gc.setBackground(c);
 			e.gc.fillRectangle(0, 0, image.getImageData().width, image.getImageData().height);
 			c.dispose();
-			
+		
 		});
 		
 		zc.setCanvasBounds(0, 0, 1129, 750); //1f/0f);
