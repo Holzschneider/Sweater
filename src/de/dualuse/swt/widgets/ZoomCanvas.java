@@ -27,6 +27,11 @@ import org.eclipse.swt.widgets.ScrollBar;
  * or
  * 		- the old regions are updated/moved, but if the movement is too fast there are gaps (parent Canvas)
  * 
+ * OS X:
+ * 		- if usb mouse connected (even if controlled by touchpad): partial redraw with gaps
+ * 		- if no usb mouse connected: always complete redraw (with no region copying)
+ * 		  (so no visual artifacts, but also no performance gains as everything has to be repainted)
+ * 
  */
 
 public class ZoomCanvas extends Canvas implements PaintListener, Listener, ControlListener {
