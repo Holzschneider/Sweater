@@ -315,6 +315,7 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 	 * Test: Only compute 'dx' and 'dy' for scroll() and only update the zoom transform after the call to 'scroll()'.
 	 * 
 	 */
+	public int zoomTransformModCounter = 0;
 	private void mouseDragged(Event e) {
 		setLocation(q, e);
 		
@@ -335,9 +336,11 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		
 		zoomTransform.translate( deltaX / zx, deltaY / zy );
 		
-//		respectCanvasBoundsAndUpdateScrollbars();
-//		setCanvasTransform(zoomTransform);
+		respectCanvasBoundsAndUpdateScrollbars();
+		setCanvasTransform(zoomTransform);
 
+		zoomTransformModCounter++;
+		
 		zoomTransform.getElements(elements);
 		float tx_ = elements[4], ty_ = elements[5];
 		
@@ -350,8 +353,9 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		setLocation(p, q);
 		
 		Point size = getSize();
-		System.out.println("scroll(" + dx + ", " + dy + ", 0, 0, " + size.x + ", " + size.y + ",false); (mouseDragged)");
+		System.out.println("pre-scroll(" + dx + ", " + dy + ", 0, 0, " + size.x + ", " + size.y + ",false); (mouseDragged) (" + zoomTransformModCounter +")");
 		this.scroll(dx, dy, 0, 0, size.x, size.y,false);
+		System.out.println("post-scroll(" + zoomTransformModCounter + ")");
 	}
 
 	private void mouseScrolled(Event e) {
@@ -392,6 +396,8 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 
 	// PaintListener
 	@Override final public void paintControl(PaintEvent e) {
+		
+		System.out.println("paintControl(" + zoomTransformModCounter + ")");
 		
 		GC gc = e.gc;
 	

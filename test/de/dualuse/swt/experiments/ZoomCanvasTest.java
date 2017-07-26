@@ -36,6 +36,8 @@ public class ZoomCanvasTest {
 			
 			// System.out.println("Painting");
 			
+			System.out.println("paintListener(" + zc.zoomTransformModCounter + ")");
+			
 			e.gc.setAntialias(SWT.OFF);
 			e.gc.setInterpolation(SWT.NONE);
 			e.gc.setLineWidth(1);
