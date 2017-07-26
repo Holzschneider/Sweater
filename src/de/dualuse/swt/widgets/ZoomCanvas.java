@@ -221,12 +221,15 @@ public class ZoomCanvas extends Canvas implements PaintListener, Listener, Contr
 		
 		zoomTransform.translate(canvasX, canvasY);
 		setCanvasTransform(zoomTransform);
+
+		zoomTransformModCounter++;
 		
 		// USE .scroll instead -> so repaint will be clipped to the area that's new
 		
 		Point size = getSize();
-		System.out.println("scroll(" + screenX + ", " + screenY + ", 0, 0, " + size.x + ", " + size.y + ",false); (scrollbarScrolled)");
+		System.out.println("pre-scroll(" + screenX + ", " + screenY + ", 0, 0, " + size.x + ", " + size.y + ",false); (scrollbarScrolled) (" + zoomTransformModCounter +")");
 		this.scroll(screenX, screenY, 0, 0, size.x, size.y, false);
+		System.out.println("post-scroll(" + zoomTransformModCounter + ")");
 //		redraw();
 	}
 
