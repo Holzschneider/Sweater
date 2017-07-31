@@ -132,7 +132,8 @@ public class ImageUpdateTest {
 			
 			sh.setText( $((mid-start)/1e6)+"ms + "+$((end-mid)/1e6)+"ms = "+$((end-start)/1e6)+"ms"+ " [ "+name+" ]");
 			
-			c.redraw();
+			app.asyncExec(c::redraw);
+//			c.redraw();
 		});
 		
 		c.addListener(MouseDown, (e)-> {
