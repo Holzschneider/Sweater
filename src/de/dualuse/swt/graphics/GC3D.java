@@ -559,7 +559,18 @@ public class GC3D implements Closeable {
 	}
 	
 //==[ Rendering: Images ]===========================================================================
-
+	
+	//XXX maybe collect all drawn ImageData & Image References in HashMap and dispose on GC3D dispose;
+	//or maybe in resource
+	public GC3D drawImage(ImageData id, int x, int y) {
+		Image im = new Image(device,id);
+		drawImage(im,0,0);
+		im.dispose();
+		
+		return this;
+	}
+	
+	
 	final static float EPSILON = 0.005f; 
 	public GC3D drawImage(Image im, int x, int y) {
 		applyState();
