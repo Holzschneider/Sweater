@@ -22,7 +22,7 @@ import org.eclipse.swt.widgets.Text;
 import de.dualuse.swt.util.SWTUtil;
 import de.dualuse.swt.util.SimpleFuture;
 
-public class ProgressDialog<E> extends Dialog {
+public class ProgressDialog extends Dialog {
 
 	final static String CANCEL_LABEL = "Cancel";
 	final static String PAUSE_LABEL = "Pause";
@@ -34,7 +34,7 @@ public class ProgressDialog<E> extends Dialog {
 	Shell parent;
 	
 	RuntimeException exception;
-	E result;
+//	E result;
 
 	boolean cancellable = true;
 	boolean pausable = true;
@@ -98,30 +98,30 @@ public class ProgressDialog<E> extends Dialog {
 	
 //==[ Dialog Configuration/Setup ]==================================================================
 	
-	public ProgressDialog<E> setCancellable(boolean cancellable) {
+	public ProgressDialog setCancellable(boolean cancellable) {
 		this.cancellable = cancellable;
 		return this;
 	}
 	
-	public ProgressDialog<E> setPausable(boolean pausable) {
+	public ProgressDialog setPausable(boolean pausable) {
 		this.pausable = pausable;
 		return this;
 	}
 	
-	public ProgressDialog<E> setDescription(Image image, String message) {
+	public ProgressDialog setDescription(Image image, String message) {
 		this.image = image;
 		this.message = message;
 		return this;
 	}
 	
-	public ProgressDialog<E> setWidth(int width) {
+	public ProgressDialog setWidth(int width) {
 		this.dialogWidth = width;
 		return this;
 	}
 	
 //==[ Create Dialog and Return Value ]==============================================================
 
-	public E open(Task<E> task) {
+	public<E> E open(Task<E> task) {
 		
 		final Shell parent = getParent();
 		final Display dsp = parent.getDisplay();
@@ -282,7 +282,7 @@ public class ProgressDialog<E> extends Dialog {
 		
 		//////////
 		
-		TaskProgressHandler handler = new TaskProgressHandler(shell, progressPane);
+		TaskProgressHandler<E> handler = new TaskProgressHandler<E>(shell, progressPane);
 		Thread t = new Thread(new Runnable() {
 			@Override public void run() {
 				task.execute(handler);
@@ -295,10 +295,10 @@ public class ProgressDialog<E> extends Dialog {
 				dsp.sleep();
 		}
 		
-		if (result==null && exception!=null)
+		if (handler.result==null && exception!=null)
 			throw exception;
 		
-		return result;
+		return handler.result;
 	}
 	
 //==[ TaskProgress Handler ]========================================================================
@@ -306,8 +306,9 @@ public class ProgressDialog<E> extends Dialog {
 	Text logArea;
 	StringBuilder logText = new StringBuilder();
 	
-	class TaskProgressHandler implements TaskProgress<E> {
+	class TaskProgressHandler<E> implements TaskProgress<E> {
 
+		E result;
 		Shell shell;
 		Composite parent;
 		Display dsp;
