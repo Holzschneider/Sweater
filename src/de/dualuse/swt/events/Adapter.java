@@ -7,7 +7,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Widget;
 
 public class Adapter implements Listener {
-	private Listener l = this;
+	private Listener delegate = this;
 	private int eventType = NONE;
 
 	public Adapter() { }
@@ -21,21 +21,31 @@ public class Adapter implements Listener {
 		this.eventType = eventType;
 	}
 
-	public Adapter(Widget parent, int eventType,  Listener listener) {
-		parent.addListener(eventType, this);
-		this.eventType = eventType;
-		l = listener;
+	public Adapter(Widget parent, int eventType, Runnable handler) {
+		this(parent, eventType, e->handler.run() );
 	}
 
-	@Override
-	public void handleEvent(Event event) {
-		if (l!=this)
-			if (event.type==eventType)
-				l.handleEvent(event);
+	public Adapter(Widget parent, int eventType, Listener listener) {
+		parent.addListener(eventType, this);
+		this.eventType = eventType;
+		delegate = listener;
 	}
 	
+	public Adapter append(Runnable handler) {
+		return this.append( e->handler.run() );
+	}
+
+	public Adapter append(Listener handler) {
+		final Listener delegate = this.delegate;
+		this.delegate = e-> { delegate.handleEvent(e); handler.handleEvent(e); };
+		return this;
+	}
 	
-//	public static void main(String[] args) {
-////		Layout l = Adapter.with(Layout.class).on("computeSize", this:: computeSize);
-//	}
+	@Override
+	public void handleEvent(Event event) {
+		if (delegate!=this)
+			if (event.type==eventType)
+				delegate.handleEvent(event);
+	}
+	
 }

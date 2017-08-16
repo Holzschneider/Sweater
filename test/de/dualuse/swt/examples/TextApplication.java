@@ -45,7 +45,7 @@ public class TextApplication extends MultiDocumentApplication {
 		
 		try (AutoShell hiddenShell = new AutoShell()) {
 			
-			ProgressDialog<String> progress = new ProgressDialog<String>(hiddenShell, "Opening Document...");
+			ProgressDialog progress = new ProgressDialog(hiddenShell, "Opening Document...");
 			try {
 				image = new Image(hiddenShell.getDisplay(), new ImageData(imageURL.openStream()));
 				progress.setDescription(image, "Opening Document:\nLoading data...");
