@@ -1,14 +1,11 @@
 package de.dualuse.swt.widgets;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Dialog;
 import org.eclipse.swt.widgets.Display;
@@ -18,11 +15,13 @@ import org.eclipse.swt.widgets.Text;
 
 public class InputDialog extends Dialog {
 
+	final static String DONE_BUTTON_LABEL = "Done";
+	final static String CANCEL_BUTTON_LABEL = "Cancel";
+	
 //==[ Constructor ]=================================================================================
 	
 	public InputDialog(Shell parent, int style) {
 		super(parent, style);
-		
 	}
 
 //==[ Create Dialog and Return Value ]==============================================================
@@ -30,7 +29,7 @@ public class InputDialog extends Dialog {
 	String result;
 	
 	public String open(String message) {
-		return open(message, "");
+		return open(message, null);
 	}
 	
 	public String open(String message, String oldValue) {
@@ -55,13 +54,13 @@ public class InputDialog extends Dialog {
 		label.setText(message);
 		
 		Text text = new Text(shell, SWT.SINGLE | SWT.BORDER | SWT.H_SCROLL);
-		text.setText(oldValue);
+		text.setText(oldValue==null?"":oldValue);
 
 		Button okButton = new Button(shell, SWT.NONE);
-		okButton.setText("Done");
+		okButton.setText(DONE_BUTTON_LABEL);
 		
 		Button cancelButton = new Button(shell, SWT.NONE);
-		cancelButton.setText("Cancel");
+		cancelButton.setText(CANCEL_BUTTON_LABEL);
 		
 		FormData data1 = new FormData();
 		data1.left = new FormAttachment(0,0);
