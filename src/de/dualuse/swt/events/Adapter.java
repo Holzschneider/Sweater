@@ -30,7 +30,17 @@ public class Adapter implements Listener {
 		this.eventType = eventType;
 		delegate = listener;
 	}
+	
+	public Adapter append(Runnable handler) {
+		return this.append( e->handler.run() );
+	}
 
+	public Adapter append(Listener handler) {
+		final Listener delegate = this.delegate;
+		this.delegate = e-> { delegate.handleEvent(e); handler.handleEvent(e); };
+		return this;
+	}
+	
 	@Override
 	public void handleEvent(Event event) {
 		if (delegate!=this)
