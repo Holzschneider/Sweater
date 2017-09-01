@@ -146,7 +146,8 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 				if (event.doit)
 					l.handleEvent(event);
 		
-		super.handleEvent(event);
+		if (!dragActive || !isMouseEvent(event.type)) // capture events while dragging
+			super.handleEvent(event);
 		
 		switch (event.type) {
 			
@@ -177,6 +178,15 @@ public class ZoomCanvas extends LayerCanvas implements PaintListener, Listener, 
 		}
 	}
 
+	private boolean isMouseEvent(int type) {
+		if (type==MouseMove) return true;
+		if (type==MouseDown) return true;
+		if (type==MouseUp) return true;
+		if (type==MouseWheel) return true;
+		if (type==Selection) return true;
+		return false;
+	}
+	
 //==[ Events: Scrollbars Manipulated ]==============================================================
 		
 	private void scrollbarScrolled(Event event) {
