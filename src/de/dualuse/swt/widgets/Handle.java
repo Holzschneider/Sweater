@@ -3,6 +3,7 @@ package de.dualuse.swt.widgets;
 import static org.eclipse.swt.SWT.COLOR_BLACK;
 import static org.eclipse.swt.SWT.COLOR_WHITE;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.LineAttributes;
 import org.eclipse.swt.widgets.Display;
@@ -73,14 +74,17 @@ public class Handle extends Gizmo<Handle> {
 //==[ Event Handling ]==============================================================================
 
 	protected float downx = 0, downy = 0;
-	protected boolean drag;
+	protected boolean drag;	// is being dragged? mousemove after mousedown&hit
+	protected boolean hit;	// was hit during mousedown?
 
 	@Override protected boolean isMouseHandler() {
 		return true;
 	}
 	
 	@Override public void onMouseDown(float x, float y, Event e) {
-		if (!hit(x,y)) { // only capture&start drag if button 1 and hit
+		hit = hit(x,y);
+		
+		if (!hit) { // only capture&start drag if button 1 and hit
 			e.doit = true;
 			return;
 		}
@@ -101,6 +105,14 @@ public class Handle extends Gizmo<Handle> {
 	}
 	
 	@Override public void onMouseMove(float x, float y, Event e) {
+
+		boolean button1Pressed = (e.stateMask & SWT.BUTTON1)!=0;
+		
+		if (!drag && hit && button1Pressed) {
+			// initDrag(x,y);
+			drag = true;
+		}
+		
 		if (!drag) {
 			if (!hit(x,y))
 				e.doit = true;
@@ -130,7 +142,7 @@ public class Handle extends Gizmo<Handle> {
 	
 	private void initDrag(float x, float y) {
 		moveTop();
-		drag = true;
+		// drag = true;
 		downx = x;
 		downy = y;
 	}
