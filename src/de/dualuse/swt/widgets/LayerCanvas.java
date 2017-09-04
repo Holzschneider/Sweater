@@ -53,6 +53,12 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 		originalTransform.dispose();
 	}
 	
+//==[ Parent ]======================================================================================
+	
+	@Override public LayerContainer getParentContainer() {
+		return null;
+	}
+	
 //==[ Child Layers ]================================================================================
 
 	@Override public Layer[] getLayers() {
@@ -141,16 +147,21 @@ public class LayerCanvas extends Canvas implements LayerContainer, Listener {
 	}
 
 	// Used by Handle.startDrag() which programmatically starts a dragging operation to reset the last captive
-	@Override public void resetCaptive() {
-		Layer cap = captive;
-		if (cap != null)
-			while (cap.captive() != null && cap.captive()!=cap)
-				cap = cap.captive();
-		if (cap!=null)
-			cap.capture(null);
+//	@Override public void resetCaptive() {
+//		Layer cap = captive;
+//		if (cap != null)
+//			while (cap.captive() != null && cap.captive()!=cap)
+//				cap = cap.captive();
+//		if (cap!=null)
+//			cap.capture(null);
+//	}
+
+	@Override public void capture(Layer c) {
+		if (captive!=null) captive.setCaptive(null);
+		captive = c;
 	}
 	
-	@Override public void capture(Layer c) {
+	@Override public void setCaptive(Layer c) {
 		captive = c;
 	}
 	

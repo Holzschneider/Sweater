@@ -83,7 +83,7 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			child.dispose();
 		clearSnapshot();
 		
-		getParent().removeLayer(this);
+		getParentContainer().removeLayer(this);
 		setRoot(null);
 		parent = null;
 		isDisposed=true;
@@ -184,17 +184,17 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 			return false;
 		
 		if (parent!=null)
-			getParent().removeLayer(this);
+			getParentContainer().removeLayer(this);
 
 		parent = r;
 		
 		if (parent!=null)
-			getParent().addLayer(this);
+			getParentContainer().addLayer(this);
 		
 		return true;
 	}
 	
-	public LayerContainer getParent() { return parent==null?root:parent; }
+	@Override public LayerContainer getParentContainer() { return parent==null?root:parent; }
 	
 	///// Children (add, get, remove, z-order)
 	
@@ -255,9 +255,9 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	// (if r==null, moves Layer to the first child position at index 0)
 	public void moveBottom() { moveBelow(null); }
 	public void moveBelow(Layer r) {
-		if (getParent() == null) return; // already disposed?
+		if (getParentContainer() == null) return; // already disposed?
 		
-		LayerContainer p = getParent();
+		LayerContainer p = getParentContainer();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
@@ -277,9 +277,9 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	// (if r==null, moves Layer to the last child position at length-1)
 	public void moveTop() { moveAbove(null); }
 	public void moveAbove(Layer r) {
-		if (getParent() == null) return; // already disposed?
+		if (getParentContainer() == null) return; // already disposed?
 		
-		LayerContainer p = getParent();
+		LayerContainer p = getParentContainer();
 		Layer[] cs = p.getLayers();
 
 		int ir = p.indexOf(this);
@@ -813,20 +813,26 @@ public class Layer extends Bounds implements LayerContainer, Runnable {
 	private Layer captive = null;
 	private int downX, downY, downT;
 	
-	// Used by Handle.startDrag() which programmatically starts a dragging operation to reset the last captive
-	@Override public void resetCaptive() {
-		Layer cap = captive;
-		if (cap != null)
-			while (cap.captive != null && cap.captive!=cap)
-				cap = cap.captive;
-		if (cap!=null)
-			cap.capture(null);
+	@Override public void capture(Layer c) {
+
+		// Reset old captive
+		if (captive!=null)
+			captive.setCaptive(null);
+		
+		// Set current captive
+		captive = c;
+		
+		// Bubble up to root
+		LayerContainer parent = getParentContainer();
+		while (parent!=null) {
+			parent.setCaptive(c);
+			parent = parent.getParentContainer();
+		}
+		
 	}
 	
-	@Override public void capture(Layer c) {
+	@Override public void setCaptive(Layer c) {
 		captive = c;
-		if (getParent()!=null)
-			getParent().capture(c);
 	}
 	
 	@Override public Layer captive() {

@@ -16,6 +16,9 @@ public interface LayerContainer {
 	interface LayerTranslationConsumer { void translate(double translationX, double translationY); }
 	interface LayerScaleConsumer { void scale(double scaleX, double scaleY); }
 	// interface LayerRotationConsumer { void rotation(double scaleX, double scaleY); }
+
+	///// Parent
+	public LayerContainer getParentContainer();
 	
 	///// Child Layers
 	
@@ -27,9 +30,11 @@ public interface LayerContainer {
 	///// Given layer captures events
 	
 	public Layer captive();
-	public void resetCaptive();
+	// public void resetCaptive();
+	
 	public void capture(Layer c);
-
+	public void setCaptive(Layer c);
+	
 	////// Redraw container (region)
 	
 	public void redraw();

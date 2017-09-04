@@ -89,8 +89,11 @@ public class Handle extends Gizmo<Handle> {
 			return;
 		}
 
-		if (e.button==1)
-			initDrag(x, y);
+		if (e.button==1) {
+			moveTop();
+			downx = x;
+			downy = y;
+		}
 		
 		fireOnMouseDown(x, y, e);
 	}
@@ -109,7 +112,6 @@ public class Handle extends Gizmo<Handle> {
 		boolean button1Pressed = (e.stateMask & SWT.BUTTON1)!=0;
 		
 		if (!drag && hit && button1Pressed) {
-			// initDrag(x,y);
 			drag = true;
 		}
 		
@@ -128,7 +130,7 @@ public class Handle extends Gizmo<Handle> {
 			
 			onHandleDragged(fromX, fromY, centerX, centerY, e);
 			
-			getParent().redraw();
+			getParentContainer().redraw();
 			for (LayerContainer lc: consumers)
 				lc.redraw();
 		}
@@ -140,13 +142,6 @@ public class Handle extends Gizmo<Handle> {
 		return (x*x + y*y) <= S*S;
 	}
 	
-	private void initDrag(float x, float y) {
-		moveTop();
-		// drag = true;
-		downx = x;
-		downy = y;
-	}
-
 //==[ Start Drag programmatically ]=================================================================
 	
 	// Allow external class to trigger a drag operation programmatically
@@ -155,15 +150,16 @@ public class Handle extends Gizmo<Handle> {
 	}
 	
 	public void startDrag(float x, float y) {
+		if (drag) return; // handle is already being dragged
+		
 		// Automatically trigger dragging the handle
 		Display.getCurrent().asyncExec(() -> {
 			// init drag with the specified coordinates
-			initDrag(x, y);
+			moveTop();
+			drag = true;
+			downx = x;
+			downy = y;
 
-			// Reset previous captive (follows the captive chain to the last captive leaf,
-			// then nulls all captive references with capture(null))
-			getParent().resetCaptive();
-			
 			// Start capturing events
 			capture(this);
 		});
